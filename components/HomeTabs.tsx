@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import RecordsPage from "./records/RecordsPage";
 import DataPage from "@/components/data/DataPage";
 import { Home, Database, LogOut } from "lucide-react";
+import WomensDayBackground from "@/components/WomensDayBackground";
 
 export default function HomeTabs() {
   const router = useRouter();
@@ -17,23 +18,18 @@ export default function HomeTabs() {
   }
 
   return (
-    <div className="w-full p-6">
+    <div className="relative w-full p-6">
+      <WomensDayBackground />
+
       <Tabs defaultValue="home" className="w-full">
-        {/* Header */}
         <div className="mb-6 grid grid-cols-[1fr_auto_1fr] items-center">
-          {/* Left spacer */}
           <div />
 
-          {/* Center Tabs */}
           <div className="flex justify-center">
-            <TabsList className="h-12 bg-muted rounded-xl p-1 shadow-sm">
+            <TabsList className="h-12 rounded-xl bg-muted p-1 shadow-sm">
               <TabsTrigger
                 value="home"
-                className="flex items-center gap-2 px-8 min-w-[140px] justify-center text-base font-medium
-                  data-[state=active]:bg-background
-                  data-[state=active]:shadow
-                  data-[state=active]:text-primary
-                "
+                className="min-w-[140px] justify-center gap-2 px-8 text-base font-medium data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow"
               >
                 <Home size={18} />
                 Home
@@ -41,11 +37,7 @@ export default function HomeTabs() {
 
               <TabsTrigger
                 value="data"
-                className="flex items-center gap-2 px-8 min-w-[140px] justify-center text-base font-medium
-                  data-[state=active]:bg-background
-                  data-[state=active]:shadow
-                  data-[state=active]:text-primary
-                "
+                className="min-w-[140px] justify-center gap-2 px-8 text-base font-medium data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow"
               >
                 <Database size={18} />
                 Data
@@ -53,7 +45,6 @@ export default function HomeTabs() {
             </TabsList>
           </div>
 
-          {/* Logout */}
           <div className="flex justify-end">
             <Button
               className="cursor-pointer"
@@ -67,12 +58,11 @@ export default function HomeTabs() {
           </div>
         </div>
 
-        {/* Content */}
-        <TabsContent value="home" className="w-full mt-0">
+        <TabsContent value="home" className="mt-0 w-full">
           <RecordsPage />
         </TabsContent>
 
-        <TabsContent value="data" className="w-full mt-0">
+        <TabsContent value="data" className="mt-0 w-full">
           <DataPage />
         </TabsContent>
       </Tabs>
