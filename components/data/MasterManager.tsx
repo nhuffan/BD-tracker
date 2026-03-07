@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ArrowUpDown, CalendarDays } from "lucide-react";
 
 import type { MasterCategory, MasterItem } from "@/lib/masters";
 import {
@@ -50,6 +51,9 @@ function formatMonthLabel(month: string) {
   return `${monthNumber}/${year}`;
 }
 
+type SortDirection = "asc" | "desc";
+type BdSortField = "points" | "money";
+
 export default function MasterManager({
   category,
 }: {
@@ -75,6 +79,10 @@ export default function MasterManager({
 
   const [monthOptions, setMonthOptions] = useState<string[]>([]);
   const [selectedMonth, setSelectedMonth] = useState<string>(ALL_TIME);
+
+  const [bdSortField, setBdSortField] = useState<BdSortField>("points");
+  const [bdSortDirection, setBdSortDirection] =
+    useState<SortDirection>("desc");
 
   async function refresh() {
     setLoading(true);
@@ -181,6 +189,43 @@ export default function MasterManager({
 
   const isSaveDisabled = !label.trim() || isDuplicateName;
 
+  const sortedItems = useMemo(() => {
+    const arr = [...items];
+
+    if (category !== "bd") {
+      return arr;
+    }
+
+    arr.sort((a, b) => {
+      const aPoints = totals[a.id]?.points ?? 0;
+      const bPoints = totals[b.id]?.points ?? 0;
+      const aMoney = totals[a.id]?.money ?? 0;
+      const bMoney = totals[b.id]?.money ?? 0;
+
+      const primaryA = bdSortField === "points" ? aPoints : aMoney;
+      const primaryB = bdSortField === "points" ? bPoints : bMoney;
+
+      if (primaryA !== primaryB) {
+        return bdSortDirection === "desc"
+          ? primaryB - primaryA
+          : primaryA - primaryB;
+      }
+
+      const secondaryA = bdSortField === "points" ? aMoney : aPoints;
+      const secondaryB = bdSortField === "points" ? bMoney : bPoints;
+
+      if (secondaryA !== secondaryB) {
+        return bdSortDirection === "desc"
+          ? secondaryB - secondaryA
+          : secondaryA - secondaryB;
+      }
+
+      return a.label.localeCompare(b.label);
+    });
+
+    return arr;
+  }, [items, totals, category, bdSortField, bdSortDirection]);
+
   async function onSave() {
     if (isSaveDisabled) return;
 
@@ -242,29 +287,75 @@ export default function MasterManager({
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <div className="font-semibold">{ui.title}</div>
+      <div className="flex items-center gap-3">
+        <div className="text-base font-semibold whitespace-nowrap">
+          {ui.title}
+        </div>
+
         <div className="flex-1" />
 
         {category === "bd" && (
-          <div className="w-[180px]">
-            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select month" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL_TIME}>All Time</SelectItem>
-                {monthOptions.map((month) => (
-                  <SelectItem key={month} value={month}>
-                    {formatMonthLabel(month)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <>
+            <div className="flex shrink-0 items-center gap-2 rounded-md border px-2 h-9">
+              <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+
+              <div className="w-[100px]">
+                <Select
+                  value={bdSortField}
+                  onValueChange={(value) => setBdSortField(value as BdSortField)}
+                >
+                  <SelectTrigger className="border-0 h-8 shadow-none px-2">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="points">Points</SelectItem>
+                    <SelectItem value="money">Money</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="w-[110px]">
+                <Select
+                  value={bdSortDirection}
+                  onValueChange={(value) =>
+                    setBdSortDirection(value as SortDirection)
+                  }
+                >
+                  <SelectTrigger className="border-0 h-8 shadow-none px-2">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="desc">High → Low</SelectItem>
+                    <SelectItem value="asc">Low → High</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="shrink-0">
+              <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                <SelectTrigger className="h-9 inline-flex min-w-[140px] w-auto gap-2">
+                  <CalendarDays className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <SelectValue placeholder="Month" />
+                </SelectTrigger>
+
+                <SelectContent>
+                  <SelectItem value={ALL_TIME}>All Time</SelectItem>
+
+                  {monthOptions.map((month) => (
+                    <SelectItem key={month} value={month}>
+                      {formatMonthLabel(month)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </>
         )}
 
-        <Button onClick={openCreate}>{ui.addButton}</Button>
+        <Button className="cursor-pointer h-9" onClick={openCreate}>
+          {ui.addButton}
+        </Button>
       </div>
 
       <div className="border rounded-xl overflow-hidden">
@@ -299,7 +390,7 @@ export default function MasterManager({
             </thead>
 
             <tbody>
-              {items.map((it, index) => (
+              {sortedItems.map((it, index) => (
                 <tr key={it.id} className="border-t">
                   <td className="p-2 text-muted-foreground">{index + 1}</td>
 
@@ -321,11 +412,16 @@ export default function MasterManager({
 
                   <td className="p-2 text-right">
                     <div className="inline-flex items-center gap-2 whitespace-nowrap">
-                      <Button variant="secondary" onClick={() => openEdit(it)}>
+                      <Button
+                        className="cursor-pointer"
+                        variant="secondary"
+                        onClick={() => openEdit(it)}
+                      >
                         Edit
                       </Button>
 
                       <Button
+                        className="cursor-pointer"
                         variant="destructive"
                         onClick={() => onDelete(it.id)}
                       >
@@ -379,6 +475,7 @@ export default function MasterManager({
           <DialogFooter>
             <Button
               variant="secondary"
+              className="cursor-pointer"
               onClick={() => {
                 setOpen(false);
                 setErrorMessage("");
@@ -387,7 +484,11 @@ export default function MasterManager({
               Cancel
             </Button>
 
-            <Button onClick={onSave} disabled={isSaveDisabled}>
+            <Button
+              className="cursor-pointer"
+              onClick={onSave}
+              disabled={isSaveDisabled}
+            >
               Save
             </Button>
           </DialogFooter>
@@ -410,7 +511,12 @@ export default function MasterManager({
           </p>
 
           <DialogFooter>
-            <Button onClick={() => setShowInUseDialog(false)}>OK</Button>
+            <Button
+              className="cursor-pointer"
+              onClick={() => setShowInUseDialog(false)}
+            >
+              OK
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

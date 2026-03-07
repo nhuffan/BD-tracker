@@ -195,6 +195,7 @@ export default function FilterDialog({
 
         <DialogFooter className="gap-2">
           <Button
+            className="cursor-pointer"
             variant="secondary"
             onClick={() => {
               onApply({});
@@ -205,6 +206,7 @@ export default function FilterDialog({
           </Button>
 
           <Button
+            className="cursor-pointer"
             onClick={() => {
               onApply(draft);
               onOpenChange(false);

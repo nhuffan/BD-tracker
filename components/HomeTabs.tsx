@@ -56,6 +56,7 @@ export default function HomeTabs() {
           {/* Logout */}
           <div className="flex justify-end">
             <Button
+              className="cursor-pointer"
               variant="outline"
               size="icon"
               onClick={handleLogout}

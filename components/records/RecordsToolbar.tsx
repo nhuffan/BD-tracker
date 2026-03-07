@@ -36,12 +36,13 @@ export default function RecordsToolbar({
 
   return (
     <div className="flex items-center gap-2">
-      <Button variant="secondary" onClick={() => setOpenFilter(true)}>
+      <Button className="cursor-pointer" variant="secondary" onClick={() => setOpenFilter(true)}>
         Filter
       </Button>
-      <Button onClick={() => setOpenCreate(true)}>Create</Button>
+      <Button className="cursor-pointer" onClick={() => setOpenCreate(true)}>Create</Button>
 
     <Button
+      className="cursor-pointer"
       variant="outline"
       onClick={() =>
         exportToExcel(rowsForExport, {
@@ -58,7 +59,7 @@ export default function RecordsToolbar({
 
       <div className="flex-1" />
 
-      <Button variant="ghost" onClick={onRefresh}>
+      <Button className="cursor-pointer" variant="ghost" onClick={onRefresh}>
         Refresh
       </Button>
 

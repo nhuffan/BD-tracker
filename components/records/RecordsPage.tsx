@@ -93,19 +93,18 @@ export default function RecordsPage() {
 
     // local overwrite server + gắn pending/failed
     for (const l of local) {
-      if (l.deleted) continue;
+      // chỉ overlay nếu local chưa sync xong
+      if (l.sync_status === "synced") continue;
 
+      if (l.deleted) continue;
 
       const { sync_status, updated_at_local, last_error, deleted, ...pure } = l as any;
 
-
-      // luôn overlay local để UI thấy pending/failed (kể cả khi trùng server)
       serverMap.set(l.id, {
         ...(pure as RecordRow),
         _sync_status: sync_status,
       });
     }
-
 
     setRows(Array.from(serverMap.values()));
     setLoading(false);

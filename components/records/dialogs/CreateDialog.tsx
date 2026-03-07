@@ -283,10 +283,10 @@ export default function CreateDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="secondary" onClick={() => onOpenChange(false)}>
+          <Button className="cursor-pointer" variant="secondary" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={submit} disabled={isSaveDisabled}>
+          <Button className="cursor-pointer" onClick={submit} disabled={isSaveDisabled}>
             Save
           </Button>
         </DialogFooter>

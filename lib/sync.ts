@@ -15,7 +15,6 @@ export async function syncPending() {
         const { error } = await supabase.from("records").delete().eq("id", item.id);
         if (error) throw error;
 
-
         await db.records.delete(item.id);
       } else {
         const { sync_status, updated_at_local, last_error, deleted, ...row } = item;
@@ -25,10 +24,7 @@ export async function syncPending() {
         if (error) throw error;
 
 
-        await db.records.update(item.id, {
-          sync_status: "synced",
-          last_error: undefined,
-        });
+        await db.records.delete(item.id)
       }
     } catch (e: any) {
       await db.records.update(item.id, {

@@ -81,7 +81,7 @@ export default function LoginPage() {
           }}
         />
 
-        <Button className="w-full" onClick={signIn} disabled={loading}>
+        <Button className="w-full cursor-pointer" onClick={signIn} disabled={loading}>
           {loading ? "Logging in..." : "Login"}
         </Button>
 
