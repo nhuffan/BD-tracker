@@ -236,6 +236,19 @@ export default function MasterManager({
     return arr;
   }, [items, totals, category, bdSortField, bdSortDirection]);
 
+  const splitItems = useMemo(() => {
+    if (category !== "bd") {
+      return { left: sortedItems, right: [] };
+    }
+
+    const half = Math.ceil(sortedItems.length / 2);
+
+    return {
+      left: sortedItems.slice(0, half),
+      right: sortedItems.slice(half),
+    };
+  }, [sortedItems, category]);
+
   const bdMedalMap = useMemo(() => {
     if (category !== "bd") return {};
 
@@ -330,6 +343,93 @@ export default function MasterManager({
     window.dispatchEvent(new Event("masters-updated"));
   }
 
+  function renderTable(list: MasterItem[], startIndex: number) {
+    return (
+      <div className="border rounded-xl overflow-hidden">
+        <div className="w-full overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/50">
+              <tr>
+                <th className="p-2 text-left">#</th>
+                <th className="p-2 text-left">Name</th>
+                {category === "bd" && (
+                  <>
+                    <th className="p-2 text-right">Points</th>
+                    <th className="p-2 text-right">Money</th>
+                  </>
+                )}
+                {isAdmin && <th className="p-2 text-right">Action</th>}
+              </tr>
+            </thead>
+
+            <tbody>
+              {list.map((it, index) => {
+                const realIndex = startIndex + index;
+
+                const displayRank =
+                  category === "bd" && bdSortDirection === "asc"
+                    ? sortedItems.length - realIndex
+                    : realIndex + 1;
+
+                return (
+                  <tr key={it.id} className="border-t odd:bg-muted/30">
+                    <td className="p-2 text-muted-foreground">
+                      {category === "bd" && bdMedalMap[it.id] ? (
+                        <span className="text-base leading-none">
+                          {bdMedalMap[it.id]}
+                        </span>
+                      ) : (
+                        displayRank
+                      )}
+                    </td>
+
+                    <td className="p-2 truncate" title={it.label}>
+                      {it.label}
+                    </td>
+
+                    {category === "bd" && (
+                      <>
+                        <td className="p-2 text-right tabular-nums">
+                          {(totals[it.id]?.points ?? 0).toLocaleString("en-US")}
+                        </td>
+
+                        <td className="p-2 text-right tabular-nums">
+                          {(totals[it.id]?.money ?? 0).toLocaleString("en-US")}
+                        </td>
+                      </>
+                    )}
+
+                    {isAdmin && (
+                      <td className="p-2 text-right">
+                        <div className="inline-flex items-center gap-2 whitespace-nowrap">
+                          <Button
+                            className="cursor-pointer"
+                            variant="secondary"
+                            onClick={() => openEdit(it)}
+                          >
+                            Edit
+                          </Button>
+
+                          <Button
+                            className="cursor-pointer"
+                            variant="destructive"
+                            onClick={() => onDelete(it.id)}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-3">
@@ -405,121 +505,32 @@ export default function MasterManager({
         )}
       </div>
 
-      <div className="border rounded-xl overflow-hidden">
-        <div className="w-full overflow-x-auto">
-          <table className="w-full text-sm">
-            <colgroup>
-              <col style={{ width: "6%" }} />
-              <col
-                style={{
-                  width:
-                    category === "bd"
-                      ? isAdmin
-                        ? "36%"
-                        : "60%"
-                      : isAdmin
-                      ? "74%"
-                      : "94%",
-                }}
-              />
-              {category === "bd" && (
-                <>
-                  <col style={{ width: "16%" }} />
-                  <col style={{ width: "18%" }} />
-                </>
-              )}
-              {isAdmin && (
-                <col style={{ width: category === "bd" ? "24%" : "20%" }} />
-              )}
-            </colgroup>
+      {category === "bd" ? (
+        <>
+          {/* mobile + tablet → 1 bảng */}
+          <div className="xl:hidden">
+            {renderTable(sortedItems, 0)}
+          </div>
 
-            <thead className="bg-muted/50">
-              <tr>
-                <th className="p-2 text-left">#</th>
-                <th className="p-2 text-left">Name</th>
+          {/* desktop lớn → 2 bảng */}
+          <div className="hidden xl:grid xl:grid-cols-2 gap-4 items-start">
+            {renderTable(splitItems.left, 0)}
 
-                {category === "bd" && (
-                  <>
-                    <th className="p-2 text-right">Points</th>
-                    <th className="p-2 text-right">Money</th>
-                  </>
-                )}
+            {splitItems.right.length > 0 &&
+              renderTable(splitItems.right, splitItems.left.length)}
+          </div>
+        </>
+      ) : (
+        renderTable(sortedItems, 0)
+      )}
 
-                {isAdmin && <th className="p-2 text-right">Action</th>}
-              </tr>
-            </thead>
+      {!loading && items.length === 0 && (
+        <div className="p-4 text-sm text-muted-foreground">No data</div>
+      )}
 
-            <tbody>
-              {sortedItems.map((it, index) => {
-                const displayRank =
-                  category === "bd" && bdSortDirection === "asc"
-                    ? sortedItems.length - index
-                    : index + 1;
-
-                return (
-                  <tr key={it.id} className="border-t">
-                    <td className="p-2 text-muted-foreground">
-                      {category === "bd" && bdMedalMap[it.id] ? (
-                        <span className="text-base leading-none">
-                          {bdMedalMap[it.id]}
-                        </span>
-                      ) : (
-                        displayRank
-                      )}
-                    </td>
-
-                    <td className="p-2 truncate" title={it.label}>
-                      {it.label}
-                    </td>
-
-                    {category === "bd" && (
-                      <>
-                        <td className="p-2 text-right tabular-nums">
-                          {(totals[it.id]?.points ?? 0).toLocaleString("en-US")}
-                        </td>
-
-                        <td className="p-2 text-right tabular-nums">
-                          {(totals[it.id]?.money ?? 0).toLocaleString("en-US")}
-                        </td>
-                      </>
-                    )}
-
-                    {isAdmin && (
-                      <td className="p-2 text-right">
-                        <div className="inline-flex items-center gap-2 whitespace-nowrap">
-                          <Button
-                            className="cursor-pointer"
-                            variant="secondary"
-                            onClick={() => openEdit(it)}
-                          >
-                            Edit
-                          </Button>
-
-                          <Button
-                            className="cursor-pointer"
-                            variant="destructive"
-                            onClick={() => onDelete(it.id)}
-                          >
-                            Delete
-                          </Button>
-                        </div>
-                      </td>
-                    )}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-
-        {!loading && items.length === 0 && (
-          <div className="p-4 text-sm text-muted-foreground">No data</div>
-        )}
-
-        {loading && (
-          <div className="p-4 text-sm text-muted-foreground">Loading...</div>
-        )}
-      </div>
+      {loading && (
+        <div className="p-4 text-sm text-muted-foreground">Loading...</div>
+      )}
 
       {isAdmin && (
         <Dialog open={open} onOpenChange={setOpen}>
