@@ -56,8 +56,10 @@ type BdSortField = "points" | "money";
 
 export default function MasterManager({
   category,
+  isAdmin,
 }: {
   category: MasterCategory;
+  isAdmin: boolean;
 }) {
   const ui = MASTER_CATEGORY_UI[category];
   const ALL_TIME = "__all__";
@@ -353,9 +355,11 @@ export default function MasterManager({
           </>
         )}
 
-        <Button className="cursor-pointer h-9" onClick={openCreate}>
-          {ui.addButton}
-        </Button>
+        {isAdmin && (        
+          <Button className="cursor-pointer h-9" onClick={openCreate}>
+            {ui.addButton}
+          </Button>
+        )}
       </div>
 
       <div className="border rounded-xl overflow-hidden">
@@ -363,14 +367,16 @@ export default function MasterManager({
           <table className="w-full text-sm">
             <colgroup>
               <col style={{ width: "6%" }} />
-              <col style={{ width: category === "bd" ? "36%" : "74%" }} />
+              <col style={{ width: category === "bd" ? (isAdmin ? "36%" : "60%") : (isAdmin ? "74%" : "94%") }} />
               {category === "bd" && (
                 <>
                   <col style={{ width: "16%" }} />
                   <col style={{ width: "18%" }} />
                 </>
               )}
-              <col style={{ width: category === "bd" ? "24%" : "20%" }} />
+              {isAdmin && (
+                <col style={{ width: category === "bd" ? "24%" : "20%" }} />
+              )}
             </colgroup>
 
             <thead className="bg-muted/50">
@@ -385,7 +391,7 @@ export default function MasterManager({
                   </>
                 )}
 
-                <th className="p-2 text-right">Action</th>
+                {isAdmin && <th className="p-2 text-right">Action</th>}
               </tr>
             </thead>
 
@@ -410,25 +416,27 @@ export default function MasterManager({
                     </>
                   )}
 
-                  <td className="p-2 text-right">
-                    <div className="inline-flex items-center gap-2 whitespace-nowrap">
-                      <Button
-                        className="cursor-pointer"
-                        variant="secondary"
-                        onClick={() => openEdit(it)}
-                      >
-                        Edit
-                      </Button>
+                  {isAdmin && (
+                    <td className="p-2 text-right">
+                      <div className="inline-flex items-center gap-2 whitespace-nowrap">
+                        <Button
+                          className="cursor-pointer"
+                          variant="secondary"
+                          onClick={() => openEdit(it)}
+                        >
+                          Edit
+                        </Button>
 
-                      <Button
-                        className="cursor-pointer"
-                        variant="destructive"
-                        onClick={() => onDelete(it.id)}
-                      >
-                        Delete
-                      </Button>
-                    </div>
-                  </td>
+                        <Button
+                          className="cursor-pointer"
+                          variant="destructive"
+                          onClick={() => onDelete(it.id)}
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -444,82 +452,86 @@ export default function MasterManager({
         )}
       </div>
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-semibold tracking-tight">
-              {editing ? ui.editDialogTitle : ui.addDialogTitle}
-            </DialogTitle>
-          </DialogHeader>
+      {isAdmin && (
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-semibold tracking-tight">
+                {editing ? ui.editDialogTitle : ui.addDialogTitle}
+              </DialogTitle>
+            </DialogHeader>
 
-          <div className="space-y-3">
-            <div>
-              <p className="mb-1.5 text-sm font-medium text-foreground">
-                {ui.fieldLabel}
-              </p>
-
-              <Input
-                value={label}
-                onChange={(e) => setLabel(e.target.value)}
-                placeholder={ui.fieldPlaceholder}
-              />
-
-              {errorMessage && (
-                <p className="mt-1 text-sm text-destructive">
-                  {errorMessage}
+            <div className="space-y-3">
+              <div>
+                <p className="mb-1.5 text-sm font-medium text-foreground">
+                  {ui.fieldLabel}
                 </p>
-              )}
+
+                <Input
+                  value={label}
+                  onChange={(e) => setLabel(e.target.value)}
+                  placeholder={ui.fieldPlaceholder}
+                />
+
+                {errorMessage && (
+                  <p className="mt-1 text-sm text-destructive">
+                    {errorMessage}
+                  </p>
+                )}
+              </div>
             </div>
-          </div>
 
-          <DialogFooter>
-            <Button
-              variant="secondary"
-              className="cursor-pointer"
-              onClick={() => {
-                setOpen(false);
-                setErrorMessage("");
-              }}
-            >
-              Cancel
-            </Button>
+            <DialogFooter>
+              <Button
+                variant="secondary"
+                className="cursor-pointer"
+                onClick={() => {
+                  setOpen(false);
+                  setErrorMessage("");
+                }}
+              >
+                Cancel
+              </Button>
 
-            <Button
-              className="cursor-pointer"
-              onClick={onSave}
-              disabled={isSaveDisabled}
-            >
-              Save
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              <Button
+                className="cursor-pointer"
+                onClick={onSave}
+                disabled={isSaveDisabled}
+              >
+                Save
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
-      <Dialog open={showInUseDialog} onOpenChange={setShowInUseDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-semibold">
-              Cannot Delete
-            </DialogTitle>
-          </DialogHeader>
+      {isAdmin && (
+        <Dialog open={showInUseDialog} onOpenChange={setShowInUseDialog}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-lg font-semibold">
+                Cannot Delete
+              </DialogTitle>
+            </DialogHeader>
 
-          <p className="text-sm text-muted-foreground">
-            This type is currently used in existing records.
-            <br />
-            <br />
-            Please go to the <b>Home</b> page and delete those records first.
-          </p>
+            <p className="text-sm text-muted-foreground">
+              This type is currently used in existing records.
+              <br />
+              <br />
+              Please go to the <b>Home</b> page and delete those records first.
+            </p>
 
-          <DialogFooter>
-            <Button
-              className="cursor-pointer"
-              onClick={() => setShowInUseDialog(false)}
-            >
-              OK
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter>
+              <Button
+                className="cursor-pointer"
+                onClick={() => setShowInUseDialog(false)}
+              >
+                OK
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

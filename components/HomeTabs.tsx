@@ -8,13 +8,19 @@ import RecordsPage from "./records/RecordsPage";
 import DataPage from "@/components/data/DataPage";
 import { Home, Database, LogOut } from "lucide-react";
 import WomensDayBackground from "@/components/WomensDayBackground";
+import { useCurrentUserRole } from "@/lib/useCurrentUserRole";
 
 export default function HomeTabs() {
   const router = useRouter();
+  const { isAdmin, loading } = useCurrentUserRole();
 
   async function handleLogout() {
     await supabase.auth.signOut();
     router.replace("/login");
+  }
+
+  if (loading) {
+    return <div className="p-6 text-sm text-muted-foreground">Loading...</div>;
   }
 
   return (
@@ -59,11 +65,11 @@ export default function HomeTabs() {
         </div>
 
         <TabsContent value="home" className="mt-0 w-full">
-          <RecordsPage />
+          <RecordsPage isAdmin={isAdmin} />
         </TabsContent>
 
         <TabsContent value="data" className="mt-0 w-full">
-          <DataPage />
+          <DataPage isAdmin={isAdmin} />
         </TabsContent>
       </Tabs>
     </div>

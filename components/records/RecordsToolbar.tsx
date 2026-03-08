@@ -15,11 +15,13 @@ export default function RecordsToolbar({
   onChangeFilters,
   rowsForExport,
   onRefresh,
+  isAdmin,
 }: {
   filters: Filters;
   onChangeFilters: (f: Filters) => void;
   rowsForExport: RecordRow[];
   onRefresh: () => void;
+  isAdmin: boolean;
 }) {
   const [openFilter, setOpenFilter] = useState(false);
   const [openCreate, setOpenCreate] = useState(false);
@@ -39,23 +41,27 @@ export default function RecordsToolbar({
       <Button className="cursor-pointer" variant="secondary" onClick={() => setOpenFilter(true)}>
         Filter
       </Button>
-      <Button className="cursor-pointer" onClick={() => setOpenCreate(true)}>Create</Button>
 
-    <Button
-      className="cursor-pointer"
-      variant="outline"
-      onClick={() =>
-        exportToExcel(rowsForExport, {
-          bd: bdMap,
-          level: levelMap,
-          customerType: customerTypeMap,
-          pointType: pointTypeMap,
-        })
-      }
-    >
-      Export Excel
-    </Button>
+      {isAdmin && (
+        <Button className="cursor-pointer" onClick={() => setOpenCreate(true)}>
+          Create
+        </Button>
+      )}
 
+      <Button
+        className="cursor-pointer"
+        variant="outline"
+        onClick={() =>
+          exportToExcel(rowsForExport, {
+            bd: bdMap,
+            level: levelMap,
+            customerType: customerTypeMap,
+            pointType: pointTypeMap,
+          })
+        }
+      >
+        Export Excel
+      </Button>
 
       <div className="flex-1" />
 

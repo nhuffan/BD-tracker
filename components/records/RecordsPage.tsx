@@ -26,7 +26,7 @@ export type RecordVM = RecordRow & {
 };
 
 
-export default function RecordsPage() {
+export default function RecordsPage({ isAdmin }: { isAdmin: boolean }) {
   const [filters, setFilters] = useState<Filters>({});
   const [rows, setRows] = useState<RecordVM[]>([]);
   const [loading, setLoading] = useState(false);
@@ -37,8 +37,8 @@ export default function RecordsPage() {
   const { items: pointTypes } = useMasters("point_type");
 
   const bdMap = useMemo(
-  () => Object.fromEntries(bdList.map((x) => [x.id, x.label])),
-  [bdList]
+    () => Object.fromEntries(bdList.map((x) => [x.id, x.label])),
+    [bdList]
   );
 
   const levelMap = useMemo(
@@ -167,6 +167,7 @@ return (
       onChangeFilters={setFilters}
       rowsForExport={filtered}
       onRefresh={refresh}
+      isAdmin = {isAdmin}
     />
 
     <RecordsTable
@@ -177,6 +178,7 @@ return (
       levelMap={levelMap}
       customerTypeMap={customerTypeMap}
       pointTypeMap={pointTypeMap}
+      isAdmin={isAdmin}
     />
   </div>
   );

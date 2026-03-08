@@ -25,6 +25,7 @@ export default function RecordsTable({
   levelMap,
   customerTypeMap,
   pointTypeMap,
+  isAdmin,
 }: {
   rows: RecordVM[];
   loading: boolean;
@@ -33,6 +34,7 @@ export default function RecordsTable({
   levelMap: Record<string, string>;
   customerTypeMap: Record<string, string>;
   pointTypeMap: Record<string, string>;
+  isAdmin: boolean;
 }) {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
@@ -52,7 +54,7 @@ export default function RecordsTable({
   }
 
   function openEditDialog(record: RecordVM) {
-    if (selectionMode) return;
+    if (!isAdmin || selectionMode) return;
     setEditing(record);
     setEditOpen(true);
   }
@@ -111,27 +113,29 @@ export default function RecordsTable({
         <div className="border rounded-xl overflow-hidden">
           <div className="flex items-center p-2 border-b">
             <div className="flex-1" />
-            <div className="flex items-center gap-2">
-              {selectionMode && (
-                <Button
-                  className="cursor-pointer"
-                  variant="ghost"
-                  onClick={() => {
-                    setSelectionMode(false);
-                    setSelected({});
-                  }}
-                >
-                  Cancel
-                </Button>
+              {isAdmin && (
+                <div className="flex items-center gap-2">
+                  {selectionMode && (
+                    <Button
+                      className="cursor-pointer"
+                      variant="ghost"
+                      onClick={() => {
+                        setSelectionMode(false);
+                        setSelected({});
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  )}
+                  <Button
+                    className="cursor-pointer"
+                    variant={selectionMode ? "destructive" : "secondary"}
+                    onClick={handleDelete}
+                  >
+                    {selectionMode ? `Delete (${selectedIds.length})` : "Delete"}
+                  </Button>
+                </div>
               )}
-              <Button
-                className="cursor-pointer"
-                variant={selectionMode ? "destructive" : "secondary"}
-                onClick={handleDelete}
-              >
-                {selectionMode ? `Delete (${selectedIds.length})` : "Delete"}
-              </Button>
-            </div>
           </div>
 
           <div className="w-full overflow-x-auto">
@@ -269,12 +273,14 @@ export default function RecordsTable({
           </div>
         </div>
 
-        <EditRecordDialog
+        {isAdmin && (
+          <EditRecordDialog
           open={editOpen}
           onOpenChange={setEditOpen}
           record={editing}
           onSaved={onChanged}
-        />
+          />
+        )}
       </>
     </TooltipProvider>
   );

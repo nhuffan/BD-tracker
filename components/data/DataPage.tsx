@@ -3,7 +3,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import MasterManager from "./MasterManager";
 
-export default function DataPage() {
+export default function DataPage({ isAdmin }: { isAdmin: boolean }) {
   return (
     <Tabs defaultValue="bd" className="w-full">
       <TabsList>
@@ -14,19 +14,19 @@ export default function DataPage() {
       </TabsList>
 
       <TabsContent value="bd" className="mt-4">
-        <MasterManager category="bd" />
+        <MasterManager category="bd" isAdmin={isAdmin} />
       </TabsContent>
 
       <TabsContent value="bd_level" className="mt-4">
-        <MasterManager category="bd_level" />
+        <MasterManager category="bd_level" isAdmin={isAdmin} />
       </TabsContent>
 
       <TabsContent value="customer_type" className="mt-4">
-        <MasterManager category="customer_type" />
+        <MasterManager category="customer_type" isAdmin={isAdmin} />
       </TabsContent>
 
       <TabsContent value="point_type" className="mt-4">
-        <MasterManager category="point_type" />
+        <MasterManager category="point_type" isAdmin={isAdmin} />
       </TabsContent>
     </Tabs>
   );
