@@ -52,6 +52,13 @@ function formatMonthLabel(month: string) {
   return `${monthNumber}/${year}`;
 }
 
+function getMedalByIndex(index: number) {
+  if (index === 0) return "🥇";
+  if (index === 1) return "🥈";
+  if (index === 2) return "🥉";
+  return null;
+}
+
 type SortDirection = "asc" | "desc";
 type BdSortField = "points" | "money";
 
@@ -229,6 +236,38 @@ export default function MasterManager({
     return arr;
   }, [items, totals, category, bdSortField, bdSortDirection]);
 
+  const bdMedalMap = useMemo(() => {
+    if (category !== "bd") return {};
+
+    const map: Record<string, string> = {};
+
+    const rankedItems = sortedItems.filter((item) => {
+      const value =
+        bdSortField === "points"
+          ? (totals[item.id]?.points ?? 0)
+          : (totals[item.id]?.money ?? 0);
+
+      return value > 0;
+    });
+
+    let medalTargets: MasterItem[];
+
+    if (bdSortDirection === "desc") {
+      medalTargets = rankedItems.slice(0, 3);
+    } else {
+      medalTargets = rankedItems.slice(-3).reverse();
+    }
+
+    medalTargets.forEach((item, index) => {
+      const medal = getMedalByIndex(index);
+      if (medal) {
+        map[item.id] = medal;
+      }
+    });
+
+    return map;
+  }, [category, sortedItems, bdSortField, bdSortDirection, totals]);
+
   async function onSave() {
     if (isSaveDisabled) return;
 
@@ -359,7 +398,7 @@ export default function MasterManager({
           </>
         )}
 
-        {isAdmin && (        
+        {isAdmin && (
           <Button className="cursor-pointer h-9" onClick={openCreate}>
             {ui.addButton}
           </Button>
@@ -371,7 +410,18 @@ export default function MasterManager({
           <table className="w-full text-sm">
             <colgroup>
               <col style={{ width: "6%" }} />
-              <col style={{ width: category === "bd" ? (isAdmin ? "36%" : "60%") : (isAdmin ? "74%" : "94%") }} />
+              <col
+                style={{
+                  width:
+                    category === "bd"
+                      ? isAdmin
+                        ? "36%"
+                        : "60%"
+                      : isAdmin
+                      ? "74%"
+                      : "94%",
+                }}
+              />
               {category === "bd" && (
                 <>
                   <col style={{ width: "16%" }} />
@@ -400,49 +450,64 @@ export default function MasterManager({
             </thead>
 
             <tbody>
-              {sortedItems.map((it, index) => (
-                <tr key={it.id} className="border-t">
-                  <td className="p-2 text-muted-foreground">{index + 1}</td>
+              {sortedItems.map((it, index) => {
+                const displayRank =
+                  category === "bd" && bdSortDirection === "asc"
+                    ? sortedItems.length - index
+                    : index + 1;
 
-                  <td className="p-2 truncate" title={it.label}>
-                    {it.label}
-                  </td>
-
-                  {category === "bd" && (
-                    <>
-                      <td className="p-2 text-right tabular-nums">
-                        {(totals[it.id]?.points ?? 0).toLocaleString("en-US")}
-                      </td>
-
-                      <td className="p-2 text-right tabular-nums">
-                        {(totals[it.id]?.money ?? 0).toLocaleString("en-US")}
-                      </td>
-                    </>
-                  )}
-
-                  {isAdmin && (
-                    <td className="p-2 text-right">
-                      <div className="inline-flex items-center gap-2 whitespace-nowrap">
-                        <Button
-                          className="cursor-pointer"
-                          variant="secondary"
-                          onClick={() => openEdit(it)}
-                        >
-                          Edit
-                        </Button>
-
-                        <Button
-                          className="cursor-pointer"
-                          variant="destructive"
-                          onClick={() => onDelete(it.id)}
-                        >
-                          Delete
-                        </Button>
-                      </div>
+                return (
+                  <tr key={it.id} className="border-t">
+                    <td className="p-2 text-muted-foreground">
+                      {category === "bd" && bdMedalMap[it.id] ? (
+                        <span className="text-base leading-none">
+                          {bdMedalMap[it.id]}
+                        </span>
+                      ) : (
+                        displayRank
+                      )}
                     </td>
-                  )}
-                </tr>
-              ))}
+
+                    <td className="p-2 truncate" title={it.label}>
+                      {it.label}
+                    </td>
+
+                    {category === "bd" && (
+                      <>
+                        <td className="p-2 text-right tabular-nums">
+                          {(totals[it.id]?.points ?? 0).toLocaleString("en-US")}
+                        </td>
+
+                        <td className="p-2 text-right tabular-nums">
+                          {(totals[it.id]?.money ?? 0).toLocaleString("en-US")}
+                        </td>
+                      </>
+                    )}
+
+                    {isAdmin && (
+                      <td className="p-2 text-right">
+                        <div className="inline-flex items-center gap-2 whitespace-nowrap">
+                          <Button
+                            className="cursor-pointer"
+                            variant="secondary"
+                            onClick={() => openEdit(it)}
+                          >
+                            Edit
+                          </Button>
+
+                          <Button
+                            className="cursor-pointer"
+                            variant="destructive"
+                            onClick={() => onDelete(it.id)}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
