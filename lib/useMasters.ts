@@ -1,7 +1,18 @@
 import { useEffect, useState } from "react";
 import { fetchMasters, MasterCategory, MasterItem } from "./masters";
 
-const cache: Record<string, MasterItem[]> = {};
+const cache: Partial<Record<MasterCategory, MasterItem[]>> = {};
+
+export function invalidateMastersCache(category?: MasterCategory) {
+  if (category) {
+    delete cache[category];
+    return;
+  }
+
+  (Object.keys(cache) as MasterCategory[]).forEach((key) => {
+    delete cache[key];
+  });
+}
 
 export function useMasters(category: MasterCategory) {
   const [items, setItems] = useState<MasterItem[]>(cache[category] ?? []);
@@ -12,7 +23,7 @@ export function useMasters(category: MasterCategory) {
 
     async function loadData(forceRefresh = false) {
       if (!forceRefresh && cache[category]) {
-        setItems(cache[category]);
+        setItems(cache[category] ?? []);
         setLoading(false);
         return;
       }

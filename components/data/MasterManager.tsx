@@ -28,6 +28,7 @@ import {
 } from "@/lib/masters";
 import { MASTER_CATEGORY_UI } from "@/lib/masterUi";
 import { supabase } from "@/lib/supabaseClient";
+import { invalidateMastersCache } from "@/lib/useMasters";
 
 function normalizeName(value: string) {
   return value
@@ -249,6 +250,7 @@ export default function MasterManager({
       });
     }
 
+    invalidateMastersCache(category);
     await refresh();
     window.dispatchEvent(new Event("masters-updated"));
 
@@ -283,6 +285,8 @@ export default function MasterManager({
     }
 
     await deleteMaster(id);
+
+    invalidateMastersCache(category);
     await refresh();
     window.dispatchEvent(new Event("masters-updated"));
   }

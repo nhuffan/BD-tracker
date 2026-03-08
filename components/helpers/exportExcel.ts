@@ -107,7 +107,7 @@ export function exportToExcel(
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Records");
-  XLSX.utils.book_append_sheet(wb, summaryWs, "Summary");
+  // XLSX.utils.book_append_sheet(wb, summaryWs, "Summary");
 
   XLSX.writeFile(
     wb,
