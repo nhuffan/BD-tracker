@@ -252,7 +252,7 @@ export default function CreateDialog({
           </div>
 
           <div>
-            <p className="mb-1.5 text-sm font-medium text-foreground">Money</p>
+            <p className="mb-1.5 text-sm font-medium text-foreground">Bonus</p>
             <Input
               inputMode="numeric"
               value={moneyInput}
@@ -266,7 +266,7 @@ export default function CreateDialog({
                   money: parsed,
                 }));
               }}
-              placeholder="Enter money"
+              placeholder="Enter bonus"
             />
           </div>
 

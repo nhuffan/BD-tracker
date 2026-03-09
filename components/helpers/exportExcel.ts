@@ -22,7 +22,7 @@ export function exportToExcel(
     "Point Type": maps?.pointType?.[r.point_type_id] ?? "",
 
     Points: r.points?.toLocaleString("en-US"),
-    "Money (VND)":
+    "Bonus (VND)":
       r.money !== null && r.money !== undefined
         ? `${r.money.toLocaleString("en-US")}`
         : "",
@@ -66,7 +66,7 @@ export function exportToExcel(
   const summaryData = [
     { Metric: "Total Records", Value: totalRecords },
     { Metric: "Total Points", Value: totalPoints },
-    { Metric: "Total Money", Value: `${totalMoney} VND` },
+    { Metric: "Total Bonus", Value: `${totalMoney} VND` },
   ];
 
   const summaryWs = XLSX.utils.json_to_sheet(summaryData);

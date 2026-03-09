@@ -355,7 +355,7 @@ export default function MasterManager({
                 {category === "bd" && (
                   <>
                     <th className="p-2 text-right">Points</th>
-                    <th className="p-2 text-right">Money</th>
+                    <th className="p-2 text-right">Bonus</th>
                   </>
                 )}
                 {isAdmin && <th className="p-2 text-right">Action</th>}
@@ -454,7 +454,7 @@ export default function MasterManager({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="points">Points</SelectItem>
-                    <SelectItem value="money">Money</SelectItem>
+                    <SelectItem value="money">Bonus</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

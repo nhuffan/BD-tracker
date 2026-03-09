@@ -141,7 +141,7 @@ export default function EditRecordDialog({
 
           <div>
             <p className="mb-1.5 text-sm font-medium text-foreground">
-              Money
+              Bonus
             </p>
             <Input
               inputMode="numeric"
@@ -149,7 +149,7 @@ export default function EditRecordDialog({
               onChange={(e) =>
                 setMoneyInput(formatNumberInput(e.target.value))
               }
-              placeholder="Enter money"
+              placeholder="Enter bonus"
             />
           </div>
 

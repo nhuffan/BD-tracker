@@ -149,7 +149,7 @@ export default function RecordsTable({
                   <th className="p-2 text-left w-[160px]">Customer Type</th>
                   <th className="p-2 text-left w-[220px]">Point Type</th>
                   <th className="p-2 text-left w-[110px]">Points</th>
-                  <th className="p-2 text-left w-[130px]">Money</th>
+                  <th className="p-2 text-left w-[130px]">Bonus</th>
                   <th className="p-2 text-left w-[60px]">Note</th>
                   {selectionMode && <th className="p-2 w-[50px] text-right"></th>}
                 </tr>
