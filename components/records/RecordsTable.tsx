@@ -27,6 +27,8 @@ export default function RecordsTable({
   customerTypeMap,
   pointTypeMap,
   isAdmin,
+  search,
+  onSearchChange,
 }: {
   rows: RecordVM[];
   loading: boolean;
@@ -36,26 +38,15 @@ export default function RecordsTable({
   customerTypeMap: Record<string, string>;
   pointTypeMap: Record<string, string>;
   isAdmin: boolean;
+  search: string;
+  onSearchChange: (value: string) => void;
 }) {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
-  const [search, setSearch] = useState("");
-
   const [editing, setEditing] = useState<RecordVM | null>(null);
   const [editOpen, setEditOpen] = useState(false);
 
   const selectedIds = Object.keys(selected).filter((id) => selected[id]);
-
-  const filteredRows = rows.filter((r) => {
-    if (!search) return true;
-
-    const keyword = search.toLowerCase();
-
-    return (
-      r.customer_name?.toLowerCase().includes(keyword) ||
-      r.note?.toLowerCase().includes(keyword)
-    );
-  });
 
   function toggleRowSelection(id: string) {
     if (!selectionMode) return;
@@ -124,17 +115,13 @@ export default function RecordsTable({
     <TooltipProvider>
       <>
         <div className="border rounded-xl overflow-hidden">
-
-          {/* Toolbar */}
           <div className="flex items-center gap-3 p-2 border-b">
-
-            {/* Search */}
             <div className="relative w-[260px]">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search customer or note..."
+                placeholder="Search BD, customer or note..."
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => onSearchChange(e.target.value)}
                 className="pl-8 h-9"
               />
             </div>
@@ -169,7 +156,7 @@ export default function RecordsTable({
 
           <div className="w-full overflow-x-auto">
             <table className="w-full text-sm table-fixed">
-              <thead className="bg-muted/50">
+              <thead className="sticky top-0 z-10 bg-muted/50 backdrop-blur supports-[backdrop-filter]:bg-muted/40">
                 <tr>
                   <th className="p-2 text-left w-[120px]">Date</th>
                   <th className="p-2 text-left w-[140px]">BD Name</th>
@@ -187,7 +174,7 @@ export default function RecordsTable({
               </thead>
 
               <tbody>
-                {filteredRows.map((r) => {
+                {rows.map((r) => {
                   const isSelected = !!selected[r.id];
 
                   return (
@@ -234,7 +221,10 @@ export default function RecordsTable({
 
                       <td
                         className="p-2 whitespace-nowrap overflow-hidden text-ellipsis"
-                        title={customerTypeMap[r.customer_type_id] ?? r.customer_type_id}
+                        title={
+                          customerTypeMap[r.customer_type_id] ??
+                          r.customer_type_id
+                        }
                       >
                         {customerTypeMap[r.customer_type_id] ??
                           r.customer_type_id}
@@ -299,7 +289,7 @@ export default function RecordsTable({
               </tbody>
             </table>
 
-            {filteredRows.length === 0 && (
+            {rows.length === 0 && (
               <div className="p-4 text-sm text-muted-foreground">
                 No records found
               </div>
