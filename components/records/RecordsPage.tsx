@@ -11,11 +11,12 @@ import RecordsTable from "./RecordsTable";
 import { useMasters } from "@/lib/useMasters";
 
 export type Filters = {
-  month?: string; // "YYYY-MM"
+  month?: string;
   from?: string;
   to?: string;
   bd_id?: string;
   customer_name?: string;
+  note?: string;
   customer_type_id?: string;
   point_type_id?: string;
 };
@@ -139,47 +140,54 @@ export default function RecordsPage({ isAdmin }: { isAdmin: boolean }) {
         if (filters.bd_id && r.bd_id !== filters.bd_id) return false;
         if (filters.customer_type_id && r.customer_type_id !== filters.customer_type_id) return false;
         if (filters.point_type_id && r.point_type_id !== filters.point_type_id) return false;
+
         if (
           filters.customer_name &&
           !r.customer_name.toLowerCase().includes(filters.customer_name.toLowerCase())
         ) {
           return false;
         }
+
+        if (
+          filters.note &&
+          !(r.note ?? "").toLowerCase().includes(filters.note.toLowerCase())
+        ) {
+          return false;
+        }
+
         return true;
       })
       .sort((a, b) => {
-        // newest -> oldest
         if (a.event_date !== b.event_date) {
           return b.event_date.localeCompare(a.event_date);
         }
 
-        // nếu cùng ngày thì ưu tiên updated_at / created_at mới hơn
         const aTime = a.updated_at ?? a.created_at ?? "";
         const bTime = b.updated_at ?? b.created_at ?? "";
         return bTime.localeCompare(aTime);
       });
   }, [rows, filters]);
 
-return (
-  <div className="space-y-3">
-    <RecordsToolbar
-      filters={filters}
-      onChangeFilters={setFilters}
-      rowsForExport={filtered}
-      onRefresh={refresh}
-      isAdmin = {isAdmin}
-    />
+  return (
+    <div className="space-y-3">
+      <RecordsToolbar
+        filters={filters}
+        onChangeFilters={setFilters}
+        rowsForExport={filtered}
+        onRefresh={refresh}
+        isAdmin = {isAdmin}
+      />
 
-    <RecordsTable
-      rows={filtered}
-      loading={loading}
-      onChanged={refresh}
-      bdMap={bdMap}
-      levelMap={levelMap}
-      customerTypeMap={customerTypeMap}
-      pointTypeMap={pointTypeMap}
-      isAdmin={isAdmin}
-    />
-  </div>
+      <RecordsTable
+        rows={filtered}
+        loading={loading}
+        onChanged={refresh}
+        bdMap={bdMap}
+        levelMap={levelMap}
+        customerTypeMap={customerTypeMap}
+        pointTypeMap={pointTypeMap}
+        isAdmin={isAdmin}
+      />
+    </div>
   );
 }

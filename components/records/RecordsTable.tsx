@@ -5,10 +5,11 @@ import type { RecordVM } from "./RecordsPage";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { db } from "@/lib/db";
 import { syncPending } from "@/lib/sync";
 import { formatDMY } from "@/lib/date";
-import { FileText } from "lucide-react";
+import { FileText, Search } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -38,11 +39,23 @@ export default function RecordsTable({
 }) {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const [search, setSearch] = useState("");
 
   const [editing, setEditing] = useState<RecordVM | null>(null);
   const [editOpen, setEditOpen] = useState(false);
 
   const selectedIds = Object.keys(selected).filter((id) => selected[id]);
+
+  const filteredRows = rows.filter((r) => {
+    if (!search) return true;
+
+    const keyword = search.toLowerCase();
+
+    return (
+      r.customer_name?.toLowerCase().includes(keyword) ||
+      r.note?.toLowerCase().includes(keyword)
+    );
+  });
 
   function toggleRowSelection(id: string) {
     if (!selectionMode) return;
@@ -111,31 +124,47 @@ export default function RecordsTable({
     <TooltipProvider>
       <>
         <div className="border rounded-xl overflow-hidden">
-          <div className="flex items-center p-2 border-b">
+
+          {/* Toolbar */}
+          <div className="flex items-center gap-3 p-2 border-b">
+
+            {/* Search */}
+            <div className="relative w-[260px]">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search customer or note..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-8 h-9"
+              />
+            </div>
+
             <div className="flex-1" />
-              {isAdmin && (
-                <div className="flex items-center gap-2">
-                  {selectionMode && (
-                    <Button
-                      className="cursor-pointer"
-                      variant="ghost"
-                      onClick={() => {
-                        setSelectionMode(false);
-                        setSelected({});
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                  )}
+
+            {isAdmin && (
+              <div className="flex items-center gap-2">
+                {selectionMode && (
                   <Button
                     className="cursor-pointer"
-                    variant={selectionMode ? "destructive" : "secondary"}
-                    onClick={handleDelete}
+                    variant="ghost"
+                    onClick={() => {
+                      setSelectionMode(false);
+                      setSelected({});
+                    }}
                   >
-                    {selectionMode ? `Delete (${selectedIds.length})` : "Delete"}
+                    Cancel
                   </Button>
-                </div>
-              )}
+                )}
+
+                <Button
+                  className="cursor-pointer"
+                  variant={selectionMode ? "destructive" : "secondary"}
+                  onClick={handleDelete}
+                >
+                  {selectionMode ? `Delete (${selectedIds.length})` : "Delete"}
+                </Button>
+              </div>
+            )}
           </div>
 
           <div className="w-full overflow-x-auto">
@@ -151,12 +180,14 @@ export default function RecordsTable({
                   <th className="p-2 text-left w-[110px]">Points</th>
                   <th className="p-2 text-left w-[130px]">Bonus</th>
                   <th className="p-2 text-left w-[60px]">Note</th>
-                  {selectionMode && <th className="p-2 w-[50px] text-right"></th>}
+                  {selectionMode && (
+                    <th className="p-2 w-[50px] text-right"></th>
+                  )}
                 </tr>
               </thead>
 
               <tbody>
-                {rows.map((r) => {
+                {filteredRows.map((r) => {
                   const isSelected = !!selected[r.id];
 
                   return (
@@ -205,7 +236,8 @@ export default function RecordsTable({
                         className="p-2 whitespace-nowrap overflow-hidden text-ellipsis"
                         title={customerTypeMap[r.customer_type_id] ?? r.customer_type_id}
                       >
-                        {customerTypeMap[r.customer_type_id] ?? r.customer_type_id}
+                        {customerTypeMap[r.customer_type_id] ??
+                          r.customer_type_id}
                       </td>
 
                       <td
@@ -215,7 +247,9 @@ export default function RecordsTable({
                         {pointTypeMap[r.point_type_id] ?? r.point_type_id}
                       </td>
 
-                      <td className="p-2">{r.points?.toLocaleString("en-US")}</td>
+                      <td className="p-2">
+                        {r.points?.toLocaleString("en-US")}
+                      </td>
 
                       <td className="p-2">
                         {r.money?.toLocaleString("en-US") ?? ""}
@@ -265,7 +299,7 @@ export default function RecordsTable({
               </tbody>
             </table>
 
-            {rows.length === 0 && (
+            {filteredRows.length === 0 && (
               <div className="p-4 text-sm text-muted-foreground">
                 No records found
               </div>
@@ -275,10 +309,10 @@ export default function RecordsTable({
 
         {isAdmin && (
           <EditRecordDialog
-          open={editOpen}
-          onOpenChange={setEditOpen}
-          record={editing}
-          onSaved={onChanged}
+            open={editOpen}
+            onOpenChange={setEditOpen}
+            record={editing}
+            onSaved={onChanged}
           />
         )}
       </>
