@@ -17,7 +17,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowUpDown, CalendarDays } from "lucide-react";
 
 import type { MasterCategory, MasterItem } from "@/lib/masters";
 import {
@@ -29,6 +28,7 @@ import {
 import { MASTER_CATEGORY_UI } from "@/lib/masterUi";
 import { supabase } from "@/lib/supabaseClient";
 import { invalidateMastersCache } from "@/lib/useMasters";
+import { Pencil, Trash2, ArrowUpDown, CalendarDays, Plus } from "lucide-react";
 
 function normalizeName(value: string) {
   return value
@@ -401,21 +401,23 @@ export default function MasterManager({
 
                     {isAdmin && (
                       <td className="p-2 text-right">
-                        <div className="inline-flex items-center gap-2 whitespace-nowrap">
+                        <div className="inline-flex items-center gap-2">
                           <Button
-                            className="cursor-pointer"
-                            variant="secondary"
+                            size="icon"
+                            variant="ghost"
+                            className="cursor-pointer h-8 w-8"
                             onClick={() => openEdit(it)}
                           >
-                            Edit
+                            <Pencil className="h-4 w-4 text-muted-foreground" />
                           </Button>
 
                           <Button
-                            className="cursor-pointer"
-                            variant="destructive"
+                            size="icon"
+                            variant="ghost"
+                            className="cursor-pointer h-8 w-8"
                             onClick={() => onDelete(it.id)}
                           >
-                            Delete
+                            <Trash2 className="h-4 w-4 text-muted-foreground" />
                           </Button>
                         </div>
                       </td>
@@ -499,7 +501,11 @@ export default function MasterManager({
         )}
 
         {isAdmin && (
-          <Button className="cursor-pointer h-9" onClick={openCreate}>
+          <Button
+            className="cursor-pointer h-9 flex items-center gap-2"
+            onClick={openCreate}
+          >
+            <Plus className="h-4 w-4" />
             {ui.addButton}
           </Button>
         )}

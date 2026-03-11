@@ -8,7 +8,7 @@ import FilterDialog from "./dialogs/FilterDialog";
 import CreateDialog from "./dialogs/CreateDialog";
 import { exportToExcel } from "../helpers/exportExcel";
 import { useMasters } from "@/lib/useMasters";
-
+import { Filter, Plus, FileSpreadsheet, RefreshCw } from "lucide-react";
 
 export default function RecordsToolbar({
   filters,
@@ -39,19 +39,18 @@ export default function RecordsToolbar({
   return (
     <div className="flex items-center gap-2">
       <Button className="cursor-pointer" variant="secondary" onClick={() => setOpenFilter(true)}>
+        <Filter className="h-4 w-4" />
         Filter
       </Button>
 
       {isAdmin && (
         <Button className="cursor-pointer" onClick={() => setOpenCreate(true)}>
+          <Plus className="h-4 w-4" />
           Create
         </Button>
       )}
 
-      <Button
-        className="cursor-pointer"
-        variant="outline"
-        onClick={() =>
+      <Button className="cursor-pointer" variant="outline" onClick={() =>
           exportToExcel(rowsForExport, {
             bd: bdMap,
             level: levelMap,
@@ -60,12 +59,14 @@ export default function RecordsToolbar({
           })
         }
       >
+        <FileSpreadsheet className="h-4 w-4" />
         Export Excel
       </Button>
 
       <div className="flex-1" />
 
       <Button className="cursor-pointer" variant="ghost" onClick={onRefresh}>
+        <RefreshCw className="h-4 w-4" />
         Refresh
       </Button>
 

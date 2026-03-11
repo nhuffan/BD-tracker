@@ -2,6 +2,7 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import MasterManager from "./MasterManager";
+import { Users, BarChart3, Shapes, Star } from "lucide-react";
 
 export default function DataPage({ isAdmin }: { isAdmin: boolean }) {
   return (
