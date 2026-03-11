@@ -434,81 +434,77 @@ export default function MasterManager({
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-3">
-        <div className="text-base font-semibold whitespace-nowrap">
-          {ui.title}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+        <div className="flex flex-wrap items-center gap-2">
+          {category === "bd" && (
+            <>
+              <div className="flex shrink-0 items-center gap-2 rounded-md border px-2 h-9">
+                <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+
+                <div className="w-[100px]">
+                  <Select
+                    value={bdSortField}
+                    onValueChange={(value) => setBdSortField(value as BdSortField)}
+                  >
+                    <SelectTrigger className="border-0 h-8 shadow-none px-2">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="points">Points</SelectItem>
+                      <SelectItem value="money">Bonus</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="w-[110px]">
+                  <Select
+                    value={bdSortDirection}
+                    onValueChange={(value) =>
+                      setBdSortDirection(value as SortDirection)
+                    }
+                  >
+                    <SelectTrigger className="border-0 h-8 shadow-none px-2">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="desc">High → Low</SelectItem>
+                      <SelectItem value="asc">Low → High</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="shrink-0">
+                <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                  <SelectTrigger className="h-9 inline-flex min-w-[140px] w-auto gap-2">
+                    <CalendarDays className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <SelectValue placeholder="Month" />
+                  </SelectTrigger>
+
+                  <SelectContent>
+                    <SelectItem value={ALL_TIME}>All Time</SelectItem>
+
+                    {monthOptions.map((month) => (
+                      <SelectItem key={month} value={month}>
+                        {formatMonthLabel(month)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </>
+          )}
+
+          {isAdmin && (
+            <Button
+              className="cursor-pointer h-9 flex items-center gap-2"
+              onClick={openCreate}
+            >
+              <Plus className="h-4 w-4" />
+              {ui.addButton}
+            </Button>
+          )}
         </div>
-
-        <div className="flex-1" />
-
-        {category === "bd" && (
-          <>
-            <div className="flex shrink-0 items-center gap-2 rounded-md border px-2 h-9">
-              <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
-
-              <div className="w-[100px]">
-                <Select
-                  value={bdSortField}
-                  onValueChange={(value) => setBdSortField(value as BdSortField)}
-                >
-                  <SelectTrigger className="border-0 h-8 shadow-none px-2">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="points">Points</SelectItem>
-                    <SelectItem value="money">Bonus</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="w-[110px]">
-                <Select
-                  value={bdSortDirection}
-                  onValueChange={(value) =>
-                    setBdSortDirection(value as SortDirection)
-                  }
-                >
-                  <SelectTrigger className="border-0 h-8 shadow-none px-2">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="desc">High → Low</SelectItem>
-                    <SelectItem value="asc">Low → High</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="shrink-0">
-              <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                <SelectTrigger className="h-9 inline-flex min-w-[140px] w-auto gap-2">
-                  <CalendarDays className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <SelectValue placeholder="Month" />
-                </SelectTrigger>
-
-                <SelectContent>
-                  <SelectItem value={ALL_TIME}>All Time</SelectItem>
-
-                  {monthOptions.map((month) => (
-                    <SelectItem key={month} value={month}>
-                      {formatMonthLabel(month)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </>
-        )}
-
-        {isAdmin && (
-          <Button
-            className="cursor-pointer h-9 flex items-center gap-2"
-            onClick={openCreate}
-          >
-            <Plus className="h-4 w-4" />
-            {ui.addButton}
-          </Button>
-        )}
       </div>
 
       {category === "bd" ? (
