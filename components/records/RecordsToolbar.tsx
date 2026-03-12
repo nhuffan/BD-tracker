@@ -60,7 +60,7 @@ export default function RecordsToolbar({
         }
       >
         <FileSpreadsheet className="h-4 w-4" />
-        Export Excel
+        Export Data
       </Button>
 
       <div className="flex-1" />

@@ -61,9 +61,9 @@ export default function DataPage({ isAdmin }: { isAdmin: boolean }) {
                 className={cn(
                   "flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left transition-all",
                   "border border-transparent",
-                  isActive
-                    ? "bg-primary text-primary-foreground shadow-md"
-                    : "hover:bg-muted text-foreground"
+                  isActive 
+                  ? "bg-primary text-primary-foreground shadow-md"
+                  : "hover:bg-muted text-foreground"
                 )}
               >
                 <div
