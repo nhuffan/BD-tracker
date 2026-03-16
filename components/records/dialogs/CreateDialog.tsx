@@ -64,11 +64,13 @@ export default function CreateDialog({
     point_type_id: "",
     points: 0,
     money: null,
+    package_amount: null,
     note: null,
   });
 
   const [pointsInput, setPointsInput] = useState("");
   const [moneyInput, setMoneyInput] = useState("");
+  const [packageAmountInput, setPackageAmountInput] = useState("");
 
   const isSaveDisabled =
     !form.event_date ||
@@ -112,6 +114,7 @@ export default function CreateDialog({
       point_type_id: "",
       points: 0,
       money: null,
+      package_amount: null,
       note: null,
     });
     setPointsInput("");
@@ -230,6 +233,27 @@ export default function CreateDialog({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div>
+            <p className="mb-1.5 text-sm font-medium text-foreground">
+              Package Amount
+            </p>
+            <Input
+              inputMode="numeric"
+              value={packageAmountInput}
+              onChange={(e) => {
+                const formatted = formatNumberInput(e.target.value);
+                const parsed = parseNumberInput(e.target.value);
+
+                setPackageAmountInput(formatted);
+                setForm((f) => ({
+                  ...f,
+                  package_amount: parsed,
+                }));
+              }}
+              placeholder="Enter package amount"
+            />
           </div>
 
           <div>

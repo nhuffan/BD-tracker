@@ -84,7 +84,7 @@ export default function MasterManager({
   const [showInUseDialog, setShowInUseDialog] = useState(false);
 
   const [totals, setTotals] = useState<
-    Record<string, { points: number; money: number }>
+    Record<string, { points: number; money: number; packageAmount: number | null }>
   >({});
 
   const [monthOptions, setMonthOptions] = useState<string[]>([]);
@@ -105,7 +105,7 @@ export default function MasterManager({
       if (category === "bd") {
         const { data: records } = await supabase
           .from("records")
-          .select("bd_id, points, money, event_date");
+          .select("bd_id, points, money, package_amount, event_date");
 
         const allRecords = records ?? [];
 
@@ -126,17 +126,25 @@ export default function MasterManager({
                 (r) => r.event_date?.slice(0, 7) === selectedMonth
               );
 
-        const map: Record<string, { points: number; money: number }> = {};
+        const map: Record<
+          string,
+          { points: number; money: number; packageAmount: number | null }
+        > = {};
 
         filteredRecords.forEach((r) => {
           if (!r.bd_id) return;
 
           if (!map[r.bd_id]) {
-            map[r.bd_id] = { points: 0, money: 0 };
+            map[r.bd_id] = { points: 0, money: 0, packageAmount: null };
           }
 
           map[r.bd_id].points += r.points ?? 0;
           map[r.bd_id].money += r.money ?? 0;
+          if (r.package_amount != null) {
+            map[r.bd_id].packageAmount =
+            (map[r.bd_id].packageAmount ?? 0) + r.package_amount;
+          }
+
         });
 
         setTotals(map);
@@ -356,6 +364,7 @@ export default function MasterManager({
                   <>
                     <th className="p-2 text-right">Points</th>
                     <th className="p-2 text-right">Bonus</th>
+                    <th className="p-2 text-right">Package Amount</th>
                   </>
                 )}
                 {isAdmin && <th className="p-2 text-right">Action</th>}
@@ -395,6 +404,14 @@ export default function MasterManager({
 
                         <td className="p-2 text-right tabular-nums">
                           {(totals[it.id]?.money ?? 0).toLocaleString("en-US")}
+                        </td>
+
+                        <td className="p-2 text-right tabular-nums"> {(() => {
+                            const packageAmount = totals[it.id]?.packageAmount;
+                            return packageAmount != null
+                            ? packageAmount.toLocaleString("en-US")
+                            : "—";
+                          })()}
                         </td>
                       </>
                     )}

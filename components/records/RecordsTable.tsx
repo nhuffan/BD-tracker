@@ -158,14 +158,15 @@ export default function RecordsTable({
             <table className="w-full text-sm table-fixed">
               <thead className="sticky top-0 z-10 bg-muted/50 backdrop-blur supports-[backdrop-filter]:bg-muted/40">
                 <tr>
-                  <th className="p-2 text-left w-[120px]">Date</th>
-                  <th className="p-2 text-left w-[140px]">BD Name</th>
-                  <th className="p-2 text-left w-[120px]">BD Level</th>
-                  <th className="p-2 text-left w-[220px]">Customer Name</th>
+                  <th className="p-2 text-left w-[80px]">Date</th>
+                  <th className="p-2 text-left w-[100px]">BD Name</th>
+                  <th className="p-2 text-left w-[100px]">BD Level</th>
+                  <th className="p-2 text-left w-[180px]">Customer Name</th>
                   <th className="p-2 text-left w-[160px]">Customer Type</th>
-                  <th className="p-2 text-left w-[220px]">Point Type</th>
-                  <th className="p-2 text-left w-[110px]">Points</th>
-                  <th className="p-2 text-left w-[130px]">Bonus</th>
+                  <th className="p-2 text-left w-[200px]">Point Type</th>
+                  <th className="p-2 text-left w-[100px]">Package Amount</th>
+                  <th className="p-2 text-left w-[100px]">Points</th>
+                  <th className="p-2 text-left w-[100px]">Bonus</th>
                   <th className="p-2 text-left w-[60px]">Note</th>
                   {selectionMode && (
                     <th className="p-2 w-[50px] text-right"></th>
@@ -238,11 +239,15 @@ export default function RecordsTable({
                       </td>
 
                       <td className="p-2">
+                        {r.package_amount?.toLocaleString("en-US") ?? "—"}
+                      </td>
+
+                      <td className="p-2">
                         {r.points?.toLocaleString("en-US")}
                       </td>
 
                       <td className="p-2">
-                        {r.money?.toLocaleString("en-US") ?? ""}
+                        {r.money?.toLocaleString("en-US") ?? 0}
                       </td>
 
                       <td className="p-2 text-left">

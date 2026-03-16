@@ -127,15 +127,8 @@ export default function RecordsPage({ isAdmin }: { isAdmin: boolean }) {
         if (filters.from && r.event_date < filters.from) return false;
         if (filters.to && r.event_date > filters.to) return false;
         if (filters.bd_id && r.bd_id !== filters.bd_id) return false;
-        if (
-          filters.customer_type_id &&
-          r.customer_type_id !== filters.customer_type_id
-        ) {
-          return false;
-        }
-        if (filters.point_type_id && r.point_type_id !== filters.point_type_id) {
-          return false;
-        }
+        if (filters.customer_type_id && r.customer_type_id !== filters.customer_type_id) return false;
+        if (filters.point_type_id && r.point_type_id !== filters.point_type_id) return false;
 
         if (
           filters.customer_name &&

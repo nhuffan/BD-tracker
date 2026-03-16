@@ -45,6 +45,7 @@ export default function EditRecordDialog({
   const [pointsInput, setPointsInput] = useState("");
   const [moneyInput, setMoneyInput] = useState("");
   const [note, setNote] = useState("");
+  const [packageAmountInput, setPackageAmountInput] = useState("");
 
   useEffect(() => {
     if (!record) return;
@@ -61,11 +62,18 @@ export default function EditRecordDialog({
         : ""
     );
 
+    setPackageAmountInput(
+      record.package_amount !== null && record.package_amount !== undefined
+        ? Number(record.package_amount).toLocaleString("en-US")
+        : ""
+    );
+
     setNote(record.note ?? "");
   }, [record]);
 
   const parsedPoints = parseNumberInput(pointsInput) ?? 0;
   const parsedMoney = parseNumberInput(moneyInput);
+  const parsedPackageAmount = parseNumberInput(packageAmountInput);
 
   const isSaveDisabled =
     !record || parsedPoints <= 0 || parsedMoney == null || parsedMoney <= 0;
@@ -87,6 +95,7 @@ export default function EditRecordDialog({
           point_type_id: record.point_type_id,
           points: record.points,
           money: record.money,
+          package_amount: record.package_amount,
           note: record.note,
           created_at: record.created_at,
           updated_at: record.updated_at,
@@ -98,6 +107,7 @@ export default function EditRecordDialog({
       ...baseRecord,
       points: parsedPoints,
       money: parsedMoney,
+      package_amount: parsedPackageAmount,
       note: note || null,
       sync_status: "pending",
       updated_at_local: Date.now(),
@@ -125,6 +135,20 @@ export default function EditRecordDialog({
         </DialogHeader>
 
         <div className="space-y-3">
+          <div>
+            <p className="mb-1.5 text-sm font-medium text-foreground">
+              Package Amount
+            </p>
+            <Input
+              inputMode="numeric"
+              value={packageAmountInput}
+              onChange={(e) =>
+                setPackageAmountInput(formatNumberInput(e.target.value))
+              }
+              placeholder="Enter package amount"
+            />
+          </div>
+
           <div>
             <p className="mb-1.5 text-sm font-medium text-foreground">
               Points
