@@ -156,7 +156,7 @@ export default function RecordsTable({
 
           <div className="w-full overflow-x-auto">
             <table className="w-full text-sm table-fixed">
-              <thead className="sticky top-0 z-10 bg-muted/50 backdrop-blur supports-[backdrop-filter]:bg-muted/40">
+              <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur border-b shadow-sm">
                 <tr>
                   <th className="p-2 text-left w-[80px]">Date</th>
                   <th className="p-2 text-left w-[100px]">BD Name</th>

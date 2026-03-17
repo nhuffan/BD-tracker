@@ -19,13 +19,17 @@ export function exportToExcel(
 
     "Customer Name": r.customer_name,
     "Customer Type": maps?.customerType?.[r.customer_type_id] ?? "",
-    "Point Type": maps?.pointType?.[r.point_type_id] ?? "",
+    "Point Type": maps?.pointType?.[r.point_type_id] ?? "0",
+    "Package Amount":
+      r.package_amount !== null && r.package_amount !== undefined
+        ? r.package_amount.toLocaleString("en-US")
+        : "—",
 
     Points: r.points?.toLocaleString("en-US"),
     "Bonus (VND)":
       r.money !== null && r.money !== undefined
-        ? `${r.money.toLocaleString("en-US")}`
-        : "",
+        ? r.money.toLocaleString("en-US")
+        : "0",
     Note: r.note ?? "",
   }));
 
@@ -55,6 +59,7 @@ export function exportToExcel(
   ws["!cols"] = colWidths;
 
   const totalRecords = rows.length;
+
   const totalPoints = rows
     .reduce((sum, r) => sum + (r.points ?? 0), 0)
     .toLocaleString("en-US");
@@ -63,9 +68,19 @@ export function exportToExcel(
     .reduce((sum, r) => sum + (r.money ?? 0), 0)
     .toLocaleString("en-US");
 
+  const totalPackageAmount = rows
+    .reduce((sum, r) => sum + (r.package_amount ?? 0), 0)
+    .toLocaleString("en-US");
+
+  const hasAnyPackageAmount = rows.some((r) => r.package_amount != null);
+
   const summaryData = [
     { Metric: "Total Records", Value: totalRecords },
     { Metric: "Total Points", Value: totalPoints },
+    {
+      Metric: "Total Package Amount",
+      Value: hasAnyPackageAmount ? totalPackageAmount : "—",
+    },
     { Metric: "Total Bonus", Value: `${totalMoney} VND` },
   ];
 

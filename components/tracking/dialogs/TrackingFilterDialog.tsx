@@ -1,0 +1,166 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import type { TrackingFilters } from "../types";
+import { useMasters } from "@/lib/useMasters";
+
+const ALL_VALUE = "__all__";
+
+export default function TrackingFilterDialog({
+  open,
+  onOpenChange,
+  filters,
+  onApply,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  filters: TrackingFilters;
+  onApply: (filters: TrackingFilters) => void;
+}) {
+  const [draft, setDraft] = useState<TrackingFilters>(filters);
+  const { items: bdList } = useMasters("bd");
+
+  useEffect(() => {
+    setDraft(filters);
+  }, [filters, open]);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-semibold tracking-tight">
+            Filter Customer
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <p className="mb-1.5 text-sm font-medium text-foreground">From</p>
+            <Input
+              type="date"
+              value={draft.from ?? ""}
+              onChange={(e) =>
+                setDraft((f) => ({ ...f, from: e.target.value || undefined }))
+              }
+            />
+          </div>
+
+          <div>
+            <p className="mb-1.5 text-sm font-medium text-foreground">To</p>
+            <Input
+              type="date"
+              value={draft.to ?? ""}
+              onChange={(e) =>
+                setDraft((f) => ({ ...f, to: e.target.value || undefined }))
+              }
+            />
+          </div>
+
+          <div className="col-span-2">
+            <p className="mb-1.5 text-sm font-medium text-foreground">
+              Customer Name
+            </p>
+            <Input
+              value={draft.customer_name ?? ""}
+              onChange={(e) =>
+                setDraft((f) => ({
+                  ...f,
+                  customer_name: e.target.value || undefined,
+                }))
+              }
+              placeholder="Enter customer name"
+            />
+          </div>
+
+          <div>
+            <p className="mb-1.5 text-sm font-medium text-foreground">BD Name</p>
+            <Select
+              value={draft.bd_id ?? ALL_VALUE}
+              onValueChange={(v) =>
+                setDraft((f) => ({
+                  ...f,
+                  bd_id: v === ALL_VALUE ? undefined : v,
+                }))
+              }
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select BD name" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL_VALUE}>All</SelectItem>
+                {bdList.map((x) => (
+                  <SelectItem key={x.id} value={x.id}>
+                    {x.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <p className="mb-1.5 text-sm font-medium text-foreground">
+              Combo/Voucher
+            </p>
+            <Select
+              value={draft.combo_voucher ?? "all"}
+              onValueChange={(v) =>
+                setDraft((f) => ({
+                  ...f,
+                  combo_voucher: v as "all" | "yes" | "none",
+                }))
+              }
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select combo/voucher" />
+              </SelectTrigger>
+              <SelectContent>   
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="yes">Yes</SelectItem>
+                <SelectItem value="none">—</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button
+            variant="secondary"
+            className="cursor-pointer"
+            onClick={() => {
+              onApply({});
+              onOpenChange(false);
+            }}
+          >
+            Reset
+          </Button>
+
+          <Button
+            className="cursor-pointer"
+            onClick={() => {
+              onApply(draft);
+              onOpenChange(false);
+            }}
+          >
+            Apply
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

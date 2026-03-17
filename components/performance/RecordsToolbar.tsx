@@ -6,7 +6,7 @@ import type { RecordRow } from "@/lib/types";
 import type { Filters } from "./RecordsPage";
 import FilterDialog from "./dialogs/FilterDialog";
 import CreateDialog from "./dialogs/CreateDialog";
-import { exportToExcel } from "../helpers/exportExcel";
+import { exportToExcel } from "./helpers/exportExcel";
 import { useMasters } from "@/lib/useMasters";
 import { Filter, Plus, FileSpreadsheet, RefreshCw } from "lucide-react";
 

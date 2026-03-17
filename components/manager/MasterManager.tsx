@@ -244,19 +244,6 @@ export default function MasterManager({
     return arr;
   }, [items, totals, category, bdSortField, bdSortDirection]);
 
-  const splitItems = useMemo(() => {
-    if (category !== "bd") {
-      return { left: sortedItems, right: [] };
-    }
-
-    const half = Math.ceil(sortedItems.length / 2);
-
-    return {
-      left: sortedItems.slice(0, half),
-      right: sortedItems.slice(half),
-    };
-  }, [sortedItems, category]);
-
   const bdMedalMap = useMemo(() => {
     if (category !== "bd") return {};
 
@@ -524,24 +511,7 @@ export default function MasterManager({
         </div>
       </div>
 
-      {category === "bd" ? (
-        <>
-          {/* mobile + tablet → 1 bảng */}
-          <div className="xl:hidden">
-            {renderTable(sortedItems, 0)}
-          </div>
-
-          {/* desktop lớn → 2 bảng */}
-          <div className="hidden xl:grid xl:grid-cols-2 gap-4 items-start">
-            {renderTable(splitItems.left, 0)}
-
-            {splitItems.right.length > 0 &&
-              renderTable(splitItems.right, splitItems.left.length)}
-          </div>
-        </>
-      ) : (
-        renderTable(sortedItems, 0)
-      )}
+      {renderTable(sortedItems, 0)}
 
       {!loading && items.length === 0 && (
         <div className="p-4 text-sm text-muted-foreground">No data</div>

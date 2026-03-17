@@ -9,7 +9,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Database, Home, LogOut, ShieldCheck } from "lucide-react";
+import {
+  Database,
+  LogOut,
+  ShieldCheck,
+  BarChart3,
+  Users,
+} from "lucide-react";
 
 function getInitialsFromEmail(email?: string | null) {
   if (!email) return "??";
@@ -46,7 +52,7 @@ export default function AppHeader({
 
           <div>
             <div className="text-2xl font-extrabold tracking-tight text-foreground">
-                Operations Hub
+              OPERATIONS HUB
             </div>
           </div>
         </div>
@@ -55,18 +61,29 @@ export default function AppHeader({
           <TabsList className="h-12 rounded-xl bg-muted/70 p-1 shadow-none">
             <TabsTrigger
               value="home"
-              className="min-w-[140px] gap-2 rounded-lg px-6 text-base font-semibold
+              className="min-w-[160px] gap-2 rounded-xl px-5 py-2.5 text-base font-semibold
               data-[state=active]:bg-background
               data-[state=active]:text-primary
               data-[state=active]:shadow-sm"
             >
-              <Home className="h-4 w-4" />
-              Home
+              <BarChart3 className="h-4 w-4" />
+              Team Performance
+            </TabsTrigger>
+
+            <TabsTrigger
+              value="tracking"
+              className="min-w-[160px] gap-2 rounded-xl px-5 py-2.5 text-base font-semibold
+              data-[state=active]:bg-background
+              data-[state=active]:text-primary
+              data-[state=active]:shadow-sm"
+            >
+              <Users className="h-4 w-4" />
+              Customer Tracking
             </TabsTrigger>
 
             <TabsTrigger
               value="data"
-              className="min-w-[160px] gap-2 rounded-lg px-6 text-base font-semibold
+              className="min-w-[160px] gap-2 rounded-xl px-5 py-2.5 text-base font-semibold
               data-[state=active]:bg-background
               data-[state=active]:text-primary
               data-[state=active]:shadow-sm"
@@ -90,17 +107,16 @@ export default function AppHeader({
             </DropdownMenuTrigger>
 
             <DropdownMenuContent align="end" className="w-64 p-1">
-                <DropdownMenuItem
-                    onClick={onLogout}
-                    className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-3 transition-colors hover:bg-muted focus:bg-muted"
-                >
-                    <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
-                        {email ?? "No email"}
-                    </span>
+              <DropdownMenuItem
+                onClick={onLogout}
+                className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-3 transition-colors hover:bg-muted focus:bg-muted"
+              >
+                <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
+                  {email ?? "No email"}
+                </span>
 
-                    <LogOut className="h-4 w-4 shrink-0 text-muted-foreground" />
-                </DropdownMenuItem>
-
+                <LogOut className="h-4 w-4 shrink-0 text-muted-foreground" />
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
