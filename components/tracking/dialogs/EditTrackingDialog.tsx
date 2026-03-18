@@ -50,24 +50,24 @@ export default function EditTrackingDialog({
 
     const [form, setForm] = useState({
         customer_name: "",
-        branch: null as number | null,
-        in_hot_list: null as number | null,
+        branch: 0,
+        in_hot_list: 0,
         bd_id: "",
         combo_voucher: false,
         note: null as string | null,
         info: null as string | null,
     });
 
-    const [branchInput, setBranchInput] = useState("");
-    const [hotListInput, setHotListInput] = useState("");
+    const [branchInput, setBranchInput] = useState("0");
+    const [hotListInput, setHotListInput] = useState("0");
 
     useEffect(() => {
         if (!record) return;
 
         setForm({
             customer_name: record.customer_name ?? "",
-            branch: record.branch ?? null,
-            in_hot_list: record.in_hot_list ?? null,
+            branch: record.branch ?? 0,
+            in_hot_list: record.in_hot_list ?? 0,
             bd_id: record.bd_id ?? "",
             combo_voucher: record.combo_voucher ?? false,
             note: record.note ?? null,
@@ -77,13 +77,13 @@ export default function EditTrackingDialog({
         setBranchInput(
             record.branch !== null && record.branch !== undefined
                 ? Number(record.branch).toLocaleString("en-US")
-                : ""
+                : "0"
         );
 
         setHotListInput(
             record.in_hot_list !== null && record.in_hot_list !== undefined
                 ? Number(record.in_hot_list).toLocaleString("en-US")
-                : ""
+                : "0"
         );
     }, [record]);
 
@@ -126,8 +126,8 @@ export default function EditTrackingDialog({
                     </DialogTitle>
                 </DialogHeader>
 
-                <div className="grid grid-cols-6 gap-3">
-                    <div className="col-span-3">
+                <div className="grid grid-cols-2 gap-3">
+                    <div>
                         <p className="mb-1.5 text-sm font-medium text-foreground">
                             Customer Name
                         </p>
@@ -140,7 +140,7 @@ export default function EditTrackingDialog({
                         />
                     </div>
 
-                    <div className="col-span-3">
+                    <div>
                         <p className="mb-1.5 text-sm font-medium text-foreground">BD Name</p>
                         <Select
                             value={form.bd_id || undefined}
@@ -159,14 +159,14 @@ export default function EditTrackingDialog({
                         </Select>
                     </div>
 
-                    <div className="col-span-2">
+                    <div>
                         <p className="mb-1.5 text-sm font-medium text-foreground">Branches</p>
                         <Input
                             inputMode="numeric"
                             value={branchInput}
                             onChange={(e) => {
                                 const formatted = formatNumberInput(e.target.value);
-                                const parsed = parseNumberInput(e.target.value);
+                                const parsed = parseNumberInput(e.target.value) ?? 0;
 
                                 setBranchInput(formatted);
                                 setForm((f) => ({
@@ -178,16 +178,16 @@ export default function EditTrackingDialog({
                         />
                     </div>
 
-                    <div className="col-span-2">
+                    <div>
                         <p className="mb-1.5 text-sm font-medium text-foreground">
-                            In Hot List
+                            In hot list
                         </p>
                         <Input
                             inputMode="numeric"
                             value={hotListInput}
                             onChange={(e) => {
                                 const formatted = formatNumberInput(e.target.value);
-                                const parsed = parseNumberInput(e.target.value);
+                                const parsed = parseNumberInput(e.target.value) ?? 0;
 
                                 setHotListInput(formatted);
                                 setForm((f) => ({
@@ -213,16 +213,33 @@ export default function EditTrackingDialog({
                             }
                         >
                             <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Select combo/voucher" />
+                                <SelectValue>
+                                    {form.combo_voucher ? (
+                                        <span className="inline-flex items-center rounded-md bg-green-100 px-2 py-0.5 text-xs font-bold text-green-700">
+                                            YES
+                                        </span>
+                                    ) : (
+                                        <span>—</span>
+                                    )}
+                                </SelectValue>
                             </SelectTrigger>
+
                             <SelectContent>
-                                <SelectItem value="yes">Yes</SelectItem>
+                                <SelectItem
+                                    value="yes"
+                                    className="font-semibold text-green-700 focus:bg-green-50 focus:text-green-700"
+                                >
+                                    <span className="inline-flex items-center rounded-md bg-green-100 px-2 py-0.5 text-xs font-bold text-green-700">
+                                        YES
+                                    </span>
+                                </SelectItem>
+
                                 <SelectItem value="none">—</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
 
-                    <div className="col-span-3">
+                    <div>
                         <p className="mb-1.5 text-sm font-medium text-foreground">Note</p>
                         <Textarea
                             value={form.note ?? ""}
@@ -233,8 +250,8 @@ export default function EditTrackingDialog({
                         />
                     </div>
 
-                    <div className="col-span-3">
-                        <p className="mb-1.5 text-sm font-medium text-foreground">Infor</p>
+                    <div>
+                        <p className="mb-1.5 text-sm font-medium text-foreground">Info</p>
                         <Textarea
                             value={form.info ?? ""}
                             onChange={(e) =>

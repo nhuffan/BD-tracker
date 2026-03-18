@@ -5,22 +5,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Search, FileText } from "lucide-react";
+import { Search } from "lucide-react";
 import type { TrackingRecordVM } from "./types";
 import { formatDMY } from "@/lib/date";
 import {
-    Tooltip,
-    TooltipContent,
     TooltipProvider,
-    TooltipTrigger,
 } from "@/components/ui/tooltip";
 import EditTrackingDialog from "./dialogs/EditTrackingDialog";
 import { supabase } from "@/lib/supabaseClient";
-
-function formatYesNo(value: boolean | null | undefined) {
-    if (value === true) return "Yes";
-    return "—";
-}
 
 export default function CustomerTrackingTable({
     rows,
@@ -83,7 +75,7 @@ export default function CustomerTrackingTable({
             .in("id", selectedIds);
 
         if (error) {
-            console.error("Failed to delete customer tracking records:", error);
+            console.error("Failed to delete customer records:", error);
             return;
         }
 
@@ -140,28 +132,31 @@ export default function CustomerTrackingTable({
                     </div>
 
                     <div className="w-full overflow-x-auto">
-                        <table className="w-full text-sm table-fixed">
+                        <table className="w-full min-w-[1200px] text-sm table-fixed">
                             <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur border-b shadow-sm">
                                 <tr>
-                                    <th className="p-2 text-left">Date</th>
-                                    <th className="p-2 text-left">
-                                        Customers{" "}
+                                    <th className="p-2 text-left w-[120px]">Date</th>
+
+                                    <th className="p-2 text-left w-[240px]">
+                                        Customers
                                         <span className="ml-2 inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
-                                        {stats.totalCustomers}
+                                            {stats.totalCustomers}
                                         </span>
                                     </th>
 
-                                    <th className="p-2 text-left">
-                                        Branches{" "}
+                                    <th className="p-2 text-left w-[120px]">
+                                        Branches
                                         <span className="ml-2 inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
                                             {stats.totalBranches.toLocaleString("en-US")}
                                         </span>
                                     </th>
-                                    <th className="p-2 text-left">In hot list</th>
-                                    <th className="p-2 text-left">BD Name</th>
-                                    <th className="p-2 text-left">Combo/Voucher</th>
-                                    <th className="p-2 text-left">Note</th>
-                                    <th className="p-2 text-left">Information</th>
+
+                                    <th className="p-2 text-left w-[120px]">In hot list</th>
+                                    <th className="p-2 text-left w-[120px]">BD Name</th>
+                                    <th className="p-2 text-left w-[140px]">Combo/Voucher</th>
+                                    <th className="p-2 text-left w-[140px]">Note</th>
+                                    <th className="p-2 text-left w-[140px]">Information</th>
+
                                     {selectionMode && (
                                         <th className="p-2 w-[60px] text-right"></th>
                                     )}
@@ -223,7 +218,7 @@ export default function CustomerTrackingTable({
 
                                             <td className="p-2">
                                                 {r.combo_voucher ? (
-                                                    <span className="inline-flex items-center rounded-md bg-green-100 px-2 py-0.5 text-xs text-green-700 font-bold">
+                                                    <span className="inline-flex items-center rounded-md bg-green-100 px-2 py-0.5 text-xs font-bold text-green-700">
                                                         YES
                                                     </span>
                                                 ) : (
@@ -233,7 +228,7 @@ export default function CustomerTrackingTable({
 
                                             <td
                                                 className="p-2 whitespace-nowrap overflow-hidden text-ellipsis"
-                                                title={r.note ?? "" }
+                                                title={r.note ?? ""}
                                             >
                                                 {r.note ?? "—"}
                                             </td>

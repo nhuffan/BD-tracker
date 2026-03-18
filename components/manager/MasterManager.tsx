@@ -60,7 +60,7 @@ function getMedalByIndex(index: number) {
 }
 
 type SortDirection = "asc" | "desc";
-type BdSortField = "points" | "money";
+type BdSortField = "points" | "money" | "newCustomers" | "newHotList";
 
 export default function MasterManager({
   category,
@@ -87,6 +87,10 @@ export default function MasterManager({
     Record<string, { points: number; money: number; packageAmount: number | null }>
   >({});
 
+  const [trackingTotals, setTrackingTotals] = useState<
+    Record<string, { newCustomers: number; newHotList: number }>
+  >({});
+
   const [monthOptions, setMonthOptions] = useState<string[]>([]);
   const [selectedMonth, setSelectedMonth] = useState<string>(ALL_TIME);
 
@@ -107,6 +111,10 @@ export default function MasterManager({
           .from("records")
           .select("bd_id, points, money, package_amount, event_date");
 
+        const { data: trackingStats } = await supabase
+          .from("bd_tracking_stats")
+          .select("bd_id, new_customers, new_hot_list");
+
         const allRecords = records ?? [];
 
         const months = Array.from(
@@ -123,8 +131,8 @@ export default function MasterManager({
           selectedMonth === ALL_TIME
             ? allRecords
             : allRecords.filter(
-                (r) => r.event_date?.slice(0, 7) === selectedMonth
-              );
+              (r) => r.event_date?.slice(0, 7) === selectedMonth
+            );
 
         const map: Record<
           string,
@@ -142,12 +150,28 @@ export default function MasterManager({
           map[r.bd_id].money += r.money ?? 0;
           if (r.package_amount != null) {
             map[r.bd_id].packageAmount =
-            (map[r.bd_id].packageAmount ?? 0) + r.package_amount;
+              (map[r.bd_id].packageAmount ?? 0) + r.package_amount;
           }
 
         });
 
         setTotals(map);
+
+        const trackingMap: Record<
+          string,
+          { newCustomers: number; newHotList: number }
+        > = {};
+
+        (trackingStats ?? []).forEach((r) => {
+          if (!r.bd_id) return;
+
+          trackingMap[r.bd_id] = {
+            newCustomers: r.new_customers ?? 0,
+            newHotList: r.new_hot_list ?? 0,
+          };
+        });
+
+        setTrackingTotals(trackingMap);
       }
     } finally {
       setLoading(false);
@@ -214,14 +238,23 @@ export default function MasterManager({
       return arr;
     }
 
-    arr.sort((a, b) => {
-      const aPoints = totals[a.id]?.points ?? 0;
-      const bPoints = totals[b.id]?.points ?? 0;
-      const aMoney = totals[a.id]?.money ?? 0;
-      const bMoney = totals[b.id]?.money ?? 0;
+    function getSortValue(id: string, field: BdSortField) {
+      switch (field) {
+        case "newCustomers":
+          return trackingTotals[id]?.newCustomers ?? 0;
+        case "newHotList":
+          return trackingTotals[id]?.newHotList ?? 0;
+        case "money":
+          return totals[id]?.money ?? 0;
+        case "points":
+        default:
+          return totals[id]?.points ?? 0;
+      }
+    }
 
-      const primaryA = bdSortField === "points" ? aPoints : aMoney;
-      const primaryB = bdSortField === "points" ? bPoints : bMoney;
+    arr.sort((a, b) => {
+      const primaryA = getSortValue(a.id, bdSortField);
+      const primaryB = getSortValue(b.id, bdSortField);
 
       if (primaryA !== primaryB) {
         return bdSortDirection === "desc"
@@ -229,42 +262,62 @@ export default function MasterManager({
           : primaryA - primaryB;
       }
 
-      const secondaryA = bdSortField === "points" ? aMoney : aPoints;
-      const secondaryB = bdSortField === "points" ? bMoney : bPoints;
+      const ALL_FIELDS = [
+        "newCustomers",
+        "newHotList",
+        "points",
+        "money",
+      ] as const;
 
-      if (secondaryA !== secondaryB) {
-        return bdSortDirection === "desc"
-          ? secondaryB - secondaryA
-          : secondaryA - secondaryB;
+      const fallbackFields = ALL_FIELDS.filter(
+        (field) => field !== bdSortField
+      );
+
+      for (const field of fallbackFields) {
+        const fallbackA = getSortValue(a.id, field);
+        const fallbackB = getSortValue(b.id, field);
+
+        if (fallbackA !== fallbackB) {
+          return bdSortDirection === "desc"
+            ? fallbackB - fallbackA
+            : fallbackA - fallbackB;
+        }
       }
 
       return a.label.localeCompare(b.label);
     });
 
     return arr;
-  }, [items, totals, category, bdSortField, bdSortDirection]);
+  }, [items, totals, trackingTotals, category, bdSortField, bdSortDirection]);
 
   const bdMedalMap = useMemo(() => {
     if (category !== "bd") return {};
 
+    function getSortValue(id: string, field: BdSortField) {
+      switch (field) {
+        case "newCustomers":
+          return trackingTotals[id]?.newCustomers ?? 0;
+        case "newHotList":
+          return trackingTotals[id]?.newHotList ?? 0;
+        case "money":
+          return totals[id]?.money ?? 0;
+        case "points":
+        default:
+          return totals[id]?.points ?? 0;
+      }
+    }
+
     const map: Record<string, string> = {};
 
     const rankedItems = sortedItems.filter((item) => {
-      const value =
-        bdSortField === "points"
-          ? (totals[item.id]?.points ?? 0)
-          : (totals[item.id]?.money ?? 0);
-
+      const value = getSortValue(item.id, bdSortField);
       return value > 0;
     });
 
-    let medalTargets: MasterItem[];
-
-    if (bdSortDirection === "desc") {
-      medalTargets = rankedItems.slice(0, 3);
-    } else {
-      medalTargets = rankedItems.slice(-3).reverse();
-    }
+    const medalTargets =
+      bdSortDirection === "desc"
+        ? rankedItems.slice(0, 3)
+        : rankedItems.slice(-3).reverse();
 
     medalTargets.forEach((item, index) => {
       const medal = getMedalByIndex(index);
@@ -274,7 +327,7 @@ export default function MasterManager({
     });
 
     return map;
-  }, [category, sortedItems, bdSortField, bdSortDirection, totals]);
+  }, [category, sortedItems, bdSortField, bdSortDirection, totals, trackingTotals]);
 
   async function onSave() {
     if (isSaveDisabled) return;
@@ -342,19 +395,21 @@ export default function MasterManager({
     return (
       <div className="border rounded-xl overflow-hidden">
         <div className="w-full overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[900px] text-sm table-fixed">
             <thead className="bg-muted/50">
               <tr>
-                <th className="p-2 text-left">#</th>
-                <th className="p-2 text-left">Name</th>
+                <th className="p-2 text-left w-[100px]">#</th>
+                <th className="p-2 text-left w-[140px]">Name</th>
                 {category === "bd" && (
                   <>
-                    <th className="p-2 text-right">Points</th>
-                    <th className="p-2 text-right">Bonus</th>
-                    <th className="p-2 text-right">Package Amount</th>
+                    <th className="p-2 text-right w-[140px]">New Customers</th>
+                    <th className="p-2 text-right w-[140px]">New In Hot List</th>
+                    <th className="p-2 text-right w-[140px]">Points</th>
+                    <th className="p-2 text-right w-[140px]">Bonus</th>
+                    <th className="p-2 text-right w-[140px]">Package Amount</th>
                   </>
                 )}
-                {isAdmin && <th className="p-2 text-right">Action</th>}
+                {isAdmin && <th className="p-2 text-right w-[100px]">Action</th>}
               </tr>
             </thead>
 
@@ -385,20 +440,28 @@ export default function MasterManager({
 
                     {category === "bd" && (
                       <>
-                        <td className="p-2 text-right tabular-nums">
+                        <td className="p-2 text-right tabular-nums truncate overflow-hidden whitespace-nowrap">
+                          {(trackingTotals[it.id]?.newCustomers ?? 0).toLocaleString("en-US")}
+                        </td>
+
+                        <td className="p-2 text-right tabular-nums truncate overflow-hidden whitespace-nowrap">
+                          {(trackingTotals[it.id]?.newHotList ?? 0).toLocaleString("en-US")}
+                        </td>
+
+                        <td className="p-2 text-right tabular-nums truncate overflow-hidden whitespace-nowrap">
                           {(totals[it.id]?.points ?? 0).toLocaleString("en-US")}
                         </td>
 
-                        <td className="p-2 text-right tabular-nums">
+                        <td className="p-2 text-right tabular-nums truncate overflow-hidden whitespace-nowrap">
                           {(totals[it.id]?.money ?? 0).toLocaleString("en-US")}
                         </td>
 
-                        <td className="p-2 text-right tabular-nums"> {(() => {
-                            const packageAmount = totals[it.id]?.packageAmount;
-                            return packageAmount != null
+                        <td className="p-2 text-right tabular-nums truncate overflow-hidden whitespace-nowrap"> {(() => {
+                          const packageAmount = totals[it.id]?.packageAmount;
+                          return packageAmount != null
                             ? packageAmount.toLocaleString("en-US")
                             : "—";
-                          })()}
+                        })()}
                         </td>
                       </>
                     )}
@@ -454,6 +517,8 @@ export default function MasterManager({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="newCustomers">New Customers</SelectItem>
+                      <SelectItem value="newHotList">New In Hot List</SelectItem>
                       <SelectItem value="points">Points</SelectItem>
                       <SelectItem value="money">Bonus</SelectItem>
                     </SelectContent>

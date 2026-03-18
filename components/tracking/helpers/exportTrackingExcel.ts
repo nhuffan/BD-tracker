@@ -15,18 +15,18 @@ export function exportTrackingToExcel(
   const data = rows.map((r) => ({
     Date: formatDMY(r.event_date),
     "Customer Name": r.customer_name,
-    Branch:
+    Branches:
       r.branch !== null && r.branch !== undefined
         ? r.branch.toLocaleString("en-US")
         : "",
-    "In Hot List":
+    "In hot list":
       r.in_hot_list !== null && r.in_hot_list !== undefined
         ? r.in_hot_list.toLocaleString("en-US")
         : "",
     "BD Name": maps?.bd?.[r.bd_id ?? ""] ?? "",
     "Combo/Voucher": yesNo(r.combo_voucher),
     Note: r.note ?? "",
-    Infor: r.info ?? "",
+    Info: r.info ?? "",
   }));
 
   const ws = XLSX.utils.json_to_sheet(data);
@@ -55,7 +55,7 @@ export function exportTrackingToExcel(
   ws["!cols"] = colWidths;
 
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Customer Tracking");
+  XLSX.utils.book_append_sheet(wb, ws, "Customers");
 
   XLSX.writeFile(
     wb,

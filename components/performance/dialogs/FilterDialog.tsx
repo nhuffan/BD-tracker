@@ -20,6 +20,8 @@ import {
 import type { Filters } from "../RecordsPage";
 import { DatePickerDMY } from "@/components/ui/date-picker-dmy";
 import { useMasters } from "@/lib/useMasters";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 function monthToRange(month: string) {
   const [y, m] = month.split("-").map(Number);
@@ -27,6 +29,16 @@ function monthToRange(month: string) {
   const lastDay = new Date(y, m, 0).getDate();
   const to = `${y}-${String(m).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
   return { from, to };
+}
+
+function toggleMultiValue(
+  current: string[] | undefined,
+  value: string
+): string[] {
+  const arr = current ?? [];
+  return arr.includes(value)
+    ? arr.filter((x) => x !== value)
+    : [...arr, value];
 }
 
 export default function FilterDialog({
@@ -143,52 +155,124 @@ export default function FilterDialog({
           <div className="grid grid-cols-2 gap-2">
             <div className="w-full">
               <p className="mb-1.5 text-sm font-medium text-foreground">Customer Type</p>
-              <Select
-                value={draft.customer_type_id ?? ALL}
-                onValueChange={(v) =>
-                  setDraft((d) => ({
-                    ...d,
-                    customer_type_id: v === ALL ? undefined : v,
-                  }))
-                }
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select customer type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={ALL}>All</SelectItem>
-                  {customerTypes.map((x) => (
-                    <SelectItem key={x.id} value={x.id}>
-                      {x.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full justify-between font-normal"
+                  >
+                    <span className="truncate text-left">
+                      {!draft.customer_type_ids?.length
+                        ? "All"
+                        : draft.customer_type_ids.length === 1
+                        ? customerTypes.find((x) => x.id === draft.customer_type_ids?.[0])?.label
+                        : `${draft.customer_type_ids.length} selected`}
+                    </span>
+                  </Button>
+                </PopoverTrigger>
+
+                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-2">
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted cursor-pointer">
+                      <Checkbox
+                        checked={!draft.customer_type_ids?.length}
+                        onCheckedChange={() =>
+                          setDraft((d) => ({
+                            ...d,
+                            customer_type_ids: undefined,
+                          }))
+                        }
+                      />
+                      <span className="text-sm">All</span>
+                    </label>
+
+                    {customerTypes.map((x) => {
+                      const checked = !!draft.customer_type_ids?.includes(x.id);
+
+                      return (
+                        <label
+                          key={x.id}
+                          className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted cursor-pointer"
+                        >
+                          <Checkbox
+                            checked={checked}
+                            onCheckedChange={() =>
+                              setDraft((d) => ({
+                                ...d,
+                                customer_type_ids: toggleMultiValue(d.customer_type_ids, x.id),
+                              }))
+                            }
+                          />
+                          <span className="text-sm">{x.label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div className="w-full">
               <p className="mb-1.5 text-sm font-medium text-foreground">Point Type</p>
-              <Select
-                value={draft.point_type_id ?? ALL}
-                onValueChange={(v) =>
-                  setDraft((d) => ({
-                    ...d,
-                    point_type_id: v === ALL ? undefined : v,
-                  }))
-                }
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select point type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={ALL}>All</SelectItem>
-                  {pointTypes.map((x) => (
-                    <SelectItem key={x.id} value={x.id}>
-                      {x.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full justify-between font-normal"
+                  >
+                    <span className="truncate text-left">
+                      {!draft.point_type_ids?.length
+                        ? "All"
+                        : draft.point_type_ids.length === 1
+                        ? pointTypes.find((x) => x.id === draft.point_type_ids?.[0])?.label
+                        : `${draft.point_type_ids.length} selected`}
+                    </span>
+                  </Button>
+                </PopoverTrigger>
+
+                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-2">
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted cursor-pointer">
+                      <Checkbox
+                        checked={!draft.point_type_ids?.length}
+                        onCheckedChange={() =>
+                          setDraft((d) => ({
+                            ...d,
+                            point_type_ids: undefined,
+                          }))
+                        }
+                      />
+                      <span className="text-sm">All</span>
+                    </label>
+
+                    {pointTypes.map((x) => {
+                      const checked = !!draft.point_type_ids?.includes(x.id);
+
+                      return (
+                        <label
+                          key={x.id}
+                          className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted cursor-pointer"
+                        >
+                          <Checkbox
+                            checked={checked}
+                            onCheckedChange={() =>
+                              setDraft((d) => ({
+                                ...d,
+                                point_type_ids: toggleMultiValue(d.point_type_ids, x.id),
+                              }))
+                            }
+                          />
+                          <span className="text-sm">{x.label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
         </div>

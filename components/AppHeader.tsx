@@ -45,7 +45,7 @@ export default function AppHeader({
   return (
     <header className="sticky top-0 z-20 border-b border-border bg-white/95 backdrop-blur">
       <div className="mx-auto flex h-20 w-full items-center justify-between px-6">
-        <div className="flex items-center gap-3">
+        <div className="hidden md:flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
             <Database className="h-5 w-5" />
           </div>
@@ -57,7 +57,7 @@ export default function AppHeader({
           </div>
         </div>
 
-        <div className="hidden md:flex">
+        <div>
           <TabsList className="h-12 rounded-xl bg-muted/70 p-1 shadow-none">
             <TabsTrigger
               value="home"
@@ -78,7 +78,7 @@ export default function AppHeader({
               data-[state=active]:shadow-sm"
             >
               <Users className="h-4 w-4" />
-              Customer Tracking
+              Customers
             </TabsTrigger>
 
             <TabsTrigger

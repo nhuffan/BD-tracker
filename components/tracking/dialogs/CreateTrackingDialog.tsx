@@ -50,16 +50,16 @@ export default function CreateTrackingDialog({
   const [form, setForm] = useState({
     event_date: today,
     customer_name: "",
-    branch: null as number | null,
-    in_hot_list: null as number | null,
+    branch: 0,
+    in_hot_list: 0,
     bd_id: "",
     combo_voucher: false,
     note: null as string | null,
     info: null as string | null,
   });
 
-  const [branchInput, setBranchInput] = useState("");
-  const [hotListInput, setHotListInput] = useState("");
+  const [branchInput, setBranchInput] = useState("0");
+  const [hotListInput, setHotListInput] = useState("0");
 
   const isSaveDisabled =
     !form.event_date || !form.customer_name.trim() || !form.bd_id;
@@ -89,15 +89,15 @@ export default function CreateTrackingDialog({
     setForm({
       event_date: today,
       customer_name: "",
-      branch: null,
-      in_hot_list: null,
+      branch: 0,
+      in_hot_list: 0,
       bd_id: "",
       combo_voucher: false,
       note: null,
       info: null,
     });
-    setBranchInput("");
-    setHotListInput("");
+    setBranchInput("0");
+    setHotListInput("0");
   }
 
   return (
@@ -154,13 +154,13 @@ export default function CreateTrackingDialog({
           </div>
 
           <div>
-            <p className="mb-1.5 text-sm font-medium text-foreground">Branch</p>
+            <p className="mb-1.5 text-sm font-medium text-foreground">Branches</p>
             <Input
               inputMode="numeric"
               value={branchInput}
               onChange={(e) => {
                 const formatted = formatNumberInput(e.target.value);
-                const parsed = parseNumberInput(e.target.value);
+                const parsed = parseNumberInput(e.target.value) ?? 0;
 
                 setBranchInput(formatted);
                 setForm((f) => ({
@@ -174,14 +174,14 @@ export default function CreateTrackingDialog({
 
           <div>
             <p className="mb-1.5 text-sm font-medium text-foreground">
-              In Hot List
+              In hot list
             </p>
             <Input
               inputMode="numeric"
               value={hotListInput}
               onChange={(e) => {
                 const formatted = formatNumberInput(e.target.value);
-                const parsed = parseNumberInput(e.target.value);
+                const parsed = parseNumberInput(e.target.value) ?? 0;
 
                 setHotListInput(formatted);
                 setForm((f) => ({
@@ -210,13 +210,21 @@ export default function CreateTrackingDialog({
                 <SelectValue placeholder="Select combo/voucher" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="true">Yes</SelectItem>
+                <SelectItem
+                  value="true"
+                  className="font-semibold text-green-700 focus:bg-green-50 focus:text-green-700"
+                >
+                  <span className="inline-flex items-center rounded-md bg-green-100 px-2 py-0.5 text-xs font-bold text-green-700">
+                    YES
+                  </span>
+                </SelectItem>
+
                 <SelectItem value="false">—</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          <div className="col-span-2">
+          <div>
             <p className="mb-1.5 text-sm font-medium text-foreground">Note</p>
             <Textarea
               value={form.note ?? ""}
@@ -227,7 +235,7 @@ export default function CreateTrackingDialog({
             />
           </div>
 
-          <div className="col-span-2">
+          <div>
             <p className="mb-1.5 text-sm font-medium text-foreground">Info</p>
             <Textarea
               value={form.info ?? ""}
@@ -237,6 +245,7 @@ export default function CreateTrackingDialog({
               placeholder="Enter info"
             />
           </div>
+
         </div>
 
         <DialogFooter>

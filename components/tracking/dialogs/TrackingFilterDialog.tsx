@@ -131,7 +131,14 @@ export default function TrackingFilterDialog({
               </SelectTrigger>
               <SelectContent>   
                 <SelectItem value="all">All</SelectItem>
-                <SelectItem value="yes">Yes</SelectItem>
+                <SelectItem
+                  value="yes"
+                  className="font-semibold text-green-700 focus:bg-green-50 focus:text-green-700"
+                >
+                  <span className="inline-flex items-center rounded-md bg-green-100 px-2 py-0.5 text-xs font-bold text-green-700">
+                    YES
+                  </span>
+                </SelectItem>
                 <SelectItem value="none">—</SelectItem>
               </SelectContent>
             </Select>
