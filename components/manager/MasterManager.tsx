@@ -65,9 +65,11 @@ type BdSortField = "points" | "money" | "newCustomers" | "newHotList";
 export default function MasterManager({
   category,
   isAdmin,
+  title,
 }: {
   category: MasterCategory;
   isAdmin: boolean;
+  title: string;
 }) {
   const ui = MASTER_CATEGORY_UI[category];
   const ALL_TIME = "__all__";
@@ -131,8 +133,8 @@ export default function MasterManager({
           selectedMonth === ALL_TIME
             ? allRecords
             : allRecords.filter(
-              (r) => r.event_date?.slice(0, 7) === selectedMonth
-            );
+                (r) => r.event_date?.slice(0, 7) === selectedMonth
+              );
 
         const map: Record<
           string,
@@ -148,11 +150,11 @@ export default function MasterManager({
 
           map[r.bd_id].points += r.points ?? 0;
           map[r.bd_id].money += r.money ?? 0;
+
           if (r.package_amount != null) {
             map[r.bd_id].packageAmount =
               (map[r.bd_id].packageAmount ?? 0) + r.package_amount;
           }
-
         });
 
         setTotals(map);
@@ -393,23 +395,23 @@ export default function MasterManager({
 
   function renderTable(list: MasterItem[], startIndex: number) {
     return (
-      <div className="border rounded-xl overflow-hidden">
+      <div className="overflow-hidden rounded-xl border">
         <div className="w-full overflow-x-auto">
-          <table className="w-full min-w-[900px] text-sm table-fixed">
+          <table className="w-full min-w-[900px] table-fixed text-sm">
             <thead className="bg-muted/50">
               <tr>
-                <th className="p-2 text-left w-[100px]">#</th>
-                <th className="p-2 text-left w-[140px]">Name</th>
+                <th className="w-[100px] p-2 text-left">#</th>
+                <th className="w-[140px] p-2 text-left">Name</th>
                 {category === "bd" && (
                   <>
-                    <th className="p-2 text-right w-[140px]">New Customers</th>
-                    <th className="p-2 text-right w-[140px]">New In Hot List</th>
-                    <th className="p-2 text-right w-[140px]">Points</th>
-                    <th className="p-2 text-right w-[140px]">Bonus</th>
-                    <th className="p-2 text-right w-[140px]">Package Amount</th>
+                    <th className="w-[140px] p-2 text-right">New Customers</th>
+                    <th className="w-[140px] p-2 text-right">New In Hot List</th>
+                    <th className="w-[140px] p-2 text-right">Points</th>
+                    <th className="w-[140px] p-2 text-right">Bonus</th>
+                    <th className="w-[140px] p-2 text-right">Package Amount</th>
                   </>
                 )}
-                {isAdmin && <th className="p-2 text-right w-[100px]">Action</th>}
+                {isAdmin && <th className="w-[100px] p-2 text-right">Action</th>}
               </tr>
             </thead>
 
@@ -434,34 +436,35 @@ export default function MasterManager({
                       )}
                     </td>
 
-                    <td className="p-2 truncate" title={it.label}>
+                    <td className="truncate p-2" title={it.label}>
                       {it.label}
                     </td>
 
                     {category === "bd" && (
                       <>
-                        <td className="p-2 text-right tabular-nums truncate overflow-hidden whitespace-nowrap">
+                        <td className="truncate overflow-hidden whitespace-nowrap p-2 text-right tabular-nums">
                           {(trackingTotals[it.id]?.newCustomers ?? 0).toLocaleString("en-US")}
                         </td>
 
-                        <td className="p-2 text-right tabular-nums truncate overflow-hidden whitespace-nowrap">
+                        <td className="truncate overflow-hidden whitespace-nowrap p-2 text-right tabular-nums">
                           {(trackingTotals[it.id]?.newHotList ?? 0).toLocaleString("en-US")}
                         </td>
 
-                        <td className="p-2 text-right tabular-nums truncate overflow-hidden whitespace-nowrap">
+                        <td className="truncate overflow-hidden whitespace-nowrap p-2 text-right tabular-nums">
                           {(totals[it.id]?.points ?? 0).toLocaleString("en-US")}
                         </td>
 
-                        <td className="p-2 text-right tabular-nums truncate overflow-hidden whitespace-nowrap">
+                        <td className="truncate overflow-hidden whitespace-nowrap p-2 text-right tabular-nums">
                           {(totals[it.id]?.money ?? 0).toLocaleString("en-US")}
                         </td>
 
-                        <td className="p-2 text-right tabular-nums truncate overflow-hidden whitespace-nowrap"> {(() => {
-                          const packageAmount = totals[it.id]?.packageAmount;
-                          return packageAmount != null
-                            ? packageAmount.toLocaleString("en-US")
-                            : "—";
-                        })()}
+                        <td className="truncate overflow-hidden whitespace-nowrap p-2 text-right tabular-nums">
+                          {(() => {
+                            const packageAmount = totals[it.id]?.packageAmount;
+                            return packageAmount != null
+                              ? packageAmount.toLocaleString("en-US")
+                              : "—";
+                          })()}
                         </td>
                       </>
                     )}
@@ -472,7 +475,7 @@ export default function MasterManager({
                           <Button
                             size="icon"
                             variant="ghost"
-                            className="cursor-pointer h-8 w-8"
+                            className="h-8 w-8 cursor-pointer"
                             onClick={() => openEdit(it)}
                           >
                             <Pencil className="h-4 w-4 text-muted-foreground" />
@@ -481,7 +484,7 @@ export default function MasterManager({
                           <Button
                             size="icon"
                             variant="ghost"
-                            className="cursor-pointer h-8 w-8"
+                            className="h-8 w-8 cursor-pointer"
                             onClick={() => onDelete(it.id)}
                           >
                             <Trash2 className="h-4 w-4 text-muted-foreground" />
@@ -501,19 +504,25 @@ export default function MasterManager({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
-        <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <h2 className="text-2xl font-bold tracking-tight text-foreground">
+            {title}
+          </h2>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
           {category === "bd" && (
             <>
-              <div className="flex shrink-0 items-center gap-2 rounded-md border px-2 h-9">
+              <div className="flex h-9 shrink-0 items-center gap-2 rounded-md border px-2">
                 <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
 
-                <div className="w-[100px]">
+                <div className="w-[140px]">
                   <Select
                     value={bdSortField}
                     onValueChange={(value) => setBdSortField(value as BdSortField)}
                   >
-                    <SelectTrigger className="border-0 h-8 shadow-none px-2">
+                    <SelectTrigger className="h-8 border-0 px-2 shadow-none">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -532,7 +541,7 @@ export default function MasterManager({
                       setBdSortDirection(value as SortDirection)
                     }
                   >
-                    <SelectTrigger className="border-0 h-8 shadow-none px-2">
+                    <SelectTrigger className="h-8 border-0 px-2 shadow-none">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -545,8 +554,8 @@ export default function MasterManager({
 
               <div className="shrink-0">
                 <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                  <SelectTrigger className="h-9 inline-flex min-w-[140px] w-auto gap-2">
-                    <CalendarDays className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <SelectTrigger className="inline-flex h-9 min-w-[140px] w-auto gap-2">
+                    <CalendarDays className="h-4 w-4 shrink-0 text-muted-foreground" />
                     <SelectValue placeholder="Month" />
                   </SelectTrigger>
 
@@ -566,7 +575,7 @@ export default function MasterManager({
 
           {isAdmin && (
             <Button
-              className="cursor-pointer h-9 flex items-center gap-2"
+              className="flex h-9 cursor-pointer items-center gap-2"
               onClick={openCreate}
             >
               <Plus className="h-4 w-4" />

@@ -42,63 +42,63 @@ export default function AppHeader({
 }) {
   const initials = useMemo(() => getInitialsFromEmail(email), [email]);
 
+  const tabClass = `
+    h-16 rounded-none border-0 border-b-2 border-transparent
+    bg-transparent px-5 text-[15px] font-semibold
+    text-muted-foreground shadow-none
+    transition-colors duration-200
+
+    hover:text-foreground
+
+    data-[state=active]:border-b-2
+    data-[state=active]:border-primary
+    data-[state=active]:bg-transparent
+    data-[state=active]:text-primary
+    data-[state=active]:shadow-none
+  `;
+
   return (
     <header className="sticky top-0 z-20 border-b border-border bg-white/95 backdrop-blur">
-      <div className="mx-auto flex h-20 w-full items-center justify-between px-6">
-        <div className="hidden md:flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
-            <Database className="h-5 w-5" />
-          </div>
+      <div className="mx-auto grid h-16 w-full grid-cols-[1fr_auto_1fr] items-center px-6">
+        {/* Left */}
+        <div className="flex items-center">
+          <div className="hidden md:flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+              <Database className="h-5 w-5" />
+            </div>
 
-          <div>
-            <div className="text-2xl font-extrabold tracking-tight text-foreground">
+            <div className="text-xl font-extrabold tracking-tight text-foreground">
               OPERATIONS HUB
             </div>
           </div>
         </div>
 
-        <div>
-          <TabsList className="h-12 rounded-xl bg-muted/70 p-1 shadow-none">
-            <TabsTrigger
-              value="home"
-              className="min-w-[160px] gap-2 rounded-xl px-5 py-2.5 text-base font-semibold
-              data-[state=active]:bg-background
-              data-[state=active]:text-primary
-              data-[state=active]:shadow-sm"
-            >
-              <BarChart3 className="h-4 w-4" />
+        {/* Center */}
+        <div className="flex justify-center">
+          <TabsList className="h-16 rounded-none border-0 bg-transparent p-0 shadow-none">
+            <TabsTrigger value="home" className={tabClass}>
+              <BarChart3 className="mr-2 h-5 w-5" />
               Team Performance
             </TabsTrigger>
 
-            <TabsTrigger
-              value="tracking"
-              className="min-w-[160px] gap-2 rounded-xl px-5 py-2.5 text-base font-semibold
-              data-[state=active]:bg-background
-              data-[state=active]:text-primary
-              data-[state=active]:shadow-sm"
-            >
-              <Users className="h-4 w-4" />
+            <TabsTrigger value="tracking" className={tabClass}>
+              <Users className="mr-2 h-5 w-5" />
               Customers
             </TabsTrigger>
 
-            <TabsTrigger
-              value="data"
-              className="min-w-[160px] gap-2 rounded-xl px-5 py-2.5 text-base font-semibold
-              data-[state=active]:bg-background
-              data-[state=active]:text-primary
-              data-[state=active]:shadow-sm"
-            >
-              <ShieldCheck className="h-4 w-4" />
+            <TabsTrigger value="data" className={tabClass}>
+              <ShieldCheck className="mr-2 h-5 w-5" />
               Management
             </TabsTrigger>
           </TabsList>
         </div>
 
-        <div className="flex items-center gap-3">
+        {/* Right */}
+        <div className="flex justify-end">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="rounded-full outline-none ring-offset-background transition focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
-                <Avatar className="h-11 w-11 border shadow-sm">
+                <Avatar className="h-10 w-10 border shadow-sm">
                   <AvatarFallback className="bg-primary/10 text-sm font-bold text-primary">
                     {initials}
                   </AvatarFallback>

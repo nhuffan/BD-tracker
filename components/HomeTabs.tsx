@@ -6,7 +6,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import RecordsPage from "./performance/RecordsPage";
 import CustomerTrackingPage from "./tracking/CustomerTrackingPage";
-import DataPage from "@/components/manager/DataPage";
+import ManagementPage from "@/components/manager/ManagementPage";
 import WomensDayBackground from "@/components/WomensDayBackground";
 import { useCurrentUserRole } from "@/lib/useCurrentUserRole";
 import AppHeader from "@/components/AppHeader";
@@ -52,7 +52,7 @@ export default function HomeTabs() {
           </TabsContent>
 
           <TabsContent value="data" className="mt-0 w-full">
-            <DataPage isAdmin={isAdmin} />
+            <ManagementPage isAdmin={isAdmin} />
           </TabsContent>
         </main>
       </Tabs>
