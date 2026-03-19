@@ -18,6 +18,19 @@ export default function HomeTabs() {
   const [email, setEmail] = useState<string | null>(null);
 
   useEffect(() => {
+    const savedTab = window.localStorage.getItem("home-active-tab");
+    
+    if (savedTab === "home" || savedTab === "tracking" || savedTab === "data") {
+      setActiveTab(savedTab);
+    }
+  }, []);
+
+  function handleTabChange(value: string) {
+    setActiveTab(value);
+    window.localStorage.setItem("home-active-tab", value);
+  }
+
+  useEffect(() => {
     async function loadUser() {
       const { data } = await supabase.auth.getUser();
       setEmail(data.user?.email ?? null);
@@ -39,19 +52,31 @@ export default function HomeTabs() {
     <div className="relative min-h-screen bg-muted/30">
       <WomensDayBackground />
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <AppHeader email={email} onLogout={handleLogout} />
 
         <main className="relative z-10 px-6 py-8">
-          <TabsContent value="home" className="mt-0 w-full">
+          <TabsContent
+            value="home"
+            forceMount
+            className={activeTab === "home" ? "mt-0 w-full" : "mt-0 hidden"}
+          >
             <RecordsPage isAdmin={isAdmin} />
           </TabsContent>
 
-          <TabsContent value="tracking" className="mt-0 w-full">
+          <TabsContent
+            value="tracking"
+            forceMount
+            className={activeTab === "tracking" ? "mt-0 w-full" : "mt-0 hidden"}
+          >
             <CustomerTrackingPage isAdmin={isAdmin} />
           </TabsContent>
 
-          <TabsContent value="data" className="mt-0 w-full">
+          <TabsContent
+            value="data"
+            forceMount
+            className={activeTab === "data" ? "mt-0 w-full" : "mt-0 hidden"}
+          >
             <ManagementPage isAdmin={isAdmin} />
           </TabsContent>
         </main>

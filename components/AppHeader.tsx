@@ -60,7 +60,6 @@ export default function AppHeader({
   return (
     <header className="sticky top-0 z-20 border-b border-border bg-white/95 backdrop-blur">
       <div className="mx-auto grid h-16 w-full grid-cols-[1fr_auto_1fr] items-center px-6">
-        {/* Left */}
         <div className="flex items-center">
           <div className="hidden md:flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
@@ -73,7 +72,6 @@ export default function AppHeader({
           </div>
         </div>
 
-        {/* Center */}
         <div className="flex justify-center">
           <TabsList className="h-16 rounded-none border-0 bg-transparent p-0 shadow-none">
             <TabsTrigger value="home" className={tabClass}>
@@ -93,7 +91,6 @@ export default function AppHeader({
           </TabsList>
         </div>
 
-        {/* Right */}
         <div className="flex justify-end">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
