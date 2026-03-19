@@ -32,8 +32,9 @@ export default function CustomerTrackingTable({
     onSearchChange: (value: string) => void;
     bdMap: Record<string, string>;
     stats: {
-        totalCustomers: number;
-        totalBranches: number;
+    totalCustomers: number;
+    totalBranches: number;
+    totalHotList: number;
     };
 }) {
     const [selectionMode, setSelectionMode] = useState(false);
@@ -140,7 +141,7 @@ export default function CustomerTrackingTable({
                                     <th className="p-2 text-left w-[240px]">
                                         Customers
                                         <span className="ml-2 inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
-                                            {stats.totalCustomers}
+                                            {stats.totalCustomers.toLocaleString("en-US")}
                                         </span>
                                     </th>
 
@@ -151,7 +152,13 @@ export default function CustomerTrackingTable({
                                         </span>
                                     </th>
 
-                                    <th className="p-2 text-left w-[120px]">In hot list</th>
+                                    <th className="p-2 text-left w-[120px]">
+                                        In hot list
+                                        <span className="ml-2 inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+                                            {stats.totalHotList.toLocaleString("en-US")}
+                                        </span>
+                                    </th>
+
                                     <th className="p-2 text-left w-[120px]">BD Name</th>
                                     <th className="p-2 text-left w-[140px]">Combo/Voucher</th>
                                     <th className="p-2 text-left w-[140px]">Note</th>

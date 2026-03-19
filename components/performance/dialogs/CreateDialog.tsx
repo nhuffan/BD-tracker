@@ -275,7 +275,7 @@ export default function CreateDialog({
             />
           </div>
 
-          <div>
+          <div className="col-span-2">
             <p className="mb-1.5 text-sm font-medium text-foreground">Bonus</p>
             <Input
               inputMode="numeric"

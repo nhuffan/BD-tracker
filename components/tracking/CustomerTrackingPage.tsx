@@ -101,18 +101,23 @@ export default function CustomerTrackingPage({
       });
   }, [rows, filters, search, bdMap]);
 
-     const stats = useMemo(() => {
-        const totalCustomers = filtered.length;
+  const stats = useMemo(() => {
+    const totalCustomers = filtered.length;
 
-        const totalBranches = filtered.reduce((sum, r) => {
-            return sum + (r.branch ?? 0);
-        }, 0);
+    const totalBranches = filtered.reduce((sum, r) => {
+      return sum + (r.branch ?? 0);
+    }, 0);
 
-        return {
-            totalCustomers,
-            totalBranches,
-        };
-    }, [filtered]);
+    const totalHotList = filtered.reduce((sum, r) => {
+      return sum + (r.in_hot_list ?? 0);
+    }, 0);
+
+    return {
+      totalCustomers,
+      totalBranches,
+      totalHotList,
+    };
+  }, [filtered]);
 
   return (
     <div className="space-y-3">

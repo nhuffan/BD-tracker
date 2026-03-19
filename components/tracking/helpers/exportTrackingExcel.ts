@@ -12,14 +12,18 @@ export function exportTrackingToExcel(
     bd?: Record<string, string>;
   }
 ) {
+  const totalBranches = rows.reduce((sum, r) => sum + (r.branch ?? 0), 0);
+  const totalHotList = rows.reduce((sum, r) => sum + (r.in_hot_list ?? 0), 0);
+  const totalCustomers = rows.length;
+
   const data = rows.map((r) => ({
     Date: formatDMY(r.event_date),
-    "Customer Name": r.customer_name,
-    Branches:
+    [`Customers (${totalCustomers.toLocaleString("en-US")})`]: r.customer_name,
+    [`Branches (${totalBranches.toLocaleString("en-US")})`]:
       r.branch !== null && r.branch !== undefined
         ? r.branch.toLocaleString("en-US")
         : "",
-    "In hot list":
+    [`In hot list (${totalHotList.toLocaleString("en-US")})`]:
       r.in_hot_list !== null && r.in_hot_list !== undefined
         ? r.in_hot_list.toLocaleString("en-US")
         : "",
@@ -59,6 +63,6 @@ export function exportTrackingToExcel(
 
   XLSX.writeFile(
     wb,
-    `customer_tracking_${new Date().toISOString().slice(0, 10)}.xlsx`
+    `customers_${new Date().toISOString().slice(0, 10)}.xlsx`
   );
 }
