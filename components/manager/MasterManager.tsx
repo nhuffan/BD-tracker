@@ -400,18 +400,22 @@ export default function MasterManager({
           <table className="w-full min-w-[900px] table-fixed text-sm">
             <thead className="bg-muted/50">
               <tr>
-                <th className="w-[100px] p-2 text-left">#</th>
-                <th className="w-[140px] p-2 text-left">Name</th>
+                <th className="w-[100px] p-2 pl-5 text-left">#</th>
+                <th className="w-[140px] p-2 text-center">Name</th>
+
                 {category === "bd" && (
                   <>
-                    <th className="w-[140px] p-2 text-right">New Customers</th>
-                    <th className="w-[140px] p-2 text-right">New In Hot List</th>
-                    <th className="w-[140px] p-2 text-right">Points</th>
-                    <th className="w-[140px] p-2 text-right">Bonus</th>
-                    <th className="w-[140px] p-2 text-right">Package Amount</th>
+                    <th className="w-[140px] p-2 text-center">New Customers</th>
+                    <th className="w-[140px] p-2 text-center">New In Hot List</th>
+                    <th className="w-[140px] p-2 text-center">Points</th>
+                    <th className="w-[140px] p-2 text-center">Bonus</th>
+                    <th className="w-[140px] p-2 text-center">Package Amount</th>
                   </>
                 )}
-                {isAdmin && <th className="w-[100px] p-2 text-right">Action</th>}
+
+                {isAdmin && (
+                  <th className="w-[100px] p-2 pr-5 text-right">Action</th>
+                )}
               </tr>
             </thead>
 
@@ -426,7 +430,8 @@ export default function MasterManager({
 
                 return (
                   <tr key={it.id} className="border-t odd:bg-muted/30">
-                    <td className="p-2 text-muted-foreground">
+                    {/* # */}
+                    <td className="p-2 pl-5 text-left text-muted-foreground">
                       {category === "bd" && bdMedalMap[it.id] ? (
                         <span className="text-base leading-none">
                           {bdMedalMap[it.id]}
@@ -436,29 +441,30 @@ export default function MasterManager({
                       )}
                     </td>
 
-                    <td className="truncate p-2" title={it.label}>
+                    {/* Name */}
+                    <td className="truncate p-2 text-center" title={it.label}>
                       {it.label}
                     </td>
 
                     {category === "bd" && (
                       <>
-                        <td className="truncate overflow-hidden whitespace-nowrap p-2 text-right tabular-nums">
+                        <td className="p-2 text-center tabular-nums">
                           {(trackingTotals[it.id]?.newCustomers ?? 0).toLocaleString("en-US")}
                         </td>
 
-                        <td className="truncate overflow-hidden whitespace-nowrap p-2 text-right tabular-nums">
+                        <td className="p-2 text-center tabular-nums">
                           {(trackingTotals[it.id]?.newHotList ?? 0).toLocaleString("en-US")}
                         </td>
 
-                        <td className="truncate overflow-hidden whitespace-nowrap p-2 text-right tabular-nums">
+                        <td className="p-2 text-center tabular-nums">
                           {(totals[it.id]?.points ?? 0).toLocaleString("en-US")}
                         </td>
 
-                        <td className="truncate overflow-hidden whitespace-nowrap p-2 text-right tabular-nums">
+                        <td className="p-2 text-center tabular-nums">
                           {(totals[it.id]?.money ?? 0).toLocaleString("en-US")}
                         </td>
 
-                        <td className="truncate overflow-hidden whitespace-nowrap p-2 text-right tabular-nums">
+                        <td className="p-2 text-center tabular-nums">
                           {(() => {
                             const packageAmount = totals[it.id]?.packageAmount;
                             return packageAmount != null
@@ -469,8 +475,9 @@ export default function MasterManager({
                       </>
                     )}
 
+                    {/* Action */}
                     {isAdmin && (
-                      <td className="p-2 text-right">
+                      <td className="p-2 pr-5 text-right">
                         <div className="inline-flex items-center gap-2">
                           <Button
                             size="icon"

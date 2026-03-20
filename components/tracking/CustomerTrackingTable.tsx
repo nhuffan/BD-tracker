@@ -32,9 +32,9 @@ export default function CustomerTrackingTable({
     onSearchChange: (value: string) => void;
     bdMap: Record<string, string>;
     stats: {
-    totalCustomers: number;
-    totalBranches: number;
-    totalHotList: number;
+        totalCustomers: number;
+        totalBranches: number;
+        totalHotList: number;
     };
 }) {
     const [selectionMode, setSelectionMode] = useState(false);
@@ -133,36 +133,36 @@ export default function CustomerTrackingTable({
                     </div>
 
                     <div className="w-full overflow-x-auto">
-                        <table className="w-full min-w-[1200px] text-sm table-fixed">
+                        <table className="w-full min-w-[1200px] text-sm table-fixed text-center">
                             <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur border-b shadow-sm">
                                 <tr>
-                                    <th className="p-2 text-left w-[120px]">Date</th>
+                                    <th className="w-[120px] p-2 pl-5 text-left">Date</th>
 
-                                    <th className="p-2 text-left w-[240px]">
+                                    <th className="p-2 w-[240px] ">
                                         Customers
                                         <span className="ml-2 inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
                                             {stats.totalCustomers.toLocaleString("en-US")}
                                         </span>
                                     </th>
 
-                                    <th className="p-2 text-left w-[120px]">
+                                    <th className="p-2 w-[120px]">
                                         Branches
                                         <span className="ml-2 inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
                                             {stats.totalBranches.toLocaleString("en-US")}
                                         </span>
                                     </th>
 
-                                    <th className="p-2 text-left w-[120px]">
+                                    <th className="p-2 w-[120px]">
                                         In hot list
                                         <span className="ml-2 inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
                                             {stats.totalHotList.toLocaleString("en-US")}
                                         </span>
                                     </th>
 
-                                    <th className="p-2 text-left w-[120px]">BD Name</th>
-                                    <th className="p-2 text-left w-[140px]">Combo/Voucher</th>
-                                    <th className="p-2 text-left w-[140px]">Note</th>
-                                    <th className="p-2 text-left w-[140px]">Information</th>
+                                    <th className="p-2 w-[120px]">BD Name</th>
+                                    <th className="p-2 w-[140px]">Combo/Voucher</th>
+                                    <th className="p-2 w-[140px]">Note</th>
+                                    <th className="p-2 w-[140px]">Information</th>
 
                                     {selectionMode && (
                                         <th className="p-2 w-[60px] text-right"></th>
@@ -182,8 +182,8 @@ export default function CustomerTrackingTable({
                                             onClick={() => toggleRowSelection(r.id)}
                                             onDoubleClick={() => openEditDialog(r)}
                                         >
-                                            <td className="p-2">
-                                                <div className="flex items-center gap-2">
+                                            <td className="p-2 pl-5 text-left">
+                                                <div className="flex items-center justify-start gap-2">
                                                     <span>{formatDMY(r.event_date)}</span>
                                                     {r._sync_status === "pending" && (
                                                         <Badge variant="secondary">Pending</Badge>
@@ -196,8 +196,8 @@ export default function CustomerTrackingTable({
 
                                             <td
                                                 className={`p-2 whitespace-nowrap overflow-hidden text-ellipsis ${(r.in_hot_list ?? 0) === 0
-                                                        ? "text-muted-foreground opacity-60"
-                                                        : ""
+                                                    ? "text-muted-foreground opacity-60"
+                                                    : ""
                                                     }`}
                                                 title={r.customer_name}
                                             >
