@@ -15,14 +15,14 @@ type QAViewTab = "active" | "done";
 function getPriorityBadgeClass(priority: QAPriority) {
   switch (priority) {
     case "urgent":
-      return "bg-red-100 text-red-700";
+      return "bg-destructive/10 text-destructive";
     case "high":
-      return "bg-red-100 text-red-700";
+      return "bg-destructive/10 text-destructive";
     case "medium":
-      return "bg-blue-100 text-blue-700";
+      return "bg-primary/10 text-primary";
     case "low":
     default:
-      return "bg-slate-100 text-slate-600";
+      return "bg-muted text-muted-foreground";
   }
 }
 
@@ -55,7 +55,7 @@ function getInitials(name?: string) {
   return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
 }
 
-export default function QATab({
+export default function QAPage({
   isAdmin,
   bdMap,
   currentUserId,
@@ -111,15 +111,15 @@ export default function QATab({
     const result = !keyword
       ? list
       : list.filter((t) => {
-        return (
-          t.title.toLowerCase().includes(keyword) ||
-          (t.issue_detail ?? "").toLowerCase().includes(keyword) ||
-          (t.admin_answer ?? "").toLowerCase().includes(keyword) ||
-          (t.asked_by_name ?? "").toLowerCase().includes(keyword) ||
-          t.priority.toLowerCase().includes(keyword) ||
-          (t.ticket_code ?? "").toLowerCase().includes(keyword)
-        );
-      });
+          return (
+            t.title.toLowerCase().includes(keyword) ||
+            (t.issue_detail ?? "").toLowerCase().includes(keyword) ||
+            (t.admin_answer ?? "").toLowerCase().includes(keyword) ||
+            (t.asked_by_name ?? "").toLowerCase().includes(keyword) ||
+            t.priority.toLowerCase().includes(keyword) ||
+            (t.ticket_code ?? "").toLowerCase().includes(keyword)
+          );
+        });
 
     return [...result].sort((a, b) => {
       const priorityDiff = priorityOrder(b.priority) - priorityOrder(a.priority);
@@ -191,10 +191,11 @@ export default function QATab({
             setSelectionMode(false);
             setSelected({});
           }}
-          className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${viewTab === "active"
+          className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+            viewTab === "active"
               ? "bg-primary text-primary-foreground"
-              : "border bg-white text-muted-foreground"
-            }`}
+              : "border bg-background text-muted-foreground hover:bg-muted"
+          }`}
         >
           Active ({activeTickets.length})
         </button>
@@ -206,10 +207,11 @@ export default function QATab({
             setSelectionMode(false);
             setSelected({});
           }}
-          className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${viewTab === "done"
+          className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+            viewTab === "done"
               ? "bg-primary text-primary-foreground"
-              : "border bg-white text-muted-foreground"
-            }`}
+              : "border bg-background text-muted-foreground hover:bg-muted"
+          }`}
         >
           Done ({doneTickets.length})
         </button>
@@ -217,7 +219,7 @@ export default function QATab({
         <div className="flex-1" />
 
         <Button
-          className="flex h-9 cursor-pointer items-center gap-2"
+          className="flex h-9 items-center gap-2 rounded-lg"
           onClick={() => setCreateOpen(true)}
         >
           <Plus className="h-4 w-4" />
@@ -225,8 +227,8 @@ export default function QATab({
         </Button>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border bg-white shadow-sm">
-        <div className="flex items-center border-b bg-muted/90 backdrop-blur px-4 py-2">
+      <div className="overflow-hidden rounded-xl border bg-background shadow-sm">
+        <div className="flex items-center border-b bg-muted/50 px-4 py-2">
           <div className="text-sm font-medium text-foreground">
             {viewTab === "active" ? "Active Tickets" : "Done Tickets"}
           </div>
@@ -235,19 +237,19 @@ export default function QATab({
 
           <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center lg:w-auto">
             <div className="relative w-full sm:w-[320px]">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search ticket, BD, summary..."
-                className="h-9 pl-8"
+                className="h-9 rounded-lg pl-9"
               />
             </div>
 
             {isAdmin && selectionMode && (
               <Button
-                className="cursor-pointer"
                 variant="ghost"
+                className="rounded-lg"
                 onClick={() => {
                   setSelectionMode(false);
                   setSelected({});
@@ -259,7 +261,7 @@ export default function QATab({
 
             {isAdmin && (
               <Button
-                className="cursor-pointer"
+                className="rounded-lg"
                 variant={selectionMode ? "destructive" : "secondary"}
                 onClick={handleDelete}
               >
@@ -303,8 +305,9 @@ export default function QATab({
                       openDetail(ticket);
                     }
                   }}
-                  className={`relative rounded-xl border bg-white p-4 text-left transition hover:bg-slate-50 hover:shadow-sm ${selectionMode ? "cursor-pointer" : "cursor-pointer"
-                    } ${isSelected ? "border-primary bg-primary/5" : ""}`}
+                  className={`relative rounded-lg border bg-background p-4 text-left transition hover:bg-muted/40 hover:shadow-sm ${
+                    isSelected ? "border-primary bg-primary/5" : ""
+                  }`}
                 >
                   {selectionMode && (
                     <div
@@ -325,11 +328,11 @@ export default function QATab({
 
                   <div className="mb-3 flex items-start gap-3">
                     <div className="min-w-0 flex-1">
-                      <div className="text-sm font-bold text-blue-600">
+                      <div className="text-sm font-bold text-primary">
                         {ticket.ticket_code}
                       </div>
 
-                      <div className="mt-1 line-clamp-1 text-base font-semibold text-slate-900">
+                      <div className="mt-1 line-clamp-1 text-base font-semibold text-foreground">
                         {ticket.title}
                       </div>
                     </div>
@@ -346,25 +349,25 @@ export default function QATab({
                   </div>
 
                   <div className="mb-3 flex items-center gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-600">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold text-muted-foreground">
                       {getInitials(bdName)}
                     </div>
 
                     <div className="min-w-0">
-                      <div className="text-xs uppercase tracking-wide text-slate-400">
+                      <div className="text-xs uppercase tracking-wide text-muted-foreground">
                         BD Name
                       </div>
-                      <div className="truncate text-sm font-medium text-slate-800">
+                      <div className="truncate text-sm font-medium text-foreground">
                         {bdName}
                       </div>
                     </div>
                   </div>
 
                   <div>
-                    <div className="mb-1 text-xs uppercase tracking-wide text-slate-400">
+                    <div className="mb-1 text-xs uppercase tracking-wide text-muted-foreground">
                       Summary
                     </div>
-                    <div className="line-clamp-2 text-sm text-slate-600">
+                    <div className="line-clamp-2 text-sm text-muted-foreground">
                       {viewTab === "done"
                         ? ticket.admin_answer || ticket.issue_detail || "—"
                         : ticket.issue_detail || "—"}

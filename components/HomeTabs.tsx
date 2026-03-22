@@ -10,7 +10,7 @@ import ManagementPage from "@/components/manager/ManagementPage";
 import WomensDayBackground from "@/components/WomensDayBackground";
 import { useCurrentUserRole } from "@/lib/useCurrentUserRole";
 import AppHeader from "@/components/AppHeader";
-import QATab from "./qa/QATab";
+import QAPage from "./qa/QAPage";
 
 export default function HomeTabs() {
   const router = useRouter();
@@ -124,7 +124,7 @@ export default function HomeTabs() {
             {!qaReady ? (
               <div className="p-4 text-sm text-muted-foreground">Loading...</div>
             ) : (
-              <QATab
+              <QAPage
                 isAdmin={isAdmin}
                 bdMap={bdMap}
                 currentUserId={currentUserId}
