@@ -85,7 +85,10 @@ export default function CreateQATicketDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[calc(100vw-32px)] max-w-2xl gap-0 overflow-hidden rounded-xl border bg-background p-0 shadow-xl">
+        <DialogContent
+          className="w-[66vw] max-w-none min-w-[900px] gap-0 overflow-hidden rounded-xl border bg-background p-0 shadow-xl"
+        >
+
         <DialogHeader className="border-b px-6 py-5">
           <DialogTitle className="text-2xl font-bold tracking-tight text-foreground">
             Submit a New Question
@@ -145,10 +148,11 @@ export default function CreateQATicketDialog({
           <div>
             <label className={labelClass}>Detailed description</label>
             <Textarea
+              wrap="soft"
               value={issueDetail}
               onChange={(e) => setIssueDetail(e.target.value)}
               placeholder="Describe your question or issue in detail..."
-              className="min-h-[140px]"
+              className="min-h-[140px] whitespace-pre-wrap break-all"
             />
           </div>
         </div>

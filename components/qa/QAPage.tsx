@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Search, Plus } from "lucide-react";
+import { Clock3, Plus, Search } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,14 +15,14 @@ type QAViewTab = "active" | "done";
 function getPriorityBadgeClass(priority: QAPriority) {
   switch (priority) {
     case "urgent":
-      return "bg-destructive/10 text-destructive";
+      return "bg-red-50 text-red-600";
     case "high":
-      return "bg-destructive/10 text-destructive";
+      return "bg-orange-50 text-orange-600";
     case "medium":
-      return "bg-primary/10 text-primary";
+      return "bg-blue-50 text-blue-600";
     case "low":
     default:
-      return "bg-muted text-muted-foreground";
+      return "bg-slate-100 text-slate-500";
   }
 }
 
@@ -48,11 +48,36 @@ function getInitials(name?: string) {
   if (!name) return "—";
 
   const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 1) {
-    return parts[0].slice(0, 2).toUpperCase();
-  }
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
 
   return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
+}
+
+function formatRelativeTime(value?: string | null) {
+  if (!value) return "—";
+
+  const diffMs = Date.now() - new Date(value).getTime();
+  const minutes = Math.floor(diffMs / 1000 / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  if (minutes < 60) return `${minutes}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  if (days === 1) return "Yesterday";
+  return `${days}d ago`;
+}
+
+function calcAvgResponseHours(tickets: QATicket[]) {
+  const completed = tickets.filter((t) => t.created_at && t.done_at);
+  if (!completed.length) return "—";
+
+  const totalHours = completed.reduce((sum, t) => {
+    const created = new Date(t.created_at).getTime();
+    const done = new Date(t.done_at as string).getTime();
+    return sum + Math.max(0, done - created) / 1000 / 60 / 60;
+  }, 0);
+
+  return `${(totalHours / completed.length).toFixed(1)}h`;
 }
 
 export default function QAPage({
@@ -111,20 +136,19 @@ export default function QAPage({
     const result = !keyword
       ? list
       : list.filter((t) => {
-          return (
-            t.title.toLowerCase().includes(keyword) ||
-            (t.issue_detail ?? "").toLowerCase().includes(keyword) ||
-            (t.admin_answer ?? "").toLowerCase().includes(keyword) ||
-            (t.asked_by_name ?? "").toLowerCase().includes(keyword) ||
-            t.priority.toLowerCase().includes(keyword) ||
-            (t.ticket_code ?? "").toLowerCase().includes(keyword)
-          );
-        });
+        return (
+          t.title.toLowerCase().includes(keyword) ||
+          (t.issue_detail ?? "").toLowerCase().includes(keyword) ||
+          (t.admin_answer ?? "").toLowerCase().includes(keyword) ||
+          (t.asked_by_name ?? "").toLowerCase().includes(keyword) ||
+          t.priority.toLowerCase().includes(keyword) ||
+          (t.ticket_code ?? "").toLowerCase().includes(keyword)
+        );
+      });
 
     return [...result].sort((a, b) => {
       const priorityDiff = priorityOrder(b.priority) - priorityOrder(a.priority);
       if (priorityDiff !== 0) return priorityDiff;
-
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
   }, [tickets, search, bdMap]);
@@ -136,6 +160,14 @@ export default function QAPage({
   const selectedIds = displayTickets
     .filter((ticket) => selected[ticket.id])
     .map((ticket) => ticket.id);
+
+  const stats = useMemo(() => {
+    return {
+      total: tickets.length,
+      active: activeTickets.length,
+      done: doneTickets.length,
+    };
+  }, [tickets, activeTickets, doneTickets]);
 
   function openDetail(ticket: QATicketVM) {
     if (selectionMode) return;
@@ -182,103 +214,110 @@ export default function QAPage({
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          onClick={() => {
-            setViewTab("active");
-            setSelectionMode(false);
-            setSelected({});
-          }}
-          className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
-            viewTab === "active"
-              ? "bg-primary text-primary-foreground"
-              : "border bg-background text-muted-foreground hover:bg-muted"
-          }`}
-        >
-          Active ({activeTickets.length})
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            setViewTab("done");
-            setSelectionMode(false);
-            setSelected({});
-          }}
-          className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
-            viewTab === "done"
-              ? "bg-primary text-primary-foreground"
-              : "border bg-background text-muted-foreground hover:bg-muted"
-          }`}
-        >
-          Done ({doneTickets.length})
-        </button>
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
+        <div>
+          <h1 className="text-[32px] font-extrabold tracking-tight text-slate-950">
+            Question Board{" "}
+            <span className="text-slate-950">({stats.total})</span>
+          </h1>
+        </div>
 
         <div className="flex-1" />
 
-        <Button
-          className="flex h-9 items-center gap-2 rounded-lg"
-          onClick={() => setCreateOpen(true)}
-        >
-          <Plus className="h-4 w-4" />
-          Create Question
-        </Button>
+        <div className="flex items-center gap-2">
+
+
+          <Button
+            className="ml-2 h-10 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer"
+            onClick={() => setCreateOpen(true)}
+          >
+            <Plus className="mr-1 h-4 w-4" />
+            Create Question
+          </Button>
+        </div>
       </div>
 
-      <div className="overflow-hidden rounded-xl border bg-background shadow-sm">
-        <div className="flex items-center border-b bg-muted/50 px-4 py-2">
-          <div className="text-sm font-medium text-foreground">
-            {viewTab === "active" ? "Active Tickets" : "Done Tickets"}
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-col gap-3 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center">
+          {/* Search */}
+          <div className="relative w-full sm:w-[320px]">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search question, priority, BD..."
+              className="h-10 rounded-lg border-slate-200 pl-9 shadow-none"
+            />
           </div>
 
+          {/* Active / Done */}
+          <div className="flex items-center gap-2 sm:ml-2">
+            <button
+              type="button"
+              onClick={() => {
+                setViewTab("active");
+                setSelectionMode(false);
+                setSelected({});
+              }}
+              className={`rounded-md px-3 py-1.5 text-xs font-semibold transition cursor-pointer ${viewTab === "active"
+                  ? "bg-primary/10 text-primary"
+                  : "text-slate-500 hover:bg-slate-100"
+                }`}
+            >
+              Active ({stats.active})
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setViewTab("done");
+                setSelectionMode(false);
+                setSelected({});
+              }}
+              className={`rounded-md px-3 py-1.5 text-xs font-semibold transition cursor-pointer ${viewTab === "done"
+                  ? "bg-primary/10 text-primary"
+                  : "text-slate-500 hover:bg-slate-100"
+                }`}
+            >
+              Done ({stats.done})
+            </button>
+          </div>
+
+          {/* push right */}
           <div className="flex-1" />
 
-          <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center lg:w-auto">
-            <div className="relative w-full sm:w-[320px]">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search ticket, BD, summary..."
-                className="h-9 rounded-lg pl-9"
-              />
-            </div>
+          {/* Actions */}
+          {isAdmin && selectionMode && (
+            <Button
+              variant="ghost"
+              className="rounded-lg"
+              onClick={() => {
+                setSelectionMode(false);
+                setSelected({});
+              }}
+            >
+              Cancel
+            </Button>
+          )}
 
-            {isAdmin && selectionMode && (
-              <Button
-                variant="ghost"
-                className="rounded-lg"
-                onClick={() => {
-                  setSelectionMode(false);
-                  setSelected({});
-                }}
-              >
-                Cancel
-              </Button>
-            )}
-
-            {isAdmin && (
-              <Button
-                className="rounded-lg"
-                variant={selectionMode ? "destructive" : "secondary"}
-                onClick={handleDelete}
-              >
-                {selectionMode ? `Delete (${selectedIds.length})` : "Delete"}
-              </Button>
-            )}
-          </div>
+          {isAdmin && (
+            <Button
+              variant={selectionMode ? "destructive" : "secondary"}
+              className="rounded-lg cursor-pointer"
+              onClick={handleDelete}
+            >
+              {selectionMode ? `Delete (${selectedIds.length})` : "Delete"}
+            </Button>
+          )}
         </div>
 
         {loading ? (
-          <div className="p-5 text-sm text-muted-foreground">Loading...</div>
+          <div className="p-5 text-sm text-slate-500">Loading...</div>
         ) : displayTickets.length === 0 ? (
-          <div className="p-5 text-sm text-muted-foreground">
-            No tickets found
-          </div>
+          <div className="p-5 text-sm text-slate-500">No tickets found</div>
         ) : (
-          <div className="grid grid-cols-1 gap-4 p-5 xl:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 p-5 md:grid-cols-2 xl:grid-cols-3">
             {displayTickets.map((ticket) => {
               const bdName = ticket.asked_by_name ?? "—";
               const isSelected = !!selected[ticket.id];
@@ -305,9 +344,8 @@ export default function QAPage({
                       openDetail(ticket);
                     }
                   }}
-                  className={`relative rounded-lg border bg-background p-4 text-left transition hover:bg-muted/40 hover:shadow-sm ${
-                    isSelected ? "border-primary bg-primary/5" : ""
-                  }`}
+                  className={`relative rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${isSelected ? "border-primary bg-primary/5" : ""
+                    }`}
                 >
                   {selectionMode && (
                     <div
@@ -326,51 +364,48 @@ export default function QAPage({
                     </div>
                   )}
 
-                  <div className="mb-3 flex items-start gap-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm font-bold text-primary">
+                  <div className="mb-3 flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="inline-flex items-center rounded-md bg-muted px-2 py-1 text-[11px] font-semibold tracking-wide text-muted-foreground">
                         {ticket.ticket_code}
-                      </div>
-
-                      <div className="mt-1 line-clamp-1 text-base font-semibold text-foreground">
-                        {ticket.title}
                       </div>
                     </div>
 
                     {!selectionMode && (
                       <span
-                        className={`inline-flex rounded-md px-2 py-1 text-[11px] font-bold uppercase ${getPriorityBadgeClass(
+                        className={`inline-flex items-center rounded-md px-2 py-1 text-[10px] font-bold uppercase ${getPriorityBadgeClass(
                           ticket.priority
                         )}`}
                       >
+                        <span className="mr-1 h-1.5 w-1.5 rounded-full bg-current opacity-70" />
                         {ticket.priority}
                       </span>
                     )}
                   </div>
 
-                  <div className="mb-3 flex items-center gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold text-muted-foreground">
-                      {getInitials(bdName)}
-                    </div>
-
-                    <div className="min-w-0">
-                      <div className="text-xs uppercase tracking-wide text-muted-foreground">
-                        BD Name
-                      </div>
-                      <div className="truncate text-sm font-medium text-foreground">
-                        {bdName}
-                      </div>
-                    </div>
+                  <div className="mb-2 line-clamp-1 text-[20px] font-bold leading-tight text-slate-950">
+                    {ticket.title}
                   </div>
 
-                  <div>
-                    <div className="mb-1 text-xs uppercase tracking-wide text-muted-foreground">
-                      Summary
+                  <div className="mb-4 line-clamp-3 min-h-[66px] text-sm leading-6 text-slate-500">
+                    {viewTab === "done"
+                      ? ticket.admin_answer || ticket.issue_detail || "—"
+                      : ticket.issue_detail || "—"}
+                  </div>
+
+                  <div className="flex items-center justify-between border-t border-slate-100 pt-3">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-200 text-[10px] font-bold text-slate-700">
+                        {getInitials(bdName)}
+                      </div>
+                      <span className="truncate text-sm font-medium text-slate-800">
+                        {bdName}
+                      </span>
                     </div>
-                    <div className="line-clamp-2 text-sm text-muted-foreground">
-                      {viewTab === "done"
-                        ? ticket.admin_answer || ticket.issue_detail || "—"
-                        : ticket.issue_detail || "—"}
+
+                    <div className="flex items-center gap-1 text-[11px] text-slate-400">
+                      <Clock3 className="h-3.5 w-3.5" />
+                      <span>{formatRelativeTime(ticket.created_at)}</span>
                     </div>
                   </div>
                 </div>

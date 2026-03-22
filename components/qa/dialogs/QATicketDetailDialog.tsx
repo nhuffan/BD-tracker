@@ -17,7 +17,11 @@ import { Textarea } from "@/components/ui/textarea";
 import type { QAPriority, QATicketVM } from "../types";
 
 const fieldClass =
-  "h-11 w-full min-w-0 rounded-lg border border-input bg-background px-3 text-sm shadow-none";
+  "!h-11 h-11 w-full min-w-0 rounded-lg border border-input bg-background px-3 text-sm shadow-none";
+const readonlyFieldClass =
+  "rounded-lg border border-input bg-muted/60 px-3 py-2 text-sm text-foreground";
+const infoFieldClass =
+  "flex h-11 w-full min-w-0 items-center rounded-lg border border-input bg-muted/60 px-3 text-sm text-foreground";
 const labelClass =
   "mb-2 block text-[11px] font-bold uppercase tracking-wide text-muted-foreground";
 
@@ -44,9 +48,23 @@ function getInitials(name?: string) {
   return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
 }
 
-function getStatusLabel(ticket?: QATicketVM | null, isDone?: boolean) {
-  const done = typeof isDone === "boolean" ? isDone : ticket?.is_done;
-  return done ? "DONE" : "IN REVIEW";
+function getPriorityLabel(priority?: QAPriority) {
+  if (!priority) return "MEDIUM";
+  return priority.toUpperCase();
+}
+
+function getPriorityBadgeClass(priority?: QAPriority) {
+  switch (priority) {
+    case "urgent":
+      return "bg-destructive/10 text-destructive";
+    case "high":
+      return "bg-orange-100 text-orange-700";
+    case "medium":
+      return "bg-primary/10 text-primary";
+    case "low":
+    default:
+      return "bg-muted text-muted-foreground";
+  }
 }
 
 export default function QATicketDetailDialog({
@@ -69,6 +87,7 @@ export default function QATicketDetailDialog({
   const [priority, setPriority] = useState<QAPriority>("medium");
   const [adminAnswer, setAdminAnswer] = useState("");
   const [isDone, setIsDone] = useState(false);
+  const [additionalDescription, setAdditionalDescription] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -76,34 +95,102 @@ export default function QATicketDetailDialog({
     setPriority(ticket.priority);
     setAdminAnswer(ticket.admin_answer ?? "");
     setIsDone(ticket.is_done);
+    setAdditionalDescription("");
   }, [ticket]);
 
   if (!ticket) return null;
 
   const requesterName = bdMap[ticket.asked_by_bd_id] ?? "—";
 
+  const isDisabledSave = isAdmin
+    ? saving
+    : saving || !additionalDescription.trim();
+
+  function renderIssueDetail(content?: string | null) {
+    if (!content) return "—";
+
+    const lines = content.split("\n");
+
+    return lines.map((line, index) => {
+      const isAdditionalHeader =
+        /^--- Additional description \(.+\) by .+ ---$/.test(line.trim());
+
+      if (isAdditionalHeader) {
+        return (
+          <div key={index} className="font-bold text-foreground">
+            {line}
+          </div>
+        );
+      }
+
+      if (!line.trim()) {
+        return <div key={index} className="h-4" />;
+      }
+
+      return <div key={index}>{line}</div>;
+    });
+  }
+
   async function handleSave() {
-    if (!isAdmin || !ticket) return;
+    if (!ticket) return;
 
     setSaving(true);
     try {
-      const payload: Record<string, unknown> = {
-        priority,
-        admin_answer: adminAnswer.trim() || null,
-        is_done: isDone,
-        answered_by_user_id: adminAnswer.trim() ? currentUserId : null,
-        updated_at: new Date().toISOString(),
-        done_at: isDone ? new Date().toISOString() : null,
-      };
+      if (isAdmin) {
+        const payload: Record<string, unknown> = {
+          priority,
+          admin_answer: adminAnswer.trim() || null,
+          is_done: isDone,
+          answered_by_user_id: adminAnswer.trim() ? currentUserId : null,
+          updated_at: new Date().toISOString(),
+          done_at: isDone ? new Date().toISOString() : null,
+        };
 
-      const { error } = await supabase
-        .from("qa_tickets")
-        .update(payload)
-        .eq("id", ticket.id);
+        const { error } = await supabase
+          .from("qa_tickets")
+          .update(payload)
+          .eq("id", ticket.id);
 
-      if (error) {
-        console.error("Failed to update qa ticket:", error);
-        return;
+        if (error) {
+          console.error("Failed to update qa ticket:", error);
+          return;
+        }
+      } else {
+        const extra = additionalDescription.trim();
+        if (!extra) return;
+
+        const now = new Date();
+
+        const timeLabel = now.toLocaleString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+
+        const mergedIssueDetail = [
+          ticket.issue_detail?.trim() || "",
+          "",
+          `--- Additional description (${timeLabel}) by ${requesterName} ---`,
+          "",
+          extra,
+        ]
+          .filter(Boolean)
+          .join("\n");
+
+        const { error } = await supabase
+          .from("qa_tickets")
+          .update({
+            issue_detail: mergedIssueDetail,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", ticket.id);
+
+        if (error) {
+          console.error("Failed to append issue detail:", error);
+          return;
+        }
       }
 
       onOpenChange(false);
@@ -115,75 +202,45 @@ export default function QATicketDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[760px] overflow-hidden rounded-xl border bg-background p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
+      <DialogContent
+        className="w-[66vw] max-w-none min-w-[900px] overflow-hidden rounded-xl border bg-background p-0"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
         <DialogTitle className="sr-only">{ticket.title}</DialogTitle>
 
         <div className="flex items-start justify-between border-b px-6 py-5">
           <div className="min-w-0">
             <div className="mb-2 flex flex-wrap items-center gap-2">
-              <span className="text-[11px] font-bold uppercase tracking-wide text-primary">
-                {getStatusLabel(ticket, isDone)}
+              <span
+                className={`inline-flex items-center rounded-md px-2 py-1 text-[11px] font-bold uppercase tracking-wide ${getPriorityBadgeClass(
+                  priority
+                )}`}
+              >
+                {getPriorityLabel(priority)}
               </span>
               <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                 · {formatTicketCode(ticket)}
               </span>
             </div>
 
-            <h2 className="max-w-[560px] text-2xl font-bold leading-tight tracking-tight text-foreground">
+            <h2 className="min-w-0 max-w-full whitespace-pre-wrap break-all text-2xl font-bold leading-tight tracking-tight text-foreground">
               {ticket.title}
             </h2>
           </div>
         </div>
 
         <div className="space-y-6 px-6 py-6">
-          <div className="rounded-lg border bg-muted/40 p-3">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold text-muted-foreground">
-                {getInitials(requesterName)}
-              </div>
-
-              <div className="min-w-0">
-                <div className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
-                  Requester
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:items-stretch">
+            <div className="min-w-0">
+              <div className={labelClass}>Requester</div>
+              <div className={`${infoFieldClass} gap-3`}>
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-bold text-muted-foreground">
+                  {getInitials(requesterName)}
                 </div>
-                <div className="truncate text-base font-semibold text-foreground">
-                  {requesterName}
-                </div>
+                <span className="truncate font-medium">{requesterName}</span>
               </div>
             </div>
-          </div>
 
-          <div>
-            <div className={labelClass}>Issue Description</div>
-
-            <div className="rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground">
-              <div
-                className="max-h-[10em] overflow-y-auto whitespace-pre-wrap leading-7"
-                style={{ scrollbarGutter: "stable" }}
-              >
-                {ticket.issue_detail || "—"}
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <div className={labelClass}>Admin Response</div>
-
-            {isAdmin ? (
-              <Textarea
-                value={adminAnswer}
-                onChange={(e) => setAdminAnswer(e.target.value)}
-                placeholder="Type your response here..."
-                className="min-h-[150px]"
-              />
-            ) : (
-              <div className="min-h-[150px] whitespace-pre-wrap rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground">
-                {ticket.admin_answer || "No answer yet"}
-              </div>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="min-w-0">
               <div className={labelClass}>Priority</div>
 
@@ -203,73 +260,119 @@ export default function QATicketDetailDialog({
                   </SelectContent>
                 </Select>
               ) : (
-                <div className="flex h-11 w-full min-w-0 items-center rounded-lg border border-input bg-background px-3 text-sm text-foreground">
-                  {ticket.priority.charAt(0).toUpperCase() + ticket.priority.slice(1)}
+                <div className={infoFieldClass}>
+                  {ticket.priority.charAt(0).toUpperCase() +
+                    ticket.priority.slice(1)}
                 </div>
               )}
             </div>
 
             <div className="min-w-0">
               <div className={labelClass}>Date Created</div>
-
-              <div className="flex h-11 w-full min-w-0 items-center gap-2 rounded-lg border border-input bg-muted/40 px-3 text-sm text-foreground">
+              <div className={`${infoFieldClass} gap-2`}>
                 <CalendarDays className="h-4 w-4 shrink-0 text-muted-foreground" />
                 <span className="truncate">{formatDate(ticket.created_at)}</span>
               </div>
             </div>
           </div>
 
-          <div
-            role={isAdmin ? "button" : undefined}
-            tabIndex={isAdmin ? 0 : -1}
-            onClick={() => {
-              if (!isAdmin) return;
-              setIsDone((prev) => !prev);
-            }}
-            onKeyDown={(e) => {
-              if (!isAdmin) return;
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                setIsDone((prev) => !prev);
-              }
-            }}
-            className={`rounded-lg border border-input bg-background p-4 transition ${
-              isAdmin ? "cursor-pointer hover:bg-muted/30" : ""
-            }`}
-          >
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <div className="text-base font-semibold text-foreground">
-                  Mark as Resolved
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  {isDone
-                    ? "This ticket is currently marked as resolved."
-                    : "Ticket will remain active until resolved."}
-                </div>
-              </div>
+          <div>
+            <div className={labelClass}>Issue Description</div>
 
-              <div onClick={(e) => e.stopPropagation()}>
-                <Checkbox
-                  checked={isAdmin ? isDone : ticket.is_done}
-                  disabled={!isAdmin}
-                  onCheckedChange={(v) => setIsDone(Boolean(v))}
-                />
+            <div className={readonlyFieldClass}>
+              <div
+                className="max-h-28 overflow-y-auto whitespace-pre-wrap break-all leading-7"
+                style={{ scrollbarGutter: "stable" }}
+              >
+                {renderIssueDetail(ticket.issue_detail)}
               </div>
             </div>
           </div>
+
+          <div>
+            <div className={labelClass}>Admin Response</div>
+
+            {isAdmin ? (
+              <Textarea
+                value={adminAnswer}
+                onChange={(e) => setAdminAnswer(e.target.value)}
+                placeholder="Type your response here..."
+                wrap="soft"
+                className="h-28 max-h-28 resize-none overflow-y-auto break-all whitespace-pre-wrap leading-7"
+              />
+            ) : (
+              <div className={readonlyFieldClass}>
+                <div
+                  className="max-h-28 overflow-y-auto whitespace-pre-wrap break-all leading-7"
+                  style={{ scrollbarGutter: "stable" }}
+                >
+                  {ticket.admin_answer || "No answer yet"}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {!isAdmin && (
+            <div>
+              <div className={labelClass}>Additional Description</div>
+              <Textarea
+                value={additionalDescription}
+                onChange={(e) => setAdditionalDescription(e.target.value)}
+                placeholder="Add more details to help clarify your issue..."
+                wrap="soft"
+                className="h-[3.5rem] max-h-[3.5rem] resize-none overflow-y-auto break-all whitespace-pre-wrap leading-7"
+              />
+            </div>
+          )}
+
+          {isAdmin && (
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => setIsDone((prev) => !prev)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setIsDone((prev) => !prev);
+                }
+              }}
+              className="cursor-pointer rounded-lg border border-input bg-background p-4 transition hover:bg-muted/30"
+            >
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <div className="text-base font-semibold text-foreground">
+                    Mark as Resolved
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {isDone
+                      ? "This ticket is currently marked as resolved."
+                      : "Ticket will remain active until resolved."}
+                  </div>
+                </div>
+
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Checkbox
+                    checked={isDone}
+                    onCheckedChange={(v) => setIsDone(Boolean(v))}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="border-t bg-muted/30 px-6 py-4">
-          {isAdmin && (
-            <Button
-              className="h-11 w-full rounded-lg"
-              onClick={handleSave}
-              disabled={saving}
-            >
-              {saving ? "Updating..." : "Update Ticket"}
-            </Button>
-          )}
+          <Button
+            className="h-11 w-full rounded-lg"
+            onClick={handleSave}
+            disabled={isDisabledSave}
+          >
+            {saving
+              ? isAdmin
+                ? "Updating..."
+                : "Submitting..."
+              : "Update Ticket"}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
