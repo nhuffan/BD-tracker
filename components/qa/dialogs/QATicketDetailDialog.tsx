@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Archive, CalendarDays, CheckCircle2 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
@@ -88,12 +88,20 @@ export default function QATicketDetailDialog({
   const [statusAction, setStatusAction] = useState<"active" | "done" | "archive">("active");
   const [additionalDescription, setAdditionalDescription] = useState("");
   const [saving, setSaving] = useState(false);
+  const titleRef = useRef<HTMLHeadingElement | null>(null);
+  const titleWrapperRef = useRef<HTMLDivElement | null>(null);
+  const titlePopoverRef = useRef<HTMLDivElement | null>(null);
+  const [showFullTitle, setShowFullTitle] = useState(false);
+  const [isTitleOverflowing, setIsTitleOverflowing] = useState(false);
 
   useEffect(() => {
     if (!ticket) return;
     setPriority(ticket.priority);
+
     setAdminAnswer(ticket.admin_answer ?? "");
     setAdditionalDescription("");
+    setShowFullTitle(false);
+    setIsTitleOverflowing(false);
 
     if (ticket.is_archived) {
       setStatusAction("archive");
@@ -103,6 +111,63 @@ export default function QATicketDetailDialog({
       setStatusAction("active");
     }
   }, [ticket]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    let frame1 = 0;
+    let frame2 = 0;
+
+    const checkTitleOverflow = () => {
+      const el = titleRef.current;
+      if (!el) return;
+      setIsTitleOverflowing(el.scrollHeight > el.clientHeight + 1);
+    };
+
+    frame1 = window.requestAnimationFrame(() => {
+      frame2 = window.requestAnimationFrame(() => {
+        checkTitleOverflow();
+      });
+    });
+
+    const observer = new ResizeObserver(() => {
+      checkTitleOverflow();
+    });
+
+    if (titleRef.current) {
+      observer.observe(titleRef.current);
+    }
+
+    window.addEventListener("resize", checkTitleOverflow);
+
+    return () => {
+      window.cancelAnimationFrame(frame1);
+      window.cancelAnimationFrame(frame2);
+      observer.disconnect();
+      window.removeEventListener("resize", checkTitleOverflow);
+    };
+  }, [ticket?.title, open]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (!showFullTitle) return;
+
+      const target = event.target as Node;
+      if (
+        titleWrapperRef.current?.contains(target) ||
+        titlePopoverRef.current?.contains(target)
+      ) {
+        return;
+      }
+
+      setShowFullTitle(false);
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showFullTitle]);
 
   const originalStatusAction = useMemo<"active" | "done" | "archive">(() => {
     if (!ticket) return "active";
@@ -261,13 +326,49 @@ export default function QATicketDetailDialog({
               </span>
             </div>
 
-            <h2 className="min-w-0 max-w-full whitespace-pre-wrap break-all text-2xl font-bold leading-tight tracking-tight text-foreground">
-              {ticket.title}
-            </h2>
+            <div ref={titleWrapperRef} className="relative max-w-full">
+              <div className="flex max-w-full items-end gap-1">
+                <h2
+                  ref={titleRef}
+                  className="min-w-0 flex-1 line-clamp-1 break-all text-2xl font-bold leading-tight tracking-tight text-foreground"
+                >
+                  {ticket.title}
+                </h2>
+
+                {isTitleOverflowing && (
+                  <button
+                    type="button"
+                    className="shrink-0 text-sm font-medium text-blue-600 underline underline-offset-2 hover:text-blue-700"
+                    onClick={() => setShowFullTitle(true)}
+                  >
+                    view more
+                  </button>
+                )}
+              </div>
+
+              {showFullTitle && (
+                <>
+                  <div
+                    className="fixed inset-0 z-10 bg-black/10"
+                    onClick={() => setShowFullTitle(false)}
+                  />
+
+                  <div
+                    ref={titlePopoverRef}
+                    className="absolute left-0 top-full z-20 mt-2 w-full max-w-[720px] rounded-xl border border-input bg-background p-4 shadow-lg"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="max-h-[240px] overflow-y-auto whitespace-pre-wrap break-all text-base font-semibold leading-7 text-foreground">
+                      {ticket.title}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
 
-        <div className="space-y-6 px-6 py-6">
+        <div className="space-y-4 px-6">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:items-stretch">
             <div className="min-w-0">
               <div className={labelClass}>Requester</div>
@@ -368,11 +469,10 @@ export default function QATicketDetailDialog({
               <Button
                 type="button"
                 variant="outline"
-                className={`h-10 flex-1 rounded-md border border-input bg-background text-sm font-medium shadow-none ${
-                  statusAction === "done"
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "text-foreground hover:bg-muted/50"
-                }`}
+                className={`h-10 flex-1 rounded-md border border-input bg-background text-sm font-medium shadow-none cursor-pointer ${statusAction === "done"
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "text-foreground hover:bg-muted/50"
+                  }`}
                 onClick={() =>
                   setStatusAction((prev) => (prev === "done" ? "active" : "done"))
                 }
@@ -384,11 +484,10 @@ export default function QATicketDetailDialog({
               <Button
                 type="button"
                 variant="outline"
-                className={`h-10 flex-1 rounded-md border border-input bg-background text-sm font-medium shadow-none ${
-                  statusAction === "archive"
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "text-foreground hover:bg-muted/50"
-                }`}
+                className={`h-10 flex-1 rounded-md border border-input bg-background text-sm font-medium shadow-none cursor-pointer ${statusAction === "archive"
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "text-foreground hover:bg-muted/50"
+                  }`}
                 onClick={() =>
                   setStatusAction((prev) =>
                     prev === "archive" ? "active" : "archive"
@@ -404,7 +503,7 @@ export default function QATicketDetailDialog({
 
         <div className="border-t bg-muted/30 px-6 py-4">
           <Button
-            className="h-11 w-full rounded-lg"
+            className="h-11 w-full rounded-lg cursor-pointer"
             onClick={handleSave}
             disabled={isDisabledSave}
           >

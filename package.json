@@ -16,6 +16,8 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "dexie": "^4.3.0",
+    "docx": "^9.6.1",
+    "file-saver": "^2.0.5",
     "lucide-react": "^0.577.0",
     "next": "16.1.6",
     "papaparse": "^5.5.3",
@@ -33,6 +35,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/file-saver": "^2.0.7",
     "@types/node": "^20",
     "@types/papaparse": "^5.5.2",
     "@types/react": "^19",

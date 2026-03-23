@@ -161,7 +161,7 @@ export default function CreateQATicketDialog({
           <Button
             type="button"
             variant="ghost"
-            className="h-11 rounded-lg px-5"
+            className="h-11 rounded-lg px-5 cursor-pointer"
             onClick={() => onOpenChange(false)}
           >
             Cancel
@@ -169,7 +169,7 @@ export default function CreateQATicketDialog({
 
           <Button
             type="button"
-            className="h-11 rounded-lg px-6"
+            className="h-11 rounded-lg px-6 cursor-pointer"
             onClick={handleSave}
             disabled={isDisabled}
           >

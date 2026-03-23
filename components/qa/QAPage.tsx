@@ -9,6 +9,15 @@ import { Checkbox } from "@/components/ui/checkbox";
 import type { QAPriority, QATicket, QATicketVM } from "./types";
 import CreateQATicketDialog from "./dialogs/CreateQATicketDialog";
 import QATicketDetailDialog from "./dialogs/QATicketDetailDialog";
+import { saveAs } from "file-saver";
+import {
+  Document,
+  Packer,
+  Paragraph,
+  TextRun,
+  HeadingLevel,
+} from "docx";
+import { Download } from "lucide-react";
 
 type QAViewTab = "active" | "done" | "archive";
 
@@ -79,6 +88,17 @@ function formatRelativeTime(value?: string | null) {
   if (hours < 24) return `${hours}h ago`;
   if (days === 1) return "Yesterday";
   return `${days}d ago`;
+}
+
+function formatExportDateTime(value?: string | null) {
+  if (!value) return "—";
+  return new Date(value).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 export default function QAPage({
@@ -223,6 +243,100 @@ export default function QAPage({
     await refresh();
   }
 
+  async function handleExportArchive() {
+    if (archivedTickets.length === 0) return;
+
+    const paragraphs: Paragraph[] = [
+      new Paragraph({
+        text: "Archived Q&A Tickets",
+        heading: HeadingLevel.TITLE,
+        spacing: { after: 300 },
+      }),
+    ];
+
+    archivedTickets.forEach((ticket) => {
+      paragraphs.push(
+        // 🔥 dòng trống trước -----
+        new Paragraph({
+          text: "",
+          spacing: { after: 60 },
+        }),
+
+        // 🔥 separator
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: `----- ${ticket.ticket_code} | ${formatExportDateTime(
+                ticket.created_at
+              )} -----`,
+              bold: true,
+            }),
+          ],
+          spacing: { after: 200 },
+        }),
+
+        // Title
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: ticket.title || "—",
+              bold: true,
+              size: 28,
+            }),
+          ],
+          spacing: { after: 200 },
+        }),
+
+        // Asked by
+        new Paragraph({
+          children: [
+            new TextRun({ text: "Asked by: ", bold: true }),
+            new TextRun(ticket.asked_by_name || "—"),
+          ],
+          spacing: { after: 120 },
+        }),
+
+        // Issue
+        new Paragraph({
+          children: [
+            new TextRun({ text: "Issue Description: ", bold: true }),
+          ],
+          spacing: { after: 80 },
+        }),
+
+        new Paragraph({
+          text: ticket.issue_detail || "—",
+          spacing: { after: 160 },
+        }),
+
+        // Admin response
+        new Paragraph({
+          children: [
+            new TextRun({ text: "Admin Response: ", bold: true }),
+          ],
+          spacing: { after: 80 },
+        }),
+
+        new Paragraph({
+          text: ticket.admin_answer || "—",
+          spacing: { after: 200 },
+        })
+      );
+    });
+
+    const doc = new Document({
+      sections: [
+        {
+          properties: {},
+          children: paragraphs,
+        },
+      ],
+    });
+
+    const blob = await Packer.toBlob(doc);
+    saveAs(blob, `archived-qa-tickets-${new Date().toISOString().slice(0, 10)}.docx`);
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
@@ -235,8 +349,20 @@ export default function QAPage({
         <div className="flex-1" />
 
         <div className="flex items-center gap-2">
+          {viewTab === "archive" && (
+            <Button
+              variant="outline"
+              className="h-10 rounded-lg cursor-pointer"
+              onClick={handleExportArchive}
+              disabled={archivedTickets.length === 0}
+            >
+              <Download className="mr-1 h-4 w-4" />
+              Export
+            </Button>
+          )}
+
           <Button
-            className="ml-2 h-10 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer"
+            className="h-10 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer"
             onClick={() => setCreateOpen(true)}
           >
             <Plus className="mr-1 h-4 w-4" />
