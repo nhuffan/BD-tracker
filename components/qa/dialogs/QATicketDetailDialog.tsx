@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { CalendarDays } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Archive, CalendarDays, CheckCircle2 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
   Select,
@@ -60,7 +59,7 @@ function getPriorityBadgeClass(priority?: QAPriority) {
     case "high":
       return "bg-orange-100 text-orange-700";
     case "medium":
-      return "bg-primary/10 text-primary";
+      return "bg-blue-50 text-blue-600";
     case "low":
     default:
       return "bg-muted text-muted-foreground";
@@ -86,7 +85,7 @@ export default function QATicketDetailDialog({
 }) {
   const [priority, setPriority] = useState<QAPriority>("medium");
   const [adminAnswer, setAdminAnswer] = useState("");
-  const [isDone, setIsDone] = useState(false);
+  const [statusAction, setStatusAction] = useState<"active" | "done" | "archive">("active");
   const [additionalDescription, setAdditionalDescription] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -94,17 +93,55 @@ export default function QATicketDetailDialog({
     if (!ticket) return;
     setPriority(ticket.priority);
     setAdminAnswer(ticket.admin_answer ?? "");
-    setIsDone(ticket.is_done);
     setAdditionalDescription("");
+
+    if (ticket.is_archived) {
+      setStatusAction("archive");
+    } else if (ticket.is_done) {
+      setStatusAction("done");
+    } else {
+      setStatusAction("active");
+    }
   }, [ticket]);
+
+  const originalStatusAction = useMemo<"active" | "done" | "archive">(() => {
+    if (!ticket) return "active";
+    if (ticket.is_archived) return "archive";
+    if (ticket.is_done) return "done";
+    return "active";
+  }, [ticket]);
+
+  const trimmedAdminAnswer = adminAnswer.trim();
+  const originalAdminAnswer = (ticket?.admin_answer ?? "").trim();
+
+  const hasAdminChanges = useMemo(() => {
+    if (!ticket) return false;
+
+    return (
+      priority !== ticket.priority ||
+      trimmedAdminAnswer !== originalAdminAnswer ||
+      statusAction !== originalStatusAction
+    );
+  }, [
+    ticket,
+    priority,
+    trimmedAdminAnswer,
+    originalAdminAnswer,
+    statusAction,
+    originalStatusAction,
+  ]);
+
+  const hasNonAdminChanges = useMemo(() => {
+    return additionalDescription.trim().length > 0;
+  }, [additionalDescription]);
 
   if (!ticket) return null;
 
   const requesterName = bdMap[ticket.asked_by_bd_id] ?? "—";
 
   const isDisabledSave = isAdmin
-    ? saving
-    : saving || !additionalDescription.trim();
+    ? saving || !hasAdminChanges
+    : saving || !hasNonAdminChanges;
 
   function renderIssueDetail(content?: string | null) {
     if (!content) return "—";
@@ -132,18 +169,19 @@ export default function QATicketDetailDialog({
   }
 
   async function handleSave() {
-    if (!ticket) return;
+    if (!ticket || isDisabledSave) return;
 
     setSaving(true);
     try {
       if (isAdmin) {
         const payload: Record<string, unknown> = {
           priority,
-          admin_answer: adminAnswer.trim() || null,
-          is_done: isDone,
-          answered_by_user_id: adminAnswer.trim() ? currentUserId : null,
+          admin_answer: trimmedAdminAnswer || null,
+          is_done: statusAction === "done",
+          is_archived: statusAction === "archive",
+          answered_by_user_id: trimmedAdminAnswer ? currentUserId : null,
           updated_at: new Date().toISOString(),
-          done_at: isDone ? new Date().toISOString() : null,
+          done_at: statusAction === "done" ? new Date().toISOString() : null,
         };
 
         const { error } = await supabase
@@ -320,43 +358,46 @@ export default function QATicketDetailDialog({
                 onChange={(e) => setAdditionalDescription(e.target.value)}
                 placeholder="Add more details to help clarify your issue..."
                 wrap="soft"
-                className="h-[3.5rem] max-h-[3.5rem] resize-none overflow-y-auto break-all whitespace-pre-wrap leading-7"
+                className="h-28 max-h-28 resize-none overflow-y-auto break-all whitespace-pre-wrap leading-7"
               />
             </div>
           )}
 
           {isAdmin && (
-            <div
-              role="button"
-              tabIndex={0}
-              onClick={() => setIsDone((prev) => !prev)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  setIsDone((prev) => !prev);
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className={`h-10 flex-1 rounded-md border border-input bg-background text-sm font-medium shadow-none ${
+                  statusAction === "done"
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "text-foreground hover:bg-muted/50"
+                }`}
+                onClick={() =>
+                  setStatusAction((prev) => (prev === "done" ? "active" : "done"))
                 }
-              }}
-              className="cursor-pointer rounded-lg border border-input bg-background p-4 transition hover:bg-muted/30"
-            >
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <div className="text-base font-semibold text-foreground">
-                    Mark as Resolved
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    {isDone
-                      ? "This ticket is currently marked as resolved."
-                      : "Ticket will remain active until resolved."}
-                  </div>
-                </div>
+              >
+                <CheckCircle2 className="mr-2 h-4 w-4" />
+                Mark as Done
+              </Button>
 
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox
-                    checked={isDone}
-                    onCheckedChange={(v) => setIsDone(Boolean(v))}
-                  />
-                </div>
-              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className={`h-10 flex-1 rounded-md border border-input bg-background text-sm font-medium shadow-none ${
+                  statusAction === "archive"
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "text-foreground hover:bg-muted/50"
+                }`}
+                onClick={() =>
+                  setStatusAction((prev) =>
+                    prev === "archive" ? "active" : "archive"
+                  )
+                }
+              >
+                <Archive className="mr-2 h-4 w-4" />
+                Archive
+              </Button>
             </div>
           )}
         </div>

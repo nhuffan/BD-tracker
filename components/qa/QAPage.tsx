@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Clock3, Plus, Search } from "lucide-react";
+import { Archive, CheckCircle2, Clock3, Plus, Search } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,7 @@ import type { QAPriority, QATicket, QATicketVM } from "./types";
 import CreateQATicketDialog from "./dialogs/CreateQATicketDialog";
 import QATicketDetailDialog from "./dialogs/QATicketDetailDialog";
 
-type QAViewTab = "active" | "done";
+type QAViewTab = "active" | "done" | "archive";
 
 function getPriorityBadgeClass(priority: QAPriority) {
   switch (priority) {
@@ -23,6 +23,20 @@ function getPriorityBadgeClass(priority: QAPriority) {
     case "low":
     default:
       return "bg-slate-100 text-slate-500";
+  }
+}
+
+function getPriorityFooterClass(priority: QAPriority) {
+  switch (priority) {
+    case "urgent":
+      return "bg-red-50/70 border-red-100";
+    case "high":
+      return "bg-orange-50/70 border-orange-100";
+    case "medium":
+      return "bg-blue-50/70 border-blue-100";
+    case "low":
+    default:
+      return "bg-slate-50 border-slate-100";
   }
 }
 
@@ -67,19 +81,6 @@ function formatRelativeTime(value?: string | null) {
   return `${days}d ago`;
 }
 
-function calcAvgResponseHours(tickets: QATicket[]) {
-  const completed = tickets.filter((t) => t.created_at && t.done_at);
-  if (!completed.length) return "—";
-
-  const totalHours = completed.reduce((sum, t) => {
-    const created = new Date(t.created_at).getTime();
-    const done = new Date(t.done_at as string).getTime();
-    return sum + Math.max(0, done - created) / 1000 / 60 / 60;
-  }, 0);
-
-  return `${(totalHours / completed.length).toFixed(1)}h`;
-}
-
 export default function QAPage({
   isAdmin,
   bdMap,
@@ -114,7 +115,7 @@ export default function QAPage({
         return;
       }
 
-      setTickets(data ?? []);
+      setTickets((data ?? []) as QATicket[]);
     } finally {
       setLoading(false);
     }
@@ -149,13 +150,21 @@ export default function QAPage({
     return [...result].sort((a, b) => {
       const priorityDiff = priorityOrder(b.priority) - priorityOrder(a.priority);
       if (priorityDiff !== 0) return priorityDiff;
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+
+      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
     });
   }, [tickets, search, bdMap]);
 
-  const activeTickets = filteredTickets.filter((t) => !t.is_done);
-  const doneTickets = filteredTickets.filter((t) => t.is_done);
-  const displayTickets = viewTab === "active" ? activeTickets : doneTickets;
+  const activeTickets = filteredTickets.filter((t) => !t.is_done && !t.is_archived);
+  const doneTickets = filteredTickets.filter((t) => t.is_done && !t.is_archived);
+  const archivedTickets = filteredTickets.filter((t) => t.is_archived);
+
+  const displayTickets =
+    viewTab === "active"
+      ? activeTickets
+      : viewTab === "done"
+        ? doneTickets
+        : archivedTickets;
 
   const selectedIds = displayTickets
     .filter((ticket) => selected[ticket.id])
@@ -166,8 +175,9 @@ export default function QAPage({
       total: tickets.length,
       active: activeTickets.length,
       done: doneTickets.length,
+      archive: archivedTickets.length,
     };
-  }, [tickets, activeTickets, doneTickets]);
+  }, [tickets, activeTickets, doneTickets, archivedTickets]);
 
   function openDetail(ticket: QATicketVM) {
     if (selectionMode) return;
@@ -218,16 +228,13 @@ export default function QAPage({
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
         <div>
           <h1 className="text-[32px] font-extrabold tracking-tight text-slate-950">
-            Question Board{" "}
-            <span className="text-slate-950">({stats.total})</span>
+            Question Board <span className="text-slate-950">({stats.total})</span>
           </h1>
         </div>
 
         <div className="flex-1" />
 
         <div className="flex items-center gap-2">
-
-
           <Button
             className="ml-2 h-10 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer"
             onClick={() => setCreateOpen(true)}
@@ -240,7 +247,6 @@ export default function QAPage({
 
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="flex flex-col gap-3 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center">
-          {/* Search */}
           <div className="relative w-full sm:w-[320px]">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <Input
@@ -251,7 +257,6 @@ export default function QAPage({
             />
           </div>
 
-          {/* Active / Done */}
           <div className="flex items-center gap-2 sm:ml-2">
             <button
               type="button"
@@ -261,8 +266,8 @@ export default function QAPage({
                 setSelected({});
               }}
               className={`rounded-md px-3 py-1.5 text-xs font-semibold transition cursor-pointer ${viewTab === "active"
-                  ? "bg-primary/10 text-primary"
-                  : "text-slate-500 hover:bg-slate-100"
+                ? "bg-primary/10 text-primary"
+                : "text-slate-500 hover:bg-slate-100"
                 }`}
             >
               Active ({stats.active})
@@ -276,18 +281,31 @@ export default function QAPage({
                 setSelected({});
               }}
               className={`rounded-md px-3 py-1.5 text-xs font-semibold transition cursor-pointer ${viewTab === "done"
-                  ? "bg-primary/10 text-primary"
-                  : "text-slate-500 hover:bg-slate-100"
+                ? "bg-primary/10 text-primary"
+                : "text-slate-500 hover:bg-slate-100"
                 }`}
             >
               Done ({stats.done})
             </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setViewTab("archive");
+                setSelectionMode(false);
+                setSelected({});
+              }}
+              className={`rounded-md px-3 py-1.5 text-xs font-semibold transition cursor-pointer ${viewTab === "archive"
+                ? "bg-primary/10 text-primary"
+                : "text-slate-500 hover:bg-slate-100"
+                }`}
+            >
+              Archive ({stats.archive})
+            </button>
           </div>
 
-          {/* push right */}
           <div className="flex-1" />
 
-          {/* Actions */}
           {isAdmin && selectionMode && (
             <Button
               variant="ghost"
@@ -344,7 +362,7 @@ export default function QAPage({
                       openDetail(ticket);
                     }
                   }}
-                  className={`relative rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${isSelected ? "border-primary bg-primary/5" : ""
+                  className={`relative flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${isSelected ? "border-primary bg-primary/5" : ""
                     }`}
                 >
                   {selectionMode && (
@@ -364,36 +382,40 @@ export default function QAPage({
                     </div>
                   )}
 
-                  <div className="mb-3 flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="inline-flex items-center rounded-md bg-muted px-2 py-1 text-[11px] font-semibold tracking-wide text-muted-foreground">
-                        {ticket.ticket_code}
+                  <div className="flex-1 px-4 pt-4">
+                    <div className="mb-3 flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="inline-flex items-center rounded-md bg-muted px-2 py-1 text-[11px] font-semibold tracking-wide text-muted-foreground">
+                          {ticket.ticket_code}
+                        </div>
                       </div>
+
+                      {!selectionMode && (
+                        <span
+                          className={`inline-flex items-center rounded-md px-2 py-1 text-[10px] font-bold uppercase ${getPriorityBadgeClass(
+                            ticket.priority
+                          )}`}
+                        >
+                          <span className="mr-1 h-1.5 w-1.5 rounded-full bg-current opacity-70" />
+                          {ticket.priority}
+                        </span>
+                      )}
                     </div>
 
-                    {!selectionMode && (
-                      <span
-                        className={`inline-flex items-center rounded-md px-2 py-1 text-[10px] font-bold uppercase ${getPriorityBadgeClass(
-                          ticket.priority
-                        )}`}
-                      >
-                        <span className="mr-1 h-1.5 w-1.5 rounded-full bg-current opacity-70" />
-                        {ticket.priority}
-                      </span>
-                    )}
+                    <div className="mb-2 line-clamp-2 text-[20px] font-bold leading-tight text-slate-950">
+                      {ticket.title}
+                    </div>
+
+                    <div className="mb-4 line-clamp-3 min-h-[72px] text-sm leading-6 text-slate-500">
+                      {ticket.admin_answer || ticket.issue_detail || "—"}
+                    </div>
                   </div>
 
-                  <div className="mb-2 line-clamp-1 text-[20px] font-bold leading-tight text-slate-950">
-                    {ticket.title}
-                  </div>
-
-                  <div className="mb-4 line-clamp-3 min-h-[66px] text-sm leading-6 text-slate-500">
-                    {viewTab === "done"
-                      ? ticket.admin_answer || ticket.issue_detail || "—"
-                      : ticket.issue_detail || "—"}
-                  </div>
-
-                  <div className="flex items-center justify-between border-t border-slate-100 pt-3">
+                  <div
+                    className={`mt-auto flex items-center justify-between border-t px-4 py-3 ${getPriorityFooterClass(
+                      ticket.priority
+                    )}`}
+                  >
                     <div className="flex min-w-0 items-center gap-2">
                       <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-200 text-[10px] font-bold text-slate-700">
                         {getInitials(bdName)}
@@ -404,8 +426,22 @@ export default function QAPage({
                     </div>
 
                     <div className="flex items-center gap-1 text-[11px] text-slate-400">
-                      <Clock3 className="h-3.5 w-3.5" />
-                      <span>{formatRelativeTime(ticket.created_at)}</span>
+                      {ticket.is_archived ? (
+                        <>
+                          <Archive className="h-3.5 w-3.5" />
+                          <span>Archived</span>
+                        </>
+                      ) : ticket.is_done ? (
+                        <>
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          <span>Done</span>
+                        </>
+                      ) : (
+                        <>
+                          <Clock3 className="h-3.5 w-3.5" />
+                          <span>{formatRelativeTime(ticket.created_at)}</span>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>

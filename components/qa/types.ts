@@ -10,6 +10,7 @@ export type QATicket = {
   admin_answer: string | null;
   answered_by_user_id: string | null;
   is_done: boolean;
+  is_archived: boolean;
   created_at: string;
   updated_at: string;
   done_at: string | null;
@@ -18,4 +19,5 @@ export type QATicket = {
 export type QATicketVM = QATicket & {
   asked_by_name?: string;
   ticket_code?: string;
+  is_archived: boolean;
 };
