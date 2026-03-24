@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Archive, CalendarDays, CheckCircle2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Archive, CalendarDays, CheckCircle2, CircleDashed } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -85,14 +85,11 @@ export default function QATicketDetailDialog({
 }) {
   const [priority, setPriority] = useState<QAPriority>("medium");
   const [adminAnswer, setAdminAnswer] = useState("");
-  const [statusAction, setStatusAction] = useState<"active" | "done" | "archive">("active");
+  const [statusAction, setStatusAction] = useState<
+    "active" | "in_progress" | "done" | "archive"
+  >("active");
   const [additionalDescription, setAdditionalDescription] = useState("");
   const [saving, setSaving] = useState(false);
-  const titleRef = useRef<HTMLHeadingElement | null>(null);
-  const titleWrapperRef = useRef<HTMLDivElement | null>(null);
-  const titlePopoverRef = useRef<HTMLDivElement | null>(null);
-  const [showFullTitle, setShowFullTitle] = useState(false);
-  const [isTitleOverflowing, setIsTitleOverflowing] = useState(false);
 
   useEffect(() => {
     if (!ticket) return;
@@ -100,79 +97,25 @@ export default function QATicketDetailDialog({
 
     setAdminAnswer(ticket.admin_answer ?? "");
     setAdditionalDescription("");
-    setShowFullTitle(false);
-    setIsTitleOverflowing(false);
 
     if (ticket.is_archived) {
       setStatusAction("archive");
     } else if (ticket.is_done) {
       setStatusAction("done");
+    } else if (ticket.is_in_progress) {
+      setStatusAction("in_progress");
     } else {
       setStatusAction("active");
     }
   }, [ticket]);
 
-  useEffect(() => {
-    if (!open) return;
-
-    let frame1 = 0;
-    let frame2 = 0;
-
-    const checkTitleOverflow = () => {
-      const el = titleRef.current;
-      if (!el) return;
-      setIsTitleOverflowing(el.scrollHeight > el.clientHeight + 1);
-    };
-
-    frame1 = window.requestAnimationFrame(() => {
-      frame2 = window.requestAnimationFrame(() => {
-        checkTitleOverflow();
-      });
-    });
-
-    const observer = new ResizeObserver(() => {
-      checkTitleOverflow();
-    });
-
-    if (titleRef.current) {
-      observer.observe(titleRef.current);
-    }
-
-    window.addEventListener("resize", checkTitleOverflow);
-
-    return () => {
-      window.cancelAnimationFrame(frame1);
-      window.cancelAnimationFrame(frame2);
-      observer.disconnect();
-      window.removeEventListener("resize", checkTitleOverflow);
-    };
-  }, [ticket?.title, open]);
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (!showFullTitle) return;
-
-      const target = event.target as Node;
-      if (
-        titleWrapperRef.current?.contains(target) ||
-        titlePopoverRef.current?.contains(target)
-      ) {
-        return;
-      }
-
-      setShowFullTitle(false);
-    }
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [showFullTitle]);
-
-  const originalStatusAction = useMemo<"active" | "done" | "archive">(() => {
+  const originalStatusAction = useMemo<
+    "active" | "in_progress" | "done" | "archive"
+  >(() => {
     if (!ticket) return "active";
     if (ticket.is_archived) return "archive";
     if (ticket.is_done) return "done";
+    if (ticket.is_in_progress) return "in_progress";
     return "active";
   }, [ticket]);
 
@@ -207,6 +150,13 @@ export default function QATicketDetailDialog({
   const isDisabledSave = isAdmin
     ? saving || !hasAdminChanges
     : saving || !hasNonAdminChanges;
+
+  const progressValue =
+    statusAction === "done" || statusAction === "archive"
+      ? 100
+      : statusAction === "in_progress"
+        ? 50
+        : 0;
 
   function renderIssueDetail(content?: string | null) {
     if (!content) return "—";
@@ -244,6 +194,7 @@ export default function QATicketDetailDialog({
           admin_answer: trimmedAdminAnswer || null,
           is_done: statusAction === "done",
           is_archived: statusAction === "archive",
+          is_in_progress: statusAction === "in_progress",
           answered_by_user_id: trimmedAdminAnswer ? currentUserId : null,
           updated_at: new Date().toISOString(),
           done_at: statusAction === "done" ? new Date().toISOString() : null,
@@ -306,7 +257,7 @@ export default function QATicketDetailDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="w-[66vw] max-w-none min-w-[900px] overflow-hidden rounded-xl border bg-background p-0"
+        className="flex max-h-[90vh] w-[66vw] max-w-none min-w-[900px] flex-col overflow-hidden rounded-xl border bg-background p-0"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <DialogTitle className="sr-only">{ticket.title}</DialogTitle>
@@ -326,49 +277,13 @@ export default function QATicketDetailDialog({
               </span>
             </div>
 
-            <div ref={titleWrapperRef} className="relative max-w-full">
-              <div className="flex max-w-full items-end gap-1">
-                <h2
-                  ref={titleRef}
-                  className="min-w-0 flex-1 line-clamp-1 break-all text-2xl font-bold leading-tight tracking-tight text-foreground"
-                >
-                  {ticket.title}
-                </h2>
-
-                {isTitleOverflowing && (
-                  <button
-                    type="button"
-                    className="shrink-0 text-sm font-medium text-blue-600 underline underline-offset-2 hover:text-blue-700"
-                    onClick={() => setShowFullTitle(true)}
-                  >
-                    view more
-                  </button>
-                )}
-              </div>
-
-              {showFullTitle && (
-                <>
-                  <div
-                    className="fixed inset-0 z-10 bg-black/10"
-                    onClick={() => setShowFullTitle(false)}
-                  />
-
-                  <div
-                    ref={titlePopoverRef}
-                    className="absolute left-0 top-full z-20 mt-2 w-full max-w-[720px] rounded-xl border border-input bg-background p-4 shadow-lg"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <div className="max-h-[240px] overflow-y-auto whitespace-pre-wrap break-all text-base font-semibold leading-7 text-foreground">
-                      {ticket.title}
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
+            <h2 className="break-words text-2xl font-bold leading-tight tracking-tight text-foreground">
+              {ticket.title}
+            </h2>
           </div>
         </div>
 
-        <div className="space-y-4 px-6">
+        <div className="flex-1 space-y-4 overflow-y-auto px-6 py-4">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:items-stretch">
             <div className="min-w-0">
               <div className={labelClass}>Requester</div>
@@ -419,10 +334,7 @@ export default function QATicketDetailDialog({
             <div className={labelClass}>Issue Description</div>
 
             <div className={readonlyFieldClass}>
-              <div
-                className="max-h-28 overflow-y-auto whitespace-pre-wrap break-all leading-7"
-                style={{ scrollbarGutter: "stable" }}
-              >
+              <div className="whitespace-pre-wrap break-all leading-7">
                 {renderIssueDetail(ticket.issue_detail)}
               </div>
             </div>
@@ -437,14 +349,11 @@ export default function QATicketDetailDialog({
                 onChange={(e) => setAdminAnswer(e.target.value)}
                 placeholder="Type your response here..."
                 wrap="soft"
-                className="h-28 max-h-28 resize-none overflow-y-auto break-all whitespace-pre-wrap leading-7"
+                className="min-h-[112px] resize-none break-all whitespace-pre-wrap leading-7"
               />
             ) : (
               <div className={readonlyFieldClass}>
-                <div
-                  className="max-h-28 overflow-y-auto whitespace-pre-wrap break-all leading-7"
-                  style={{ scrollbarGutter: "stable" }}
-                >
+                <div className="whitespace-pre-wrap break-all leading-7">
                   {ticket.admin_answer || "No answer yet"}
                 </div>
               </div>
@@ -459,44 +368,77 @@ export default function QATicketDetailDialog({
                 onChange={(e) => setAdditionalDescription(e.target.value)}
                 placeholder="Add more details to help clarify your issue..."
                 wrap="soft"
-                className="h-28 max-h-28 resize-none overflow-y-auto break-all whitespace-pre-wrap leading-7"
+                className="min-h-[112px] resize-none break-all whitespace-pre-wrap leading-7"
               />
             </div>
           )}
 
           {isAdmin && (
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                className={`h-10 flex-1 rounded-md border border-input bg-background text-sm font-medium shadow-none cursor-pointer ${statusAction === "done"
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "text-foreground hover:bg-muted/50"
-                  }`}
-                onClick={() =>
-                  setStatusAction((prev) => (prev === "done" ? "active" : "done"))
-                }
-              >
-                <CheckCircle2 className="mr-2 h-4 w-4" />
-                Mark as Done
-              </Button>
+            <div className="space-y-3">
+              <div>
+                <div className={labelClass}>Progress</div>
 
-              <Button
-                type="button"
-                variant="outline"
-                className={`h-10 flex-1 rounded-md border border-input bg-background text-sm font-medium shadow-none cursor-pointer ${statusAction === "archive"
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "text-foreground hover:bg-muted/50"
-                  }`}
-                onClick={() =>
-                  setStatusAction((prev) =>
-                    prev === "archive" ? "active" : "archive"
-                  )
-                }
-              >
-                <Archive className="mr-2 h-4 w-4" />
-                Archive
-              </Button>
+                <div className="space-y-2">
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full bg-primary transition-all duration-200"
+                      style={{ width: `${progressValue}%` }}
+                    />
+                  </div>
+                  <div className="text-xs font-medium text-muted-foreground">
+                    {progressValue}% complete
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className={`h-10 rounded-md border border-input bg-background text-sm font-medium shadow-none cursor-pointer ${statusAction === "done"
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "text-foreground hover:bg-muted/50"
+                    }`}
+                  onClick={() =>
+                    setStatusAction((prev) => (prev === "done" ? "active" : "done"))
+                  }
+                >
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  Done
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  className={`h-10 rounded-md border border-input bg-background text-sm font-medium shadow-none cursor-pointer ${statusAction === "in_progress"
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "text-foreground hover:bg-muted/50"
+                    }`}
+                  onClick={() =>
+                    setStatusAction((prev) =>
+                      prev === "in_progress" ? "active" : "in_progress"
+                    )
+                  }
+                >
+                  <CircleDashed className="mr-2 h-4 w-4" />
+                  In Progress
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  className={`h-10 rounded-md border border-input bg-background text-sm font-medium shadow-none cursor-pointer ${statusAction === "archive"
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "text-foreground hover:bg-muted/50"
+                    }`}
+                  onClick={() =>
+                    setStatusAction((prev) => (prev === "archive" ? "active" : "archive"))
+                  }
+                >
+                  <Archive className="mr-2 h-4 w-4" />
+                  Archive
+                </Button>
+              </div>
             </div>
           )}
         </div>

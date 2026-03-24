@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Archive, CheckCircle2, Clock3, Plus, Search } from "lucide-react";
+import { Archive, CheckCircle2, CircleDashed, Clock3, Plus, Search } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +19,7 @@ import {
 } from "docx";
 import { Download } from "lucide-react";
 
-type QAViewTab = "active" | "done" | "archive";
+type QAViewTab = "active" | "in_progress" | "done" | "archive";
 
 function getPriorityBadgeClass(priority: QAPriority) {
   switch (priority) {
@@ -176,15 +176,20 @@ export default function QAPage({
   }, [tickets, search, bdMap]);
 
   const activeTickets = filteredTickets.filter((t) => !t.is_done && !t.is_archived);
+  const inProgressTickets = filteredTickets.filter(
+    (t) => t.is_in_progress && !t.is_done && !t.is_archived
+  );
   const doneTickets = filteredTickets.filter((t) => t.is_done && !t.is_archived);
   const archivedTickets = filteredTickets.filter((t) => t.is_archived);
 
   const displayTickets =
     viewTab === "active"
       ? activeTickets
-      : viewTab === "done"
-        ? doneTickets
-        : archivedTickets;
+      : viewTab === "in_progress"
+        ? inProgressTickets
+        : viewTab === "done"
+          ? doneTickets
+          : archivedTickets;
 
   const selectedIds = displayTickets
     .filter((ticket) => selected[ticket.id])
@@ -194,10 +199,11 @@ export default function QAPage({
     return {
       total: tickets.length,
       active: activeTickets.length,
+      inProgress: inProgressTickets.length,
       done: doneTickets.length,
       archive: archivedTickets.length,
     };
-  }, [tickets, activeTickets, doneTickets, archivedTickets]);
+  }, [tickets, activeTickets, inProgressTickets, doneTickets, archivedTickets]);
 
   function openDetail(ticket: QATicketVM) {
     if (selectionMode) return;
@@ -402,6 +408,21 @@ export default function QAPage({
             <button
               type="button"
               onClick={() => {
+                setViewTab("in_progress");
+                setSelectionMode(false);
+                setSelected({});
+              }}
+              className={`rounded-md px-3 py-1.5 text-xs font-semibold transition cursor-pointer ${viewTab === "in_progress"
+                  ? "bg-primary/10 text-primary"
+                  : "text-slate-500 hover:bg-slate-100"
+                }`}
+            >
+              In Progress ({stats.inProgress})
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
                 setViewTab("done");
                 setSelectionMode(false);
                 setSelected({});
@@ -561,6 +582,11 @@ export default function QAPage({
                         <>
                           <CheckCircle2 className="h-3.5 w-3.5" />
                           <span>Done</span>
+                        </>
+                      ) : ticket.is_in_progress ? (
+                        <>
+                          <CircleDashed className="h-3.5 w-3.5" />
+                          <span>In Progress</span>
                         </>
                       ) : (
                         <>
