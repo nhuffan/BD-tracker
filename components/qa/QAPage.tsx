@@ -175,11 +175,18 @@ export default function QAPage({
     });
   }, [tickets, search, bdMap]);
 
-  const activeTickets = filteredTickets.filter((t) => !t.is_done && !t.is_archived);
+  const activeTickets = filteredTickets.filter(
+    (t) => !t.is_in_progress && !t.is_done && !t.is_archived
+  );
   const inProgressTickets = filteredTickets.filter(
     (t) => t.is_in_progress && !t.is_done && !t.is_archived
   );
-  const doneTickets = filteredTickets.filter((t) => t.is_done && !t.is_archived);
+  const doneTickets = [...filteredTickets]
+    .filter((t) => t.is_done && !t.is_archived)
+    .sort(
+      (a, b) =>
+        new Date(b.done_at ?? 0).getTime() - new Date(a.done_at ?? 0).getTime()
+    );
   const archivedTickets = filteredTickets.filter((t) => t.is_archived);
 
   const displayTickets =
@@ -348,7 +355,7 @@ export default function QAPage({
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
         <div>
           <h1 className="text-[32px] font-extrabold tracking-tight text-slate-950">
-            Question Board <span className="text-slate-950">({stats.total})</span>
+            Question Board <span className="text-slate-950">({stats.active})</span>
           </h1>
         </div>
 
@@ -413,8 +420,8 @@ export default function QAPage({
                 setSelected({});
               }}
               className={`rounded-md px-3 py-1.5 text-xs font-semibold transition cursor-pointer ${viewTab === "in_progress"
-                  ? "bg-primary/10 text-primary"
-                  : "text-slate-500 hover:bg-slate-100"
+                ? "bg-primary/10 text-primary"
+                : "text-slate-500 hover:bg-slate-100"
                 }`}
             >
               In Progress ({stats.inProgress})
