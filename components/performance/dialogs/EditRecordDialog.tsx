@@ -47,36 +47,61 @@ export default function EditRecordDialog({
   const [note, setNote] = useState("");
   const [packageAmountInput, setPackageAmountInput] = useState("");
 
-  useEffect(() => {
-    if (!record) return;
+  function resetFormFromRecord(target: RecordVM | null) {
+    if (!target) {
+      setPointsInput("");
+      setMoneyInput("");
+      setPackageAmountInput("");
+      setNote("");
+      return;
+    }
 
     setPointsInput(
-      record.points !== null && record.points !== undefined
-        ? Number(record.points).toLocaleString("en-US")
+      target.points !== null && target.points !== undefined
+        ? Number(target.points).toLocaleString("en-US")
         : ""
     );
 
     setMoneyInput(
-      record.money !== null && record.money !== undefined
-        ? Number(record.money).toLocaleString("en-US")
+      target.money !== null && target.money !== undefined
+        ? Number(target.money).toLocaleString("en-US")
         : ""
     );
 
     setPackageAmountInput(
-      record.package_amount !== null && record.package_amount !== undefined
-        ? Number(record.package_amount).toLocaleString("en-US")
+      target.package_amount !== null && target.package_amount !== undefined
+        ? Number(target.package_amount).toLocaleString("en-US")
         : ""
     );
 
-    setNote(record.note ?? "");
-  }, [record]);
+    setNote(target.note ?? "");
+  }
+
+  useEffect(() => {
+    if (open) {
+      resetFormFromRecord(record);
+    }
+  }, [open, record]);
 
   const parsedPoints = parseNumberInput(pointsInput) ?? 0;
   const parsedMoney = parseNumberInput(moneyInput);
   const parsedPackageAmount = parseNumberInput(packageAmountInput);
 
+  const originalPoints = record?.points ?? 0;
+  const originalMoney = record?.money ?? null;
+  const originalPackageAmount = record?.package_amount ?? null;
+  const originalNote = record?.note ?? "";
+
+  const hasChanges = !!record &&
+  (
+    parsedPoints !== originalPoints ||
+    parsedMoney !== originalMoney ||
+    parsedPackageAmount !== originalPackageAmount ||
+    note !== originalNote
+  );
+
   const isSaveDisabled =
-    !record || parsedPoints <= 0 || parsedMoney == null || parsedMoney <= 0;
+    !record || parsedPoints <= 0 || !hasChanges;
 
   async function handleSave() {
     if (!record || isSaveDisabled) return;
@@ -125,9 +150,19 @@ export default function EditRecordDialog({
     window.dispatchEvent(new Event("records-updated"));
   }
 
+  function handleOpenChange(nextOpen: boolean) {
+    if (!nextOpen) {
+      resetFormFromRecord(record);
+    }
+    onOpenChange(nextOpen);
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md" onOpenAutoFocus={(e) => e.preventDefault()}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent
+        className="max-w-md"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold tracking-tight">
             Edit Record
@@ -193,7 +228,7 @@ export default function EditRecordDialog({
           <Button
             variant="secondary"
             className="cursor-pointer"
-            onClick={() => onOpenChange(false)}
+            onClick={() => handleOpenChange(false)}
           >
             Cancel
           </Button>

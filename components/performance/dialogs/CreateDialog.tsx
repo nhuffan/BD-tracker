@@ -79,9 +79,7 @@ export default function CreateDialog({
     !form.customer_name.trim() ||
     !form.customer_type_id ||
     !form.point_type_id ||
-    form.points <= 0 ||
-    form.money == null ||
-    form.money <= 0;
+    form.points <= 0;
 
   async function submit() {
     if (isSaveDisabled) return;
@@ -237,7 +235,7 @@ export default function CreateDialog({
 
           <div>
             <p className="mb-1.5 text-sm font-medium text-foreground">
-              Package Amount
+              Package Amount (optional)
             </p>
             <Input
               inputMode="numeric"
@@ -276,7 +274,7 @@ export default function CreateDialog({
           </div>
 
           <div className="col-span-2">
-            <p className="mb-1.5 text-sm font-medium text-foreground">Bonus</p>
+            <p className="mb-1.5 text-sm font-medium text-foreground">Bonus (optional)</p>
             <Input
               inputMode="numeric"
               value={moneyInput}
@@ -295,7 +293,7 @@ export default function CreateDialog({
           </div>
 
           <div className="col-span-2">
-            <p className="mb-1.5 text-sm font-medium text-foreground">Note</p>
+            <p className="mb-1.5 text-sm font-medium text-foreground">Note (optional)</p>
             <Textarea
               value={form.note ?? ""}
               onChange={(e) =>

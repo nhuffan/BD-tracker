@@ -247,7 +247,9 @@ export default function RecordsTable({
                       </td>
 
                       <td className="p-2">
-                        {r.money?.toLocaleString("en-US") ?? 0}
+                        {r.money !== null && r.money !== undefined
+                          ? r.money.toLocaleString("en-US")
+                          : "—"}
                       </td>
 
                       <td className="p-2 text-left">
