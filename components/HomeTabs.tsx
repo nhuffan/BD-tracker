@@ -18,8 +18,6 @@ export default function HomeTabs() {
   const [activeTab, setActiveTab] = useState("home");
   const [email, setEmail] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string>("");
-  const [bdMap, setBdMap] = useState<Record<string, string>>({});
-  const [qaReady, setQaReady] = useState(false);
 
   useEffect(() => {
     const savedTab = window.localStorage.getItem("home-active-tab");
@@ -47,32 +45,6 @@ export default function HomeTabs() {
     }
 
     loadUser();
-  }, []);
-
-  useEffect(() => {
-    async function loadBdMap() {
-      const { data, error } = await supabase
-        .from("masters")
-        .select("id, label")
-        .eq("category", "bd")
-        .eq("is_active", true)
-        .order("label", { ascending: true });
-
-      if (error) {
-        console.error("Failed to load BD masters:", error);
-        return;
-      }
-
-      const map: Record<string, string> = {};
-      (data ?? []).forEach((item) => {
-        map[item.id] = item.label;
-      });
-
-      setBdMap(map);
-      setQaReady(true);
-    }
-
-    loadBdMap();
   }, []);
 
   async function handleLogout() {
@@ -121,15 +93,10 @@ export default function HomeTabs() {
             forceMount
             className={activeTab === "qa" ? "mt-0 w-full" : "mt-0 hidden"}
           >
-            {!qaReady ? (
-              <div className="p-4 text-sm text-muted-foreground">Loading...</div>
-            ) : (
-              <QAPage
-                isAdmin={isAdmin}
-                bdMap={bdMap}
-                currentUserId={currentUserId}
-              />
-            )}
+            <QAPage
+              isAdmin={isAdmin}
+              currentUserId={currentUserId}
+            />
           </TabsContent>
         </main>
       </Tabs>

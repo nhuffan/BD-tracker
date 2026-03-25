@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Archive, CalendarDays, CheckCircle2, CircleDashed } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
@@ -72,16 +72,20 @@ export default function QATicketDetailDialog({
   ticket,
   isAdmin,
   bdMap,
+  adminNameMap,
   currentUserId,
   onSaved,
+  onTicketChanged,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   ticket: QATicketVM | null;
   isAdmin: boolean;
   bdMap: Record<string, string>;
+  adminNameMap?: Record<string, string>;
   currentUserId: string;
   onSaved: () => void;
+  onTicketChanged: (ticket: QATicketVM) => void;
 }) {
   const [priority, setPriority] = useState<QAPriority>("medium");
   const [adminAnswer, setAdminAnswer] = useState("");
@@ -90,24 +94,113 @@ export default function QATicketDetailDialog({
   >("active");
   const [additionalDescription, setAdditionalDescription] = useState("");
   const [saving, setSaving] = useState(false);
+  const [editingUsers, setEditingUsers] = useState<
+    Array<{
+      userId: string;
+      name: string;
+      joinedAt: string;
+      role: "admin" | "user";
+    }>
+  >([]);
+  const [conflictMessage, setConflictMessage] = useState("");
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const currentAdminName = adminNameMap?.[currentUserId] ?? "Another admin";
+  const requesterName = ticket ? bdMap[ticket.asked_by_bd_id] ?? "—" : "—";
 
   useEffect(() => {
-    if (!ticket) return;
-    setPriority(ticket.priority);
+    if (!open || !ticket?.id) return;
 
-    setAdminAnswer(ticket.admin_answer ?? "");
-    setAdditionalDescription("");
+    const channel = supabase.channel(`qa-ticket:${ticket.id}`, {
+      config: {
+        presence: {
+          key: currentUserId,
+        },
+      },
+    });
 
-    if (ticket.is_archived) {
-      setStatusAction("archive");
-    } else if (ticket.is_done) {
-      setStatusAction("done");
-    } else if (ticket.is_in_progress) {
-      setStatusAction("in_progress");
-    } else {
-      setStatusAction("active");
-    }
-  }, [ticket]);
+    channelRef.current = channel;
+
+    channel
+      .on("presence", { event: "sync" }, () => {
+        const state = channel.presenceState<{
+          userId: string;
+          name: string;
+          joinedAt: string;
+          role: "admin" | "user";
+        }>();
+
+        const users = Object.values(state)
+          .flat()
+          .map((item) => ({
+            userId: item.userId,
+            name: item.name,
+            joinedAt: item.joinedAt,
+            role: item.role,
+          }))
+          .filter((item, index, arr) => {
+            return arr.findIndex((x) => x.userId === item.userId) === index;
+          });
+
+        setEditingUsers(users);
+      })
+      .subscribe(async (status) => {
+        if (status === "SUBSCRIBED") {
+          await channel.track({
+            userId: currentUserId,
+            name: isAdmin ? currentAdminName : requesterName,
+            joinedAt: new Date().toISOString(),
+            role: isAdmin ? "admin" : "user",
+          });
+        }
+      });
+
+    return () => {
+      setEditingUsers([]);
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+    };
+  }, [open, ticket?.id, currentUserId, currentAdminName, requesterName, isAdmin]);
+
+  useEffect(() => {
+    if (!open || !ticket?.id) return;
+
+    const channel = supabase
+      .channel(`qa-ticket-row:${ticket.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "qa_tickets",
+          filter: `id=eq.${ticket.id}`,
+        },
+        (payload) => {
+          const next = payload.new as QATicketVM;
+
+          const nextVm: QATicketVM = {
+            ...ticket,
+            ...next,
+            asked_by_name: bdMap[next.asked_by_bd_id] ?? "—",
+          };
+
+          onTicketChanged(nextVm);
+
+          setConflictMessage("");
+          applyTicketToForm(nextVm);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [open, ticket?.id, bdMap, onTicketChanged]);
+
+  useEffect(() => {
+    setConflictMessage("");
+  }, [ticket?.id, open]);
 
   const originalStatusAction = useMemo<
     "active" | "in_progress" | "done" | "archive"
@@ -145,11 +238,21 @@ export default function QATicketDetailDialog({
 
   if (!ticket) return null;
 
-  const requesterName = bdMap[ticket.asked_by_bd_id] ?? "—";
-
   const isDisabledSave = isAdmin
     ? saving || !hasAdminChanges
     : saving || !hasNonAdminChanges;
+
+  const sortedEditors = [...editingUsers].sort(
+    (a, b) =>
+      new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime()
+  );
+
+  const adminEditors = sortedEditors.filter((user) => user.role === "admin");
+  const activeAdminEditor = adminEditors[0] ?? null;
+  const isCurrentUserActiveAdmin = activeAdminEditor?.userId === currentUserId;
+
+  const lockedByOtherAdmin = !!activeAdminEditor && !isCurrentUserActiveAdmin;
+  const lockOwnerLabel = activeAdminEditor?.name ?? "Another admin";
 
   const progressValue =
     statusAction === "done" || statusAction === "archive"
@@ -183,30 +286,91 @@ export default function QATicketDetailDialog({
     });
   }
 
+  function applyTicketToForm(nextTicket: QATicketVM) {
+    setPriority(nextTicket.priority);
+    setAdminAnswer(nextTicket.admin_answer ?? "");
+
+    if (nextTicket.is_archived) {
+      setStatusAction("archive");
+    } else if (nextTicket.is_done) {
+      setStatusAction("done");
+    } else if (nextTicket.is_in_progress) {
+      setStatusAction("in_progress");
+    } else {
+      setStatusAction("active");
+    }
+  }
+
   async function handleSave() {
-    if (!ticket || isDisabledSave) return;
+    if (!ticket || isDisabledSave || lockedByOtherAdmin) return;
 
     setSaving(true);
+    setConflictMessage("");
+
     try {
       if (isAdmin) {
+        const now = new Date().toISOString();
+
+        const nextIsDone = statusAction === "done";
+        const nextIsArchived = statusAction === "archive";
+        const nextIsInProgress = statusAction === "in_progress";
+
+        const movedToDone =
+          statusAction === "done" && originalStatusAction !== "done";
+        const movedToArchive =
+          statusAction === "archive" && originalStatusAction !== "archive";
+        const movedToInProgress =
+          statusAction === "in_progress" && originalStatusAction !== "in_progress";
+
+        const statusChanged = statusAction !== originalStatusAction;
+
         const payload: Record<string, unknown> = {
           priority,
           admin_answer: trimmedAdminAnswer || null,
-          is_done: statusAction === "done",
-          is_archived: statusAction === "archive",
-          is_in_progress: statusAction === "in_progress",
+          is_done: nextIsDone,
+          is_archived: nextIsArchived,
+          is_in_progress: nextIsInProgress,
           answered_by_user_id: trimmedAdminAnswer ? currentUserId : null,
-          updated_at: new Date().toISOString(),
-          done_at: statusAction === "done" ? new Date().toISOString() : null,
+          updated_by_user_id: currentUserId,
+          status_updated_by_user_id: statusChanged ? currentUserId : ticket.status_updated_by_user_id ?? null,
+          updated_at: now,
+          version: (ticket.version ?? 1) + 1,
+
+          in_progress_at: nextIsInProgress
+            ? movedToInProgress
+              ? now
+              : ticket.in_progress_at
+            : null,
+
+          done_at: nextIsDone
+            ? movedToDone
+              ? now
+              : ticket.done_at
+            : null,
+
+          archived_at: nextIsArchived
+            ? movedToArchive
+              ? now
+              : ticket.archived_at
+            : null,
         };
 
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from("qa_tickets")
           .update(payload)
-          .eq("id", ticket.id);
+          .eq("id", ticket.id)
+          .eq("version", ticket.version ?? 1)
+          .select("*");
 
         if (error) {
           console.error("Failed to update qa ticket:", error);
+          return;
+        }
+
+        if (!data || data.length === 0) {
+          setConflictMessage(
+            "This ticket was updated by another admin. Please reopen it to load the latest data."
+          );
           return;
         }
       } else {
@@ -233,16 +397,29 @@ export default function QATicketDetailDialog({
           .filter(Boolean)
           .join("\n");
 
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from("qa_tickets")
           .update({
             issue_detail: mergedIssueDetail,
             updated_at: new Date().toISOString(),
+            updated_by_user_id: currentUserId,
+            version: (ticket.version ?? 1) + 1,
           })
-          .eq("id", ticket.id);
+          .eq("id", ticket.id)
+          .eq("version", ticket.version ?? 1)
+          .select("*");
 
         if (error) {
           console.error("Failed to append issue detail:", error);
+          setConflictMessage(
+            "This ticket was updated by an admin. Please reopen it to load the latest data."
+          );
+          return;
+        }
+        if (!data || data.length === 0) {
+          setConflictMessage(
+            "This ticket was updated by another admin. Please reopen it to load the latest data."
+          );
           return;
         }
       }
@@ -262,8 +439,10 @@ export default function QATicketDetailDialog({
       >
         <DialogTitle className="sr-only">{ticket.title}</DialogTitle>
 
-        <div className="flex items-start justify-between border-b px-6 py-5">
+        <div className="border-b px-6 py-5">
           <div className="min-w-0">
+
+
             <div className="mb-2 flex flex-wrap items-center gap-2">
               <span
                 className={`inline-flex items-center rounded-md px-2 py-1 text-[11px] font-bold uppercase tracking-wide ${getPriorityBadgeClass(
@@ -276,6 +455,29 @@ export default function QATicketDetailDialog({
                 · {formatTicketCode(ticket)}
               </span>
             </div>
+
+            {lockedByOtherAdmin && (
+              <div className="mb-4 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700">
+                  <CircleDashed className="h-4 w-4" />
+                </div>
+
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold text-amber-900">
+                    Admin {lockOwnerLabel} is currently editing this ticket.
+                  </div>
+                  <div className="mt-0.5 text-sm text-amber-800">
+                    Some fields are temporarily locked.
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {conflictMessage && (
+              <div className="mb-4 rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm font-medium text-destructive">
+                {conflictMessage}
+              </div>
+            )}
 
             <h2 className="break-words text-2xl font-bold leading-tight tracking-tight text-foreground">
               {ticket.title}
@@ -302,6 +504,7 @@ export default function QATicketDetailDialog({
                 <Select
                   value={priority}
                   onValueChange={(value) => setPriority(value as QAPriority)}
+                  disabled={lockedByOtherAdmin}
                 >
                   <SelectTrigger className={fieldClass}>
                     <SelectValue />
@@ -341,16 +544,36 @@ export default function QATicketDetailDialog({
           </div>
 
           <div>
-            <div className={labelClass}>Admin Response</div>
+            <div className="mb-2 flex items-center justify-between">
+              <div className="block text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                Admin Response
+              </div>
+
+              {isAdmin && lockedByOtherAdmin && (
+                <div className="text-[10px] font-medium uppercase tracking-wide text-amber-700">
+                  Locked by {lockOwnerLabel}
+                </div>
+              )}
+            </div>
 
             {isAdmin ? (
-              <Textarea
-                value={adminAnswer}
-                onChange={(e) => setAdminAnswer(e.target.value)}
-                placeholder="Type your response here..."
-                wrap="soft"
-                className="min-h-[112px] resize-none break-all whitespace-pre-wrap leading-7"
-              />
+              <div className="space-y-2">
+                <Textarea
+                  value={adminAnswer}
+                  onChange={(e) => setAdminAnswer(e.target.value)}
+                  placeholder={
+                    lockedByOtherAdmin
+                      ? `Locked by ${lockOwnerLabel}`
+                      : "Type your response here..."
+                  }
+                  wrap="soft"
+                  disabled={lockedByOtherAdmin}
+                  className={`min-h-[112px] resize-none break-all whitespace-pre-wrap leading-7 ${lockedByOtherAdmin
+                    ? "cursor-not-allowed border-amber-200 bg-amber-50 text-muted-foreground opacity-100"
+                    : ""
+                    }`}
+                />
+              </div>
             ) : (
               <div className={readonlyFieldClass}>
                 <div className="whitespace-pre-wrap break-all leading-7">
@@ -362,13 +585,32 @@ export default function QATicketDetailDialog({
 
           {!isAdmin && (
             <div>
-              <div className={labelClass}>Additional Description</div>
+              <div className="mb-2 flex items-end justify-between">
+                <div className="block text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                  Additional Description
+                </div>
+
+                {lockedByOtherAdmin && (
+                  <div className="text-[10px] font-medium uppercase tracking-wide text-amber-700">
+                    Locked by {lockOwnerLabel}
+                  </div>
+                )}
+              </div>
+
               <Textarea
                 value={additionalDescription}
                 onChange={(e) => setAdditionalDescription(e.target.value)}
-                placeholder="Add more details to help clarify your issue..."
+                placeholder={
+                  lockedByOtherAdmin
+                    ? `Locked by ${lockOwnerLabel}`
+                    : "Add more details to help clarify your issue..."
+                }
                 wrap="soft"
-                className="min-h-[112px] resize-none break-all whitespace-pre-wrap leading-7"
+                disabled={lockedByOtherAdmin}
+                className={`min-h-[112px] resize-none break-all whitespace-pre-wrap leading-7 ${lockedByOtherAdmin
+                  ? "cursor-not-allowed border-amber-200 bg-amber-50 text-muted-foreground opacity-100"
+                  : ""
+                  }`}
               />
             </div>
           )}
@@ -395,9 +637,12 @@ export default function QATicketDetailDialog({
                 <Button
                   type="button"
                   variant="outline"
-                  className={`h-10 rounded-md border border-input bg-background text-sm font-medium shadow-none cursor-pointer ${statusAction === "done"
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "text-foreground hover:bg-muted/50"
+                  disabled={lockedByOtherAdmin}
+                  className={`h-10 rounded-md border border-input bg-background text-sm font-medium shadow-none ${statusAction === "done"
+                    ? "border-primary bg-primary/10 text-primary opacity-100"
+                    : lockedByOtherAdmin
+                      ? "cursor-not-allowed text-muted-foreground opacity-60"
+                      : "cursor-pointer text-foreground hover:bg-muted/50"
                     }`}
                   onClick={() =>
                     setStatusAction((prev) => (prev === "done" ? "active" : "done"))
@@ -410,9 +655,12 @@ export default function QATicketDetailDialog({
                 <Button
                   type="button"
                   variant="outline"
-                  className={`h-10 rounded-md border border-input bg-background text-sm font-medium shadow-none cursor-pointer ${statusAction === "in_progress"
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "text-foreground hover:bg-muted/50"
+                  disabled={lockedByOtherAdmin}
+                  className={`h-10 rounded-md border border-input bg-background text-sm font-medium shadow-none ${statusAction === "in_progress"
+                    ? "border-primary bg-primary/10 text-primary opacity-100"
+                    : lockedByOtherAdmin
+                      ? "cursor-not-allowed text-muted-foreground opacity-60"
+                      : "cursor-pointer text-foreground hover:bg-muted/50"
                     }`}
                   onClick={() =>
                     setStatusAction((prev) =>
@@ -427,9 +675,12 @@ export default function QATicketDetailDialog({
                 <Button
                   type="button"
                   variant="outline"
-                  className={`h-10 rounded-md border border-input bg-background text-sm font-medium shadow-none cursor-pointer ${statusAction === "archive"
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "text-foreground hover:bg-muted/50"
+                  disabled={lockedByOtherAdmin}
+                  className={`h-10 rounded-md border border-input bg-background text-sm font-medium shadow-none ${statusAction === "archive"
+                    ? "border-primary bg-primary/10 text-primary opacity-100"
+                    : lockedByOtherAdmin
+                      ? "cursor-not-allowed text-muted-foreground opacity-60"
+                      : "cursor-pointer text-foreground hover:bg-muted/50"
                     }`}
                   onClick={() =>
                     setStatusAction((prev) => (prev === "archive" ? "active" : "archive"))
@@ -447,7 +698,7 @@ export default function QATicketDetailDialog({
           <Button
             className="h-11 w-full rounded-lg cursor-pointer"
             onClick={handleSave}
-            disabled={isDisabledSave}
+            disabled={isDisabledSave || lockedByOtherAdmin}
           >
             {saving
               ? isAdmin

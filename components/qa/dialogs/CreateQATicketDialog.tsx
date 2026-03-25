@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import type { QAPriority } from "../types";
+import { useMasters } from "@/lib/useMasters";
 
 const fieldClass =
   "h-11 w-full min-w-0 rounded-lg border border-input bg-background px-3 text-sm shadow-none";
@@ -30,12 +31,10 @@ const labelClass =
 export default function CreateQATicketDialog({
   open,
   onOpenChange,
-  bdMap,
   onSaved,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  bdMap: Record<string, string>;
   onSaved: () => void;
 }) {
   const [askedByBdId, setAskedByBdId] = useState("");
@@ -44,11 +43,11 @@ export default function CreateQATicketDialog({
   const [priority, setPriority] = useState<QAPriority>("medium");
   const [saving, setSaving] = useState(false);
 
+  const { items: bdList } = useMasters("bd");
+
   const bdOptions = useMemo(() => {
-    return Object.entries(bdMap)
-      .map(([id, label]) => ({ id, label }))
-      .sort((a, b) => a.label.localeCompare(b.label));
-  }, [bdMap]);
+    return [...bdList].sort((a, b) => a.label.localeCompare(b.label));
+  }, [bdList]);
 
   const isDisabled = !askedByBdId || !title.trim() || saving;
 
@@ -85,9 +84,9 @@ export default function CreateQATicketDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent
-          className="w-[66vw] max-w-none min-w-[900px] gap-0 overflow-hidden rounded-xl border bg-background p-0 shadow-xl"
-        >
+      <DialogContent
+        className="w-[66vw] max-w-none min-w-[900px] gap-0 overflow-hidden rounded-xl border bg-background p-0 shadow-xl"
+      >
 
         <DialogHeader className="border-b px-6 py-5">
           <DialogTitle className="text-2xl font-bold tracking-tight text-foreground">

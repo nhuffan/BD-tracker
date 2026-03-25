@@ -18,6 +18,7 @@ import {
   HeadingLevel,
 } from "docx";
 import { Download } from "lucide-react";
+import { useMasters } from "@/lib/useMasters";
 
 type QAViewTab = "active" | "in_progress" | "done" | "archive";
 
@@ -76,20 +77,6 @@ function getInitials(name?: string) {
   return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
 }
 
-function formatRelativeTime(value?: string | null) {
-  if (!value) return "—";
-
-  const diffMs = Date.now() - new Date(value).getTime();
-  const minutes = Math.floor(diffMs / 1000 / 60);
-  const hours = Math.floor(minutes / 60);
-  const days = Math.floor(hours / 24);
-
-  if (minutes < 60) return `${minutes}m ago`;
-  if (hours < 24) return `${hours}h ago`;
-  if (days === 1) return "Yesterday";
-  return `${days}d ago`;
-}
-
 function formatExportDateTime(value?: string | null) {
   if (!value) return "—";
   return new Date(value).toLocaleString("en-US", {
@@ -101,13 +88,39 @@ function formatExportDateTime(value?: string | null) {
   });
 }
 
+function formatFooterTime(value?: string | null) {
+  if (!value) return "—";
+
+  const d = new Date(value);
+
+  const date = d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+
+  const time = d.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  return `${date} | ${time}`;
+}
+
+function upsertTicket(list: QATicket[], next: QATicket) {
+  const index = list.findIndex((item) => item.id === next.id);
+  if (index === -1) return [next, ...list];
+
+  const clone = [...list];
+  clone[index] = next;
+  return clone;
+}
+
 export default function QAPage({
   isAdmin,
-  bdMap,
   currentUserId,
 }: {
   isAdmin: boolean;
-  bdMap: Record<string, string>;
   currentUserId: string;
 }) {
   const [loading, setLoading] = useState(false);
@@ -121,6 +134,14 @@ export default function QAPage({
 
   const [selectionMode, setSelectionMode] = useState(false);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const [adminNameMap, setAdminNameMap] = useState<Record<string, string>>({});
+
+  const { items: bdList } = useMasters("bd");
+
+  const bdNameMap = useMemo(() => {
+    return Object.fromEntries(bdList.map((item) => [item.id, item.label]));
+  }, [bdList]);
+
 
   async function refresh() {
     setLoading(true);
@@ -142,7 +163,89 @@ export default function QAPage({
   }
 
   useEffect(() => {
+    const channel = supabase
+      .channel("qa-tickets-changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "qa_tickets",
+        },
+        (payload) => {
+          const next = payload.new as QATicket;
+          setTickets((prev) => upsertTicket(prev, next));
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "qa_tickets",
+        },
+        (payload) => {
+          const next = payload.new as QATicket;
+
+          setTickets((prev) => upsertTicket(prev, next));
+
+          setSelectedTicket((prev) => {
+            if (!prev || prev.id !== next.id) return prev;
+
+            return {
+              ...prev,
+              ...next,
+              asked_by_name: bdNameMap[next.asked_by_bd_id] ?? "—",
+            };
+          });
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "DELETE",
+          schema: "public",
+          table: "qa_tickets",
+        },
+        (payload) => {
+          const oldRow = payload.old as { id: string };
+
+          setTickets((prev) => prev.filter((item) => item.id !== oldRow.id));
+          setSelectedTicket((prev) => (prev?.id === oldRow.id ? null : prev));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [bdNameMap]);
+
+  useEffect(() => {
     refresh();
+  }, []);
+
+  useEffect(() => {
+    async function loadAdmins() {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, email")
+        .eq("role", "admin");
+
+      if (error) {
+        console.error("Failed to load admin profiles:", error);
+        return;
+      }
+
+      const map: Record<string, string> = {};
+      (data ?? []).forEach((item) => {
+        map[item.id] = item.email;
+      });
+
+      setAdminNameMap(map);
+    }
+
+    loadAdmins();
   }, []);
 
   const filteredTickets = useMemo(() => {
@@ -150,7 +253,7 @@ export default function QAPage({
 
     const list: QATicketVM[] = tickets.map((t, index) => ({
       ...t,
-      asked_by_name: bdMap[t.asked_by_bd_id] ?? "—",
+      asked_by_name: bdNameMap[t.asked_by_bd_id] ?? "—",
       ticket_code: formatTicketCode(index),
     }));
 
@@ -173,21 +276,34 @@ export default function QAPage({
 
       return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
     });
-  }, [tickets, search, bdMap]);
+  }, [tickets, search, bdNameMap]);
 
   const activeTickets = filteredTickets.filter(
     (t) => !t.is_in_progress && !t.is_done && !t.is_archived
   );
-  const inProgressTickets = filteredTickets.filter(
-    (t) => t.is_in_progress && !t.is_done && !t.is_archived
-  );
+
+  const inProgressTickets = [...filteredTickets]
+    .filter((t) => t.is_in_progress && !t.is_done && !t.is_archived)
+    .sort(
+      (a, b) =>
+        new Date(b.in_progress_at ?? b.updated_at ?? b.created_at).getTime() -
+        new Date(a.in_progress_at ?? a.updated_at ?? a.created_at).getTime()
+    );
+
   const doneTickets = [...filteredTickets]
     .filter((t) => t.is_done && !t.is_archived)
     .sort(
       (a, b) =>
         new Date(b.done_at ?? 0).getTime() - new Date(a.done_at ?? 0).getTime()
     );
-  const archivedTickets = filteredTickets.filter((t) => t.is_archived);
+
+  const archivedTickets = [...filteredTickets]
+    .filter((t) => t.is_archived)
+    .sort(
+      (a, b) =>
+        new Date(b.archived_at ?? b.updated_at ?? b.created_at).getTime() -
+        new Date(a.archived_at ?? a.updated_at ?? a.created_at).getTime()
+    );
 
   const displayTickets =
     viewTab === "active"
@@ -355,7 +471,7 @@ export default function QAPage({
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
         <div>
           <h1 className="text-[32px] font-extrabold tracking-tight text-slate-950">
-            Question Board <span className="text-slate-950">({stats.active})</span>
+            Ticket Dashboard <span className="text-slate-950">({stats.active})</span>
           </h1>
         </div>
 
@@ -579,26 +695,46 @@ export default function QAPage({
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-1 text-[11px] text-slate-400">
+                    <div className="flex items-end gap-1.5 text-[11px] font-medium text-slate-500">
                       {ticket.is_archived ? (
                         <>
-                          <Archive className="h-3.5 w-3.5" />
-                          <span>Archived</span>
+                          <Archive className="h-[10px] w-[10px] shrink-0 text-slate-500" />
+                          <span className="uppercase tracking-[0.04em] leading-none">
+                            Archived:
+                          </span>
+                          <span className="font-semibold text-slate-700 leading-none">
+                            {formatFooterTime(ticket.updated_at ?? ticket.archived_at)}
+                          </span>
                         </>
                       ) : ticket.is_done ? (
                         <>
-                          <CheckCircle2 className="h-3.5 w-3.5" />
-                          <span>Done</span>
+                          <CheckCircle2 className="h-[10px] w-[10px] shrink-0 text-slate-500" />
+                          <span className="uppercase tracking-[0.04em] leading-none">
+                            Done:
+                          </span>
+                          <span className="font-semibold text-slate-700 leading-none">
+                            {formatFooterTime(ticket.updated_at ?? ticket.done_at)}
+                          </span>
                         </>
                       ) : ticket.is_in_progress ? (
                         <>
-                          <CircleDashed className="h-3.5 w-3.5" />
-                          <span>In Progress</span>
+                          <CircleDashed className="h-[10px] w-[10px] shrink-0 text-slate-500" />
+                          <span className="uppercase tracking-[0.04em] leading-none">
+                            Updated:
+                          </span>
+                          <span className="font-semibold text-slate-700 leading-none">
+                            {formatFooterTime(ticket.updated_at ?? ticket.in_progress_at)}
+                          </span>
                         </>
                       ) : (
                         <>
-                          <Clock3 className="h-3.5 w-3.5" />
-                          <span>{formatRelativeTime(ticket.created_at)}</span>
+                          <Clock3 className="h-[10px] w-[10px] shrink-0 text-slate-500" />
+                          <span className="uppercase tracking-[0.04em] leading-none">
+                            Created:
+                          </span>
+                          <span className="font-semibold text-slate-700 leading-none">
+                            {formatFooterTime(ticket.created_at)}
+                          </span>
                         </>
                       )}
                     </div>
@@ -613,7 +749,6 @@ export default function QAPage({
       <CreateQATicketDialog
         open={createOpen}
         onOpenChange={setCreateOpen}
-        bdMap={bdMap}
         onSaved={refresh}
       />
 
@@ -622,9 +757,22 @@ export default function QAPage({
         onOpenChange={setDetailOpen}
         ticket={selectedTicket}
         isAdmin={isAdmin}
-        bdMap={bdMap}
+        bdMap={bdNameMap}
+        adminNameMap={adminNameMap}
         currentUserId={currentUserId}
         onSaved={refresh}
+        onTicketChanged={(next) => {
+          setTickets((prev) => upsertTicket(prev, next));
+          setSelectedTicket((prev) => {
+            if (!prev || prev.id !== next.id) return prev;
+
+            return {
+              ...prev,
+              ...next,
+              asked_by_name: bdNameMap[next.asked_by_bd_id] ?? "—",
+            };
+          });
+        }}
       />
     </div>
   );

@@ -10,16 +10,27 @@ export type QATicket = {
   admin_answer: string | null;
   answered_by_user_id: string | null;
   is_done: boolean;
+  created_at: string;
+  updated_at: string | null;
+  done_at: string | null;
   is_archived: boolean;
   is_in_progress: boolean;
-  created_at: string;
-  updated_at: string;
-  done_at: string | null;
+  in_progress_at: string | null;
+  archived_at: string | null;
+
+  version: number;
+  updated_by_user_id: string | null;
+  status_updated_by_user_id: string | null;
 };
 
 export type QATicketVM = QATicket & {
-  asked_by_name?: string;
-  ticket_code?: string;
-  is_archived: boolean;
-  is_in_progress: boolean;
+  asked_by_name: string;
+  ticket_code: string;
+};
+
+export type QATicketPresence = {
+  userId: string;
+  name: string;
+  ticketId: string;
+  joinedAt: string;
 };
