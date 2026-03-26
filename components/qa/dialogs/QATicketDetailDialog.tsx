@@ -108,6 +108,13 @@ export default function QATicketDetailDialog({
   const requesterName = ticket ? bdMap[ticket.asked_by_bd_id] ?? "—" : "—";
 
   useEffect(() => {
+    if (!open || !ticket) return;
+
+    applyTicketToForm(ticket);
+    setAdditionalDescription("");
+  }, [ticket, open]);
+
+  useEffect(() => {
     if (!open || !ticket?.id) return;
 
     const channel = supabase.channel(`qa-ticket:${ticket.id}`, {
