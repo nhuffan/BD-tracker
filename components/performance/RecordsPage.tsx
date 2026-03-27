@@ -24,8 +24,17 @@ export type RecordVM = RecordRow & {
   _sync_status?: "pending" | "synced" | "failed";
 };
 
+function getCurrentMonth() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  return `${year}-${month}`;
+}
+
 export default function RecordsPage({ isAdmin }: { isAdmin: boolean }) {
-  const [filters, setFilters] = useState<Filters>({});
+  const [filters, setFilters] = useState<Filters>({
+    month: getCurrentMonth(),
+  });
   const [rows, setRows] = useState<RecordVM[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
@@ -121,9 +130,26 @@ export default function RecordsPage({ isAdmin }: { isAdmin: boolean }) {
     };
   }, []);
 
+  const monthOptions = useMemo(() => {
+    const months = Array.from(
+      new Set(
+        rows
+          .map((r) => r.event_date?.slice(0, 7))
+          .filter(Boolean)
+      )
+    ).sort((a, b) => b.localeCompare(a));
+
+    return ["__all__", ...months];
+  }, [rows]);
+
   const filtered = useMemo(() => {
     return [...rows]
       .filter((r) => {
+        if (filters.month && filters.month !== "__all__") {
+          const recordMonth = r.event_date.slice(0, 7);
+          if (recordMonth !== filters.month) return false;
+        }
+
         if (filters.from && r.event_date < filters.from) return false;
         if (filters.to && r.event_date > filters.to) return false;
         if (filters.bd_id && r.bd_id !== filters.bd_id) return false;
@@ -195,6 +221,7 @@ export default function RecordsPage({ isAdmin }: { isAdmin: boolean }) {
         rowsForExport={filtered}
         onRefresh={refresh}
         isAdmin={isAdmin}
+        monthOptions={monthOptions}
       />
 
       <RecordsTable

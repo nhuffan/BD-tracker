@@ -23,14 +23,6 @@ import { useMasters } from "@/lib/useMasters";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
-function monthToRange(month: string) {
-  const [y, m] = month.split("-").map(Number);
-  const from = `${y}-${String(m).padStart(2, "0")}-01`;
-  const lastDay = new Date(y, m, 0).getDate();
-  const to = `${y}-${String(m).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
-  return { from, to };
-}
-
 function toggleMultiValue(
   current: string[] | undefined,
   value: string
@@ -53,23 +45,12 @@ export default function FilterDialog({
   onApply: (f: Filters) => void;
 }) {
   const [draft, setDraft] = useState<Filters>(filters);
-  const ALL = "__all__";
-
   const { items: bdList } = useMasters("bd");
   const { items: customerTypes } = useMasters("customer_type");
   const { items: pointTypes } = useMasters("point_type");
+  const ALL = "__all__";
 
   useEffect(() => setDraft(filters), [filters]);
-
-  const monthRange = useMemo(() => {
-    if (!draft.month) return null;
-    return monthToRange(draft.month);
-  }, [draft.month]);
-
-  useEffect(() => {
-    if (!monthRange) return;
-    setDraft((d) => ({ ...d, from: monthRange.from, to: monthRange.to }));
-  }, [monthRange?.from, monthRange?.to]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -81,17 +62,6 @@ export default function FilterDialog({
         </DialogHeader>
 
         <div className="space-y-3">
-          <div className="w-full">
-            <p className="mb-1.5 text-sm font-medium text-foreground">Month</p>
-            <Input
-              type="month"
-              value={draft.month ?? ""}
-              onChange={(e) =>
-                setDraft((d) => ({ ...d, month: e.target.value || undefined }))
-              }
-            />
-          </div>
-
           <div className="grid grid-cols-2 gap-2">
             <div className="w-full">
               <p className="mb-1.5 text-sm font-medium text-foreground">From Date</p>

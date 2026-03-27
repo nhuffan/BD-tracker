@@ -42,7 +42,6 @@ export default function CreateQATicketDialog({
   const [issueDetail, setIssueDetail] = useState("");
   const [priority, setPriority] = useState<QAPriority>("medium");
   const [saving, setSaving] = useState(false);
-
   const { items: bdList } = useMasters("bd");
 
   const bdOptions = useMemo(() => {
