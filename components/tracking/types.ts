@@ -22,6 +22,7 @@ export type TrackingRecordVM = TrackingRecordRow & {
 };
 
 export type TrackingFilters = {
+  month?: string;
   from?: string;
   to?: string;
   customer_name?: string;

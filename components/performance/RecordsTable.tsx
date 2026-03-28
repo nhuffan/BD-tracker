@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { db } from "@/lib/db";
 import { syncPending } from "@/lib/sync";
 import { formatDMY } from "@/lib/date";
-import { FileText, Search } from "lucide-react";
+import { FileText, Search, RefreshCw } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -22,6 +22,7 @@ export default function RecordsTable({
   rows,
   loading,
   onChanged,
+  onRefresh,
   bdMap,
   levelMap,
   customerTypeMap,
@@ -33,6 +34,7 @@ export default function RecordsTable({
   rows: RecordVM[];
   loading: boolean;
   onChanged: () => void;
+  onRefresh: () => void;
   bdMap: Record<string, string>;
   levelMap: Record<string, string>;
   customerTypeMap: Record<string, string>;
@@ -128,30 +130,41 @@ export default function RecordsTable({
 
             <div className="flex-1" />
 
-            {isAdmin && (
-              <div className="flex items-center gap-2">
-                {selectionMode && (
+            <div className="flex items-center gap-2">
+              <Button
+                className="cursor-pointer"
+                variant="ghost"
+                onClick={onRefresh}
+              >
+                <RefreshCw className="h-4 w-4" />
+                Refresh
+              </Button>
+
+              {isAdmin && (
+                <>
+                  {selectionMode && (
+                    <Button
+                      className="cursor-pointer"
+                      variant="ghost"
+                      onClick={() => {
+                        setSelectionMode(false);
+                        setSelected({});
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  )}
+
                   <Button
                     className="cursor-pointer"
-                    variant="ghost"
-                    onClick={() => {
-                      setSelectionMode(false);
-                      setSelected({});
-                    }}
+                    variant={selectionMode ? "destructive" : "secondary"}
+                    onClick={handleDelete}
                   >
-                    Cancel
+                    {selectionMode ? `Delete (${selectedIds.length})` : "Delete"}
                   </Button>
-                )}
-
-                <Button
-                  className="cursor-pointer"
-                  variant={selectionMode ? "destructive" : "secondary"}
-                  onClick={handleDelete}
-                >
-                  {selectionMode ? `Delete (${selectedIds.length})` : "Delete"}
-                </Button>
-              </div>
-            )}
+                </>
+              )}
+            </div>
           </div>
 
           <div className="w-full overflow-x-auto">
@@ -181,9 +194,8 @@ export default function RecordsTable({
                   return (
                     <tr
                       key={r.id}
-                      className={`border-t ${
-                        selectionMode ? "cursor-pointer" : "cursor-default"
-                      } ${isSelected ? "bg-muted/40" : ""}`}
+                      className={`border-t ${selectionMode ? "cursor-pointer" : "cursor-default"
+                        } ${isSelected ? "bg-muted/40" : ""}`}
                       onClick={() => toggleRowSelection(r.id)}
                       onDoubleClick={() => openEditDialog(r)}
                     >

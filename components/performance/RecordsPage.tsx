@@ -228,6 +228,7 @@ export default function RecordsPage({ isAdmin }: { isAdmin: boolean }) {
         rows={filtered}
         loading={loading}
         onChanged={refresh}
+        onRefresh={refresh}
         bdMap={bdMap}
         levelMap={levelMap}
         customerTypeMap={customerTypeMap}

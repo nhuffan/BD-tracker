@@ -7,12 +7,23 @@ import CustomerTrackingTable from "./CustomerTrackingTable";
 import type { TrackingFilters, TrackingRecordVM } from "./types";
 import { useMasters } from "@/lib/useMasters";
 
+function getCurrentMonth() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  return `${year}-${month}`;
+}
+
+const ALL = "__all__";
+
 export default function CustomerTrackingPage({
   isAdmin,
 }: {
   isAdmin: boolean;
 }) {
-  const [filters, setFilters] = useState<TrackingFilters>({});
+  const [filters, setFilters] = useState<TrackingFilters>({
+    month: getCurrentMonth(),
+  });
   const [rows, setRows] = useState<TrackingRecordVM[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
@@ -52,9 +63,32 @@ export default function CustomerTrackingPage({
     refresh();
   }, []);
 
+  const monthOptions = useMemo(() => {
+    const months = Array.from(
+      new Set(rows.map((r) => r.event_date?.slice(0, 7)).filter(Boolean))
+    ).sort((a, b) => b.localeCompare(a));
+
+    const currentMonth = filters.month;
+    if (
+      currentMonth &&
+      currentMonth !== ALL &&
+      !months.includes(currentMonth)
+    ) {
+      months.unshift(currentMonth);
+      months.sort((a, b) => b.localeCompare(a));
+    }
+
+    return [ALL, ...months];
+  }, [rows, filters.month]);
+
   const filtered = useMemo(() => {
     return [...rows]
       .filter((r) => {
+        if (filters.month && filters.month !== ALL) {
+          const recordMonth = r.event_date.slice(0, 7);
+          if (recordMonth !== filters.month) return false;
+        }
+
         if (filters.from && r.event_date < filters.from) return false;
         if (filters.to && r.event_date > filters.to) return false;
         if (filters.bd_id && r.bd_id !== filters.bd_id) return false;
@@ -128,12 +162,14 @@ export default function CustomerTrackingPage({
         onRefresh={refresh}
         isAdmin={isAdmin}
         bdMap={bdMap}
+        monthOptions={monthOptions}
       />
 
       <CustomerTrackingTable
         rows={filtered}
         loading={loading}
         onChanged={refresh}
+        onRefresh={refresh}
         isAdmin={isAdmin}
         search={search}
         onSearchChange={setSearch}

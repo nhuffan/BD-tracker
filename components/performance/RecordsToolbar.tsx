@@ -12,7 +12,6 @@ import {
   Filter,
   Plus,
   FileSpreadsheet,
-  RefreshCw,
   ChevronLeft,
   ChevronRight,
   CalendarDays
@@ -65,18 +64,19 @@ export default function RecordsToolbar({
   const ALL = "__all__";
   const currentMonth = filters.month ?? ALL;
   const currentIndex = monthOptions.indexOf(currentMonth);
-  const isPrevDisabled = currentMonth === ALL || currentIndex <= 1;
-  const isNextDisabled =
+  const isPrevDisabled =
     currentMonth === ALL || currentIndex === -1 || currentIndex >= monthOptions.length - 1;
 
+  const isNextDisabled = currentMonth === ALL || currentIndex <= 1;
+
   function handlePrevMonth() {
-    if (currentIndex <= 1) return;
-    onChangeFilters({ ...filters, month: monthOptions[currentIndex - 1] });
+    if (currentIndex === -1 || currentIndex >= monthOptions.length - 1) return;
+    onChangeFilters({ ...filters, month: monthOptions[currentIndex + 1] });
   }
 
   function handleNextMonth() {
-    if (currentIndex === -1 || currentIndex >= monthOptions.length - 1) return;
-    onChangeFilters({ ...filters, month: monthOptions[currentIndex + 1] });
+    if (currentIndex <= 1) return;
+    onChangeFilters({ ...filters, month: monthOptions[currentIndex - 1] });
   }
 
   return (
@@ -183,11 +183,6 @@ export default function RecordsToolbar({
           <ChevronRight className="h-4 w-4" />
         </Button>
       </div>
-
-      {/* <Button className="cursor-pointer" variant="ghost" onClick={onRefresh}>
-        <RefreshCw className="h-4 w-4" />
-        Refresh
-      </Button> */}
 
       <FilterDialog
         open={openFilter}

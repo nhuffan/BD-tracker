@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
+import { Search, RefreshCw } from "lucide-react";
 import type { TrackingRecordVM } from "./types";
 import { formatDMY } from "@/lib/date";
 import {
@@ -21,12 +21,14 @@ export default function CustomerTrackingTable({
     isAdmin,
     search,
     onSearchChange,
+    onRefresh,
     bdMap,
     stats,
 }: {
     rows: TrackingRecordVM[];
     loading: boolean;
     onChanged: () => void;
+    onRefresh: () => void;
     isAdmin: boolean;
     search: string;
     onSearchChange: (value: string) => void;
@@ -106,30 +108,42 @@ export default function CustomerTrackingTable({
 
                         <div className="flex-1" />
 
-                        {isAdmin && (
-                            <div className="flex items-center gap-2">
-                                {selectionMode && (
+                        <div className="flex items-center gap-2">
+                            <Button
+                                className="cursor-pointer"
+                                variant="ghost"
+                                onClick={onRefresh}
+                            >
+                                <RefreshCw className="h-4 w-4" />
+                                Refresh
+                            </Button>
+
+
+                            {isAdmin && (
+                                <div className="flex items-center gap-2">
+                                    {selectionMode && (
+                                        <Button
+                                            className="cursor-pointer"
+                                            variant="ghost"
+                                            onClick={() => {
+                                                setSelectionMode(false);
+                                                setSelected({});
+                                            }}
+                                        >
+                                            Cancel
+                                        </Button>
+                                    )}
+
                                     <Button
                                         className="cursor-pointer"
-                                        variant="ghost"
-                                        onClick={() => {
-                                            setSelectionMode(false);
-                                            setSelected({});
-                                        }}
+                                        variant={selectionMode ? "destructive" : "secondary"}
+                                        onClick={handleDelete}
                                     >
-                                        Cancel
+                                        {selectionMode ? `Delete (${selectedIds.length})` : "Delete"}
                                     </Button>
-                                )}
-
-                                <Button
-                                    className="cursor-pointer"
-                                    variant={selectionMode ? "destructive" : "secondary"}
-                                    onClick={handleDelete}
-                                >
-                                    {selectionMode ? `Delete (${selectedIds.length})` : "Delete"}
-                                </Button>
-                            </div>
-                        )}
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     <div className="w-full overflow-x-auto">
