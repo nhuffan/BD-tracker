@@ -1,7 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Archive, CalendarDays, CheckCircle2, CircleDashed } from "lucide-react";
+import {
+  Archive,
+  CalendarDays,
+  CheckCircle2,
+  CircleDashed,
+  File,
+  FileText,
+  Image as ImageIcon,
+  Paperclip,
+} from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -13,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import type { QAPriority, QATicketVM } from "../types";
+import type { QAPriority, QATicketVM, QATicketAttachment } from "../types";
 
 const fieldClass =
   "!h-11 h-11 w-full min-w-0 rounded-lg border border-input bg-background px-3 text-sm shadow-none";
@@ -23,6 +32,22 @@ const infoFieldClass =
   "flex h-11 w-full min-w-0 items-center rounded-lg border border-input bg-muted/60 px-3 text-sm text-foreground";
 const labelClass =
   "mb-2 block text-[11px] font-bold uppercase tracking-wide text-muted-foreground";
+const attachmentCardClass =
+  "relative flex h-[72px] min-h-[72px] w-full min-w-0 items-center gap-3 overflow-hidden rounded-lg border border-input bg-background px-3 py-2 pr-[42px]";
+
+function formatFileSize(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function isImageFile(type: string) {
+  return type.startsWith("image/");
+}
+
+function isPdfFile(type: string, name: string) {
+  return type === "application/pdf" || name.toLowerCase().endsWith(".pdf");
+}
 
 function formatTicketCode(ticket?: QATicketVM | null) {
   if (!ticket?.ticket_code) return "QA-TICKET";
@@ -106,6 +131,8 @@ export default function QATicketDetailDialog({
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const currentAdminName = adminNameMap?.[currentUserId] ?? "Another admin";
   const requesterName = ticket ? bdMap[ticket.asked_by_bd_id] ?? "—" : "—";
+  const attachments: QATicketAttachment[] = ticket?.attachments ?? [];
+  const hasAttachments = attachments.length > 0;
 
   useEffect(() => {
     if (!open || !ticket) return;
@@ -446,9 +473,8 @@ export default function QATicketDetailDialog({
       >
         <DialogTitle className="sr-only">{ticket.title}</DialogTitle>
 
-        <div className="border-b px-6 py-5">
+        <div className="border-b px-6 py-4">
           <div className="min-w-0">
-
 
             <div className="mb-2 flex flex-wrap items-center gap-2">
               <span
@@ -492,7 +518,7 @@ export default function QATicketDetailDialog({
           </div>
         </div>
 
-        <div className="flex-1 space-y-4 overflow-y-auto px-6 py-4">
+        <div className="flex-1 space-y-4 overflow-y-auto px-6">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:items-stretch">
             <div className="min-w-0">
               <div className={labelClass}>Requester</div>
@@ -548,6 +574,58 @@ export default function QATicketDetailDialog({
                 {renderIssueDetail(ticket.issue_detail)}
               </div>
             </div>
+          </div>
+
+          <div>
+            <div className="mb-2 flex items-center gap-2">
+
+              <div className="block text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                Attachments
+              </div>
+              <Paperclip className="h-4 w-4 text-muted-foreground" />
+            </div>
+
+            {hasAttachments ? (
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                {attachments.map((item) => {
+                  const isImage = isImageFile(item.type);
+                  const isPdf = isPdfFile(item.type, item.name);
+
+                  return (
+                    <div key={item.id} className={attachmentCardClass}>
+                      {isImage && item.preview_url ? (
+                        <img
+                          src={item.preview_url}
+                          alt={item.name}
+                          className="h-10 w-10 shrink-0 rounded object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-muted">
+                          {isPdf ? (
+                            <FileText className="h-5 w-5 text-red-500" />
+                          ) : (
+                            <File className="h-5 w-5 text-blue-500" />
+                          )}
+                        </div>
+                      )}
+
+                      <div className="min-w-0 flex-1 overflow-hidden pr-2">
+                        <div className="truncate text-sm font-medium text-foreground">
+                          {item.name}
+                        </div>
+                        <div className="mt-1 text-xs text-muted-foreground">
+                          {formatFileSize(item.size)}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-sm text-primary">
+                None
+              </div>
+            )}
           </div>
 
           <div>
