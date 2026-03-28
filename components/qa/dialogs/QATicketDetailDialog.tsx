@@ -6,11 +6,9 @@ import {
   CalendarDays,
   CheckCircle2,
   CircleDashed,
-  File,
-  FileText,
-  Image as ImageIcon,
   Paperclip,
 } from "lucide-react";
+import { AttachmentIcon, isImageFile, isVideoFile } from "@/components/qa/utils/AttachmentIcon";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -22,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import type { QAPriority, QATicketVM, QATicketAttachment } from "../types";
+import type { QAPriority, QATicketVM, QATicketAttachment } from "../utils/types";
 
 const fieldClass =
   "!h-11 h-11 w-full min-w-0 rounded-lg border border-input bg-background px-3 text-sm shadow-none";
@@ -39,14 +37,6 @@ function formatFileSize(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function isImageFile(type: string) {
-  return type.startsWith("image/");
-}
-
-function isPdfFile(type: string, name: string) {
-  return type === "application/pdf" || name.toLowerCase().endsWith(".pdf");
 }
 
 function formatTicketCode(ticket?: QATicketVM | null) {
@@ -89,6 +79,21 @@ function getPriorityBadgeClass(priority?: QAPriority) {
     default:
       return "bg-muted text-muted-foreground";
   }
+}
+
+function getAttachmentOpenUrl(item: QATicketAttachment) {
+  const baseUrl = item.secure_url || item.url || null;
+  if (!baseUrl) return null;
+
+  const isPreviewable =
+    isImageFile(item.type) || isVideoFile(item.type, item.name);
+
+  if (isPreviewable) {
+    return baseUrl;
+  }
+
+  const separator = baseUrl.includes("?") ? "&" : "?";
+  return `${baseUrl}${separator}fl_attachment=${encodeURIComponent(item.name)}`;
 }
 
 export default function QATicketDetailDialog({
@@ -589,24 +594,28 @@ export default function QATicketDetailDialog({
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 {attachments.map((item) => {
                   const isImage = isImageFile(item.type);
-                  const isPdf = isPdfFile(item.type, item.name);
 
                   return (
-                    <div key={item.id} className={attachmentCardClass}>
-                      {isImage && item.preview_url ? (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => {
+                        const targetUrl = getAttachmentOpenUrl(item);
+                        if (targetUrl) {
+                          window.open(targetUrl, "_blank", "noopener,noreferrer");
+                        }
+                      }}
+                      className={`${attachmentCardClass} group cursor-pointer text-left transition-all duration-150 hover:border-primary/40 hover:bg-muted/50 hover:shadow-sm active:scale-[0.98]`}
+                      title={item.name}
+                    >
+                      {isImage && (item.thumbnail_url || item.secure_url) ? (
                         <img
-                          src={item.preview_url}
+                          src={item.thumbnail_url || item.secure_url}
                           alt={item.name}
-                          className="h-10 w-10 shrink-0 rounded object-cover"
+                          className="h-10 w-10 shrink-0 rounded-lg object-cover"
                         />
                       ) : (
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-muted">
-                          {isPdf ? (
-                            <FileText className="h-5 w-5 text-red-500" />
-                          ) : (
-                            <File className="h-5 w-5 text-blue-500" />
-                          )}
-                        </div>
+                        <AttachmentIcon type={item.type} name={item.name} />
                       )}
 
                       <div className="min-w-0 flex-1 overflow-hidden pr-2">
@@ -617,7 +626,7 @@ export default function QATicketDetailDialog({
                           {formatFileSize(item.size)}
                         </div>
                       </div>
-                    </div>
+                    </button>
                   );
                 })}
               </div>

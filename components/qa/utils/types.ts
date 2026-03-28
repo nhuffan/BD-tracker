@@ -33,7 +33,13 @@ export type QATicketAttachment = {
   name: string;
   size: number;
   type: string;
-  preview_url?: string | null;
+  resource_type: "image" | "video" | "raw";
+  public_id: string;
+  url: string;
+  secure_url: string;
+  format?: string | null;
+  version?: number | null;
+  thumbnail_url?: string | null;
 };
 
 export type QATicketPresence = {

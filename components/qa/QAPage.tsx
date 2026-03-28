@@ -6,7 +6,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import type { QAPriority, QATicket, QATicketVM } from "./types";
+import type { QAPriority, QATicket, QATicketVM } from "./utils/types";
 import CreateQATicketDialog from "./dialogs/CreateQATicketDialog";
 import QATicketDetailDialog from "./dialogs/QATicketDetailDialog";
 import { saveAs } from "file-saver";
@@ -357,19 +357,57 @@ export default function QAPage({
       return;
     }
 
-    const { error } = await supabase
-      .from("qa_tickets")
-      .delete()
-      .in("id", selectedIds);
+    try {
+      const ticketsToDelete = tickets.filter((ticket) =>
+        selectedIds.includes(ticket.id)
+      );
 
-    if (error) {
-      console.error("Failed to delete qa tickets:", error);
-      return;
+      const attachmentItems = ticketsToDelete.flatMap((ticket) =>
+        (ticket.attachments ?? [])
+          .filter((item) => item.public_id)
+          .map((item) => ({
+            public_id: item.public_id,
+            resource_type: item.resource_type,
+          }))
+      );
+
+      if (attachmentItems.length > 0) {
+        const deleteFilesRes = await fetch("/api/cloudinary/delete", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            items: attachmentItems,
+          }),
+        });
+
+        if (!deleteFilesRes.ok) {
+          const err = await deleteFilesRes.json().catch(() => null);
+          console.error("Failed to delete cloudinary files:", err);
+          alert("Failed to delete attachments from Cloudinary.");
+          return;
+        }
+      }
+
+      const { error } = await supabase
+        .from("qa_tickets")
+        .delete()
+        .in("id", selectedIds);
+
+      if (error) {
+        console.error("Failed to delete qa tickets:", error);
+        alert("Failed to delete tickets.");
+        return;
+      }
+
+      setSelected({});
+      setSelectionMode(false);
+      await refresh();
+    } catch (error) {
+      console.error("Delete flow failed:", error);
+      alert("Delete failed.");
     }
-
-    setSelected({});
-    setSelectionMode(false);
-    await refresh();
   }
 
   async function handleExportArchive() {

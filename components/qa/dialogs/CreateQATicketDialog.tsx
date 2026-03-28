@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { File, FileText, Image as ImageIcon, UploadCloud, Trash2 } from "lucide-react";
+import { UploadCloud, Trash2 } from "lucide-react";
+import { AttachmentIcon, isImageFile } from "@/components/qa/utils/AttachmentIcon";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import type { QAPriority, QATicketAttachment } from "../types";
+import type { QAPriority, QATicketAttachment } from "../utils/types";
 import { useMasters } from "@/lib/useMasters";
 
 const fieldClass =
@@ -33,24 +34,21 @@ const labelClass =
 const attachmentCardClass =
   "relative flex h-[72px] min-h-[72px] w-full min-w-0 items-center gap-3 overflow-hidden rounded-lg border border-input bg-background px-3 py-2 pr-[42px]";
 
+const interactiveCardClass =
+  "group cursor-pointer transition-all duration-150 hover:border-primary/40 hover:bg-muted/50 hover:shadow-sm active:scale-[0.98]";
+
 const MAX_ATTACHMENTS = 4;
 
 type LocalAttachment = QATicketAttachment & {
-  file: File;
+  file?: File;
+  local_preview_url?: string | null;
+  upload_status?: "idle" | "uploading" | "uploaded" | "error";
 };
 
 function formatFileSize(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function isImageFile(type: string) {
-  return type.startsWith("image/");
-}
-
-function isPdfFile(type: string, name: string) {
-  return type === "application/pdf" || name.toLowerCase().endsWith(".pdf");
 }
 
 function truncateMiddleFileName(name: string, maxBaseLength = 30) {
@@ -71,6 +69,10 @@ function truncateMiddleFileName(name: string, maxBaseLength = 30) {
   const back = Math.max(5, Math.floor((maxBaseLength - 3) / 2));
 
   return `${base.slice(0, front)}...${base.slice(-back)}${ext}`;
+}
+
+function getLocalAttachmentOpenUrl(item: LocalAttachment) {
+  return item.local_preview_url || item.secure_url || item.url || null;
 }
 
 export default function CreateQATicketDialog({
@@ -109,19 +111,27 @@ export default function CreateQATicketDialog({
       const remain = MAX_ATTACHMENTS - prev.length;
       if (remain <= 0) return prev;
 
-      const next = files
+      const next: LocalAttachment[] = files
         .filter((file) => {
           const key = `${file.name}-${file.size}-${file.type}`;
           return !existing.has(key);
         })
         .slice(0, remain)
-        .map((file) => ({
+        .map((file): LocalAttachment => ({
           id: crypto.randomUUID(),
           name: file.name,
           size: file.size,
           type: file.type || "application/octet-stream",
-          preview_url: isImageFile(file.type) ? URL.createObjectURL(file) : null,
+          resource_type: "raw",
+          public_id: "",
+          url: "",
+          secure_url: "",
+          format: null,
+          version: null,
+          thumbnail_url: null,
+          local_preview_url: URL.createObjectURL(file),
           file,
+          upload_status: "idle",
         }));
 
       return [...prev, ...next];
@@ -137,7 +147,7 @@ export default function CreateQATicketDialog({
   function handleRemoveAttachment(id: string) {
     setAttachments((prev) => {
       const target = prev.find((item) => item.id === id);
-      if (target?.preview_url) URL.revokeObjectURL(target.preview_url);
+      if (target?.local_preview_url) URL.revokeObjectURL(target.local_preview_url);
       return prev.filter((item) => item.id !== id);
     });
   }
@@ -146,22 +156,51 @@ export default function CreateQATicketDialog({
     if (open) return;
 
     attachments.forEach((item) => {
-      if (item.preview_url) URL.revokeObjectURL(item.preview_url);
+      if (item.local_preview_url) URL.revokeObjectURL(item.local_preview_url);
     });
     setAttachments([]);
     setDragging(false);
   }, [open]);
+
+  async function uploadAttachments(files: LocalAttachment[]) {
+    const formData = new FormData();
+
+    files.forEach((item) => {
+      if (item.file) {
+        formData.append("files", item.file);
+      }
+    });
+
+    const res = await fetch("/api/cloudinary/upload", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!res.ok) {
+      throw new Error("Failed to upload attachments");
+    }
+
+    const data = await res.json();
+    return data.files as QATicketAttachment[];
+  }
 
   async function handleSave() {
     if (isDisabled) return;
 
     setSaving(true);
     try {
+      let uploadedAttachments: QATicketAttachment[] = [];
+
+      if (attachments.length > 0) {
+        uploadedAttachments = await uploadAttachments(attachments);
+      }
+
       const payload = {
         asked_by_bd_id: askedByBdId,
         title: title.trim(),
         issue_detail: issueDetail.trim() || null,
         priority,
+        attachments: uploadedAttachments,
       };
 
       const { error } = await supabase.from("qa_tickets").insert(payload);
@@ -178,7 +217,7 @@ export default function CreateQATicketDialog({
       setPriority("medium");
       console.log("attachments ui only:", attachments);
       attachments.forEach((item) => {
-        if (item.preview_url) URL.revokeObjectURL(item.preview_url);
+        if (item.local_preview_url) URL.revokeObjectURL(item.local_preview_url);
       });
       setAttachments([]);
       onOpenChange(false);
@@ -271,6 +310,8 @@ export default function CreateQATicketDialog({
               multiple
               accept="
                 image/*,
+                video/*,
+                .mp4,.mov,.webm,.m4v,
                 .pdf,
                 .txt,
                 .doc,.docx,
@@ -281,7 +322,11 @@ export default function CreateQATicketDialog({
                 application/vnd.ms-excel,
                 application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,
                 application/vnd.ms-powerpoint,
-                application/vnd.openxmlformats-officedocument.presentationml.presentation
+                application/vnd.openxmlformats-officedocument.presentationml.presentation,
+                video/mp4,
+                video/quicktime,
+                video/webm,
+                video/x-m4v
               "
               className="hidden"
               onChange={handleFileChange}
@@ -308,7 +353,7 @@ export default function CreateQATicketDialog({
                     : "1.5px dashed color-mix(in oklab, var(--primary) 22%, transparent)",
                   borderRadius: "10px",
                 }}
-                className="flex min-h-[60px] w-full cursor-pointer flex-col items-center justify-center bg-background px-5 py-5 text-center"
+                className={`flex min-h-[60px] w-full flex-col items-center justify-center px-5 py-5 text-center ${interactiveCardClass}`}
               >
                 <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
                   <UploadCloud className="h-5 w-5" />
@@ -319,17 +364,37 @@ export default function CreateQATicketDialog({
                 </div>
 
                 <div className="mt-1 text-xs text-muted-foreground">
-                  PDF, PNG, JPG (Max. 10MB)
+                  Max. 10MB
                 </div>
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 {attachments.map((item) => {
                   const isImage = isImageFile(item.type);
-                  const isPdf = isPdfFile(item.type, item.name);
 
                   return (
-                    <div key={item.id} className={attachmentCardClass}>
+                    <div
+                      key={item.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => {
+                        const targetUrl = getLocalAttachmentOpenUrl(item);
+                        if (targetUrl) {
+                          window.open(targetUrl, "_blank", "noopener,noreferrer");
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          const targetUrl = getLocalAttachmentOpenUrl(item);
+                          if (targetUrl) {
+                            window.open(targetUrl, "_blank", "noopener,noreferrer");
+                          }
+                        }
+                      }}
+                      className={`${attachmentCardClass} group cursor-pointer text-left transition-all duration-150 hover:border-primary/40 hover:bg-muted/50 hover:shadow-sm active:scale-[0.98]`}
+                      title={item.name}
+                    >
                       <button
                         type="button"
                         onClick={(e) => {
@@ -341,20 +406,14 @@ export default function CreateQATicketDialog({
                         <Trash2 className="h-4 w-4 cursor-pointer" />
                       </button>
 
-                      {isImage && item.preview_url ? (
+                      {isImage && item.local_preview_url ? (
                         <img
-                          src={item.preview_url}
+                          src={item.local_preview_url}
                           alt={item.name}
-                          className="h-10 w-10 shrink-0 rounded object-cover"
+                          className="h-10 w-10 shrink-0 rounded-lg object-cover"
                         />
                       ) : (
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-muted">
-                          {isPdf ? (
-                            <FileText className="h-5 w-5 text-red-500" />
-                          ) : (
-                            <File className="h-5 w-5 text-blue-500" />
-                          )}
-                        </div>
+                        <AttachmentIcon type={item.type} name={item.name} />
                       )}
 
                       <div className="min-w-0 flex-1 overflow-hidden pr-1">
@@ -379,7 +438,7 @@ export default function CreateQATicketDialog({
                         : "1.5px dashed color-mix(in oklab, var(--primary) 22%, transparent)",
                       borderRadius: "10px",
                     }}
-                    className="flex h-[72px] min-h-[72px] w-full items-center justify-center bg-background px-3 py-2 text-sm font-medium text-muted-foreground transition hover:text-foreground"
+                    className={`flex h-[72px] min-h-[72px] w-full items-center justify-center rounded-lg border border-input bg-background px-3 py-2 text-sm font-medium text-muted-foreground ${interactiveCardClass}`}
                   >
                     + Add more
                   </button>
