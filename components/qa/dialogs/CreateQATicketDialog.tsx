@@ -29,6 +29,9 @@ import {
   interactiveCardClass,
   formatFileSize,
   truncateMiddleFileName,
+  MAX_ATTACHMENTS,
+  preprocessAttachmentFiles,
+  getOversizedFiles,
 } from "../utils/attachmentHelpers";
 import AttachmentLoadingIndicator from "../utils/AttachmentLoadingIndicator";
 
@@ -37,8 +40,6 @@ const fieldClass =
 
 const labelClass =
   "mb-2 block text-[11px] font-bold uppercase tracking-wide text-muted-foreground";
-
-const MAX_ATTACHMENTS = 4;
 
 type LocalAttachment = QATicketAttachment & {
   file?: File;
@@ -71,15 +72,25 @@ export default function CreateQATicketDialog({
   const [attachments, setAttachments] = useState<LocalAttachment[]>([]);
   const [dragging, setDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-
   const bdOptions = useMemo(() => {
     return [...bdList].sort((a, b) => a.label.localeCompare(b.label));
   }, [bdList]);
-
   const isDisabled = !askedByBdId || !title.trim() || saving;
 
-  function mergeFiles(fileList: FileList | File[]) {
-    const files = Array.from(fileList);
+  async function mergeFiles(fileList: FileList | File[]) {
+    const rawFiles = Array.from(fileList);
+
+    const processedFiles = await preprocessAttachmentFiles(
+      rawFiles,
+      isImageFile
+    );
+
+    const oversizedFiles = getOversizedFiles(rawFiles);
+    if (oversizedFiles.length > 0) {
+      alert(
+        oversizedFiles.map((file) => `${file.name} exceeds the 10MB limit.`).join("\n")
+      );
+    }
 
     setAttachments((prev) => {
       const existing = new Set(
@@ -89,7 +100,7 @@ export default function CreateQATicketDialog({
       const remain = MAX_ATTACHMENTS - prev.length;
       if (remain <= 0) return prev;
 
-      const next: LocalAttachment[] = files
+      const next: LocalAttachment[] = processedFiles
         .filter((file) => {
           const key = `${file.name}-${file.size}-${file.type}`;
           return !existing.has(key);
@@ -116,9 +127,9 @@ export default function CreateQATicketDialog({
     });
   }
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     if (!e.target.files?.length) return;
-    mergeFiles(e.target.files);
+    await mergeFiles(e.target.files);
     e.target.value = "";
   }
 
@@ -324,11 +335,11 @@ export default function CreateQATicketDialog({
                   setDragging(true);
                 }}
                 onDragLeave={() => setDragging(false)}
-                onDrop={(e) => {
+                onDrop={async (e) => {
                   e.preventDefault();
                   setDragging(false);
                   if (e.dataTransfer.files?.length) {
-                    mergeFiles(e.dataTransfer.files);
+                    await mergeFiles(e.dataTransfer.files);
                   }
                 }}
                 style={{
