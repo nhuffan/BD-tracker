@@ -109,13 +109,21 @@ export default function MasterManager({
       setItems(data);
 
       if (category === "bd") {
-        const { data: records } = await supabase
+        const { data: records, error: recordsError } = await supabase
           .from("records")
           .select("bd_id, points, money, package_amount, event_date");
 
-        const { data: trackingStats } = await supabase
+        const { data: trackingStats, error: trackingError } = await supabase
           .from("bd_tracking_stats")
           .select("bd_id, new_customers, new_hot_list");
+
+        if (recordsError) {
+          console.error("Failed to fetch records:", recordsError);
+        }
+
+        if (trackingError) {
+          console.error("Failed to fetch bd_tracking_stats:", trackingError);
+        }
 
         const allRecords = records ?? [];
 
@@ -133,8 +141,8 @@ export default function MasterManager({
           selectedMonth === ALL_TIME
             ? allRecords
             : allRecords.filter(
-                (r) => r.event_date?.slice(0, 7) === selectedMonth
-              );
+              (r) => r.event_date?.slice(0, 7) === selectedMonth
+            );
 
         const map: Record<
           string,
@@ -182,6 +190,51 @@ export default function MasterManager({
 
   useEffect(() => {
     refresh();
+  }, [category, selectedMonth]);
+
+  useEffect(() => {
+    if (category !== "bd") return;
+
+    const channel = supabase
+      .channel("bd-manager-realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "records",
+        },
+        () => {
+          refresh();
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "customer_tracking",
+        },
+        () => {
+          refresh();
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "masters",
+        },
+        () => {
+          refresh();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [category, selectedMonth]);
 
   useEffect(() => {

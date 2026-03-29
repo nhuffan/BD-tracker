@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Archive, CheckCircle2, CircleDashed, Clock3, Plus, Search } from "lucide-react";
+import { Archive, CheckCircle2, CircleDashed, Clock3, Plus, Search, Paperclip } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -673,41 +673,50 @@ export default function QAPage({
                   className={`relative flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${isSelected ? "border-primary bg-primary/5" : ""
                     }`}
                 >
-                  {selectionMode && (
-                    <div
-                      className="absolute right-3 top-3 z-10"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <Checkbox
-                        checked={isSelected}
-                        onCheckedChange={(value) =>
-                          setSelected((prev) => ({
-                            ...prev,
-                            [ticket.id]: Boolean(value),
-                          }))
-                        }
-                      />
-                    </div>
-                  )}
 
                   <div className="flex-1 px-4 pt-4">
                     <div className="mb-3 flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="inline-flex items-center rounded-md bg-muted px-2 py-1 text-[11px] font-semibold tracking-wide text-muted-foreground">
+                      <div className="min-w-0 flex items-center gap-2">
+                        <div className="inline-flex items-center rounded-md bg-muted px-2 py-1 text-[12px] font-bold tracking-wide text-muted-foreground">
                           {ticket.ticket_code}
                         </div>
+
+                        {(ticket.attachments?.length ?? 0) > 0 && (
+                          <div className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-[12px] font-bold tracking-wide text-muted-foreground">
+                            <Paperclip className="h-3 w-3 shrink-0" />
+                            <span>{ticket.attachments?.length}</span>
+                          </div>
+                        )}
                       </div>
 
-                      {!selectionMode && (
+                      <div className="flex items-center gap-2">
                         <span
-                          className={`inline-flex items-center rounded-md px-2 py-1 text-[10px] font-bold uppercase ${getPriorityBadgeClass(
+                          className={`inline-flex items-center rounded-md px-2 py-1 text-[11px] font-bold uppercase ${getPriorityBadgeClass(
                             ticket.priority
                           )}`}
                         >
                           <span className="mr-1 h-1.5 w-1.5 rounded-full bg-current opacity-70" />
                           {ticket.priority}
                         </span>
-                      )}
+
+                        {selectionMode && (
+                          <div
+                            className="flex h-[20px] w-[20px] items-center justify-center"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={(value) =>
+                                setSelected((prev) => ({
+                                  ...prev,
+                                  [ticket.id]: Boolean(value),
+                                }))
+                              }
+                              className="h-4 w-4"
+                            />
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     <div className="mb-2 line-clamp-2 text-[20px] font-bold leading-tight text-slate-950">

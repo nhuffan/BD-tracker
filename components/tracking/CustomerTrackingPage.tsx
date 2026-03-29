@@ -63,6 +63,29 @@ export default function CustomerTrackingPage({
     refresh();
   }, []);
 
+  useEffect(() => {
+    const channel = supabase
+      .channel("customer-tracking-changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "customer_tracking",
+        },
+        () => {
+          refresh();
+        }
+      )
+      .subscribe((status) => {
+        console.log("customer_tracking realtime:", status);
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   const monthOptions = useMemo(() => {
     const months = Array.from(
       new Set(rows.map((r) => r.event_date?.slice(0, 7)).filter(Boolean))
