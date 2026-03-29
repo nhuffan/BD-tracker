@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   CircleDashed,
   Paperclip,
+  Loader2,
 } from "lucide-react";
 import { AttachmentIcon, isImageFile, isVideoFile } from "@/components/qa/utils/AttachmentIcon";
 import { supabase } from "@/lib/supabaseClient";
@@ -21,6 +22,13 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import type { QAPriority, QATicketVM, QATicketAttachment } from "../utils/types";
+import {
+  attachmentCardClass,
+  interactiveCardClass,
+  formatFileSize,
+  truncateMiddleFileName,
+} from "../utils/attachmentHelpers";
+import AttachmentLoadingIndicator from "../utils/AttachmentLoadingIndicator";
 
 const fieldClass =
   "!h-11 h-11 w-full min-w-0 rounded-lg border border-input bg-background px-3 text-sm shadow-none";
@@ -30,14 +38,6 @@ const infoFieldClass =
   "flex h-11 w-full min-w-0 items-center rounded-lg border border-input bg-muted/60 px-3 text-sm text-foreground";
 const labelClass =
   "mb-2 block text-[11px] font-bold uppercase tracking-wide text-muted-foreground";
-const attachmentCardClass =
-  "relative flex h-[72px] min-h-[72px] w-full min-w-0 items-center gap-3 overflow-hidden rounded-lg border border-input bg-background px-3 py-2 pr-[42px]";
-
-function formatFileSize(bytes: number) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
 
 function formatTicketCode(ticket?: QATicketVM | null) {
   if (!ticket?.ticket_code) return "QA-TICKET";
@@ -605,7 +605,7 @@ export default function QATicketDetailDialog({
                           window.open(targetUrl, "_blank", "noopener,noreferrer");
                         }
                       }}
-                      className={`${attachmentCardClass} group cursor-pointer text-left transition-all duration-150 hover:border-primary/40 hover:bg-muted/50 hover:shadow-sm active:scale-[0.98]`}
+                      className={`${attachmentCardClass} ${interactiveCardClass} text-left`}
                       title={item.name}
                     >
                       {isImage && (item.thumbnail_url || item.secure_url) ? (
@@ -618,9 +618,12 @@ export default function QATicketDetailDialog({
                         <AttachmentIcon type={item.type} name={item.name} />
                       )}
 
-                      <div className="min-w-0 flex-1 overflow-hidden pr-2">
-                        <div className="truncate text-sm font-medium text-foreground">
-                          {item.name}
+                      <div className="min-w-0 flex-1 overflow-hidden pr-1">
+                        <div
+                          className="overflow-hidden text-sm font-medium text-foreground"
+                          title={item.name}
+                        >
+                          {truncateMiddleFileName(item.name)}
                         </div>
                         <div className="mt-1 text-xs text-muted-foreground">
                           {formatFileSize(item.size)}
@@ -794,11 +797,8 @@ export default function QATicketDetailDialog({
             onClick={handleSave}
             disabled={isDisabledSave || lockedByOtherAdmin}
           >
-            {saving
-              ? isAdmin
-                ? "Updating..."
-                : "Submitting..."
-              : "Update Ticket"}
+            {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Update Ticket
           </Button>
         </div>
       </DialogContent>

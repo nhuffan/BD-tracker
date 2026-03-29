@@ -24,18 +24,19 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import type { QAPriority, QATicketAttachment } from "../utils/types";
 import { useMasters } from "@/lib/useMasters";
+import {
+  attachmentCardClass,
+  interactiveCardClass,
+  formatFileSize,
+  truncateMiddleFileName,
+} from "../utils/attachmentHelpers";
+import AttachmentLoadingIndicator from "../utils/AttachmentLoadingIndicator";
 
 const fieldClass =
   "h-11 w-full min-w-0 rounded-lg border border-input bg-background px-3 text-sm shadow-none";
 
 const labelClass =
   "mb-2 block text-[11px] font-bold uppercase tracking-wide text-muted-foreground";
-
-const attachmentCardClass =
-  "relative flex h-[72px] min-h-[72px] w-full min-w-0 items-center gap-3 overflow-hidden rounded-lg border border-input bg-background px-3 py-2 pr-[42px]";
-
-const interactiveCardClass =
-  "group cursor-pointer transition-all duration-150 hover:border-primary/40 hover:bg-muted/50 hover:shadow-sm active:scale-[0.98]";
 
 const MAX_ATTACHMENTS = 4;
 
@@ -44,32 +45,6 @@ type LocalAttachment = QATicketAttachment & {
   local_preview_url?: string | null;
   upload_status?: "idle" | "uploading" | "uploaded" | "error";
 };
-
-function formatFileSize(bytes: number) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function truncateMiddleFileName(name: string, maxBaseLength = 30) {
-  const lastDot = name.lastIndexOf(".");
-
-  if (lastDot <= 0 || lastDot === name.length - 1) {
-    if (name.length <= maxBaseLength) return name;
-    const keep = Math.max(6, Math.floor((maxBaseLength - 3) / 2));
-    return `${name.slice(0, keep)}...${name.slice(-keep)}`;
-  }
-
-  const base = name.slice(0, lastDot);
-  const ext = name.slice(lastDot);
-
-  if (base.length <= maxBaseLength) return name;
-
-  const front = Math.max(8, Math.ceil((maxBaseLength - 3) / 2));
-  const back = Math.max(5, Math.floor((maxBaseLength - 3) / 2));
-
-  return `${base.slice(0, front)}...${base.slice(-back)}${ext}`;
-}
 
 function getLocalAttachmentOpenUrl(item: LocalAttachment) {
   return item.local_preview_url || item.secure_url || item.url || null;
@@ -89,6 +64,9 @@ export default function CreateQATicketDialog({
   const [issueDetail, setIssueDetail] = useState("");
   const [priority, setPriority] = useState<QAPriority>("medium");
   const [saving, setSaving] = useState(false);
+  const [submitStage, setSubmitStage] = useState<
+    "idle" | "uploading_attachments" | "creating_ticket"
+  >("idle");
   const { items: bdList } = useMasters("bd");
   const [attachments, setAttachments] = useState<LocalAttachment[]>([]);
   const [dragging, setDragging] = useState(false);
@@ -188,12 +166,17 @@ export default function CreateQATicketDialog({
     if (isDisabled) return;
 
     setSaving(true);
+    setSubmitStage("idle");
+
     try {
       let uploadedAttachments: QATicketAttachment[] = [];
 
       if (attachments.length > 0) {
+        setSubmitStage("uploading_attachments");
         uploadedAttachments = await uploadAttachments(attachments);
       }
+
+      setSubmitStage("creating_ticket");
 
       const payload = {
         asked_by_bd_id: askedByBdId,
@@ -224,6 +207,7 @@ export default function CreateQATicketDialog({
       onSaved();
     } finally {
       setSaving(false);
+      setSubmitStage("idle");
     }
   }
 
@@ -448,24 +432,41 @@ export default function CreateQATicketDialog({
           </div>
         </div>
 
-        <DialogFooter className="flex-row items-center justify-end gap-3 border-t px-6 py-4">
-          <Button
-            type="button"
-            variant="ghost"
-            className="h-11 rounded-lg px-5 cursor-pointer"
-            onClick={() => onOpenChange(false)}
-          >
-            Cancel
-          </Button>
+        <DialogFooter className="border-t px-6 py-4">
+          <div className="flex h-11 flex-1 items-center">
+            <div className="flex min-h-[44px] flex-1 items-center">
+              {saving && (
+                <AttachmentLoadingIndicator
+                  text={
+                    submitStage === "uploading_attachments"
+                      ? `Uploading ${attachments.length} file${attachments.length > 1 ? "s" : ""}...`
+                      : "Submitting ticket..."
+                  }
+                />
+              )}
+            </div>
 
-          <Button
-            type="button"
-            className="h-11 rounded-lg px-6 cursor-pointer"
-            onClick={handleSave}
-            disabled={isDisabled}
-          >
-            {saving ? "Submitting..." : "Submit Question"}
-          </Button>
+            <div className="flex shrink-0 items-center gap-3">
+              <Button
+                type="button"
+                variant="ghost"
+                className="h-11 rounded-lg px-5 cursor-pointer"
+                onClick={() => onOpenChange(false)}
+                disabled={saving}
+              >
+                Cancel
+              </Button>
+
+              <Button
+                type="button"
+                className="h-11 rounded-lg px-6 cursor-pointer"
+                onClick={handleSave}
+                disabled={isDisabled}
+              >
+                Submit Question
+              </Button>
+            </div>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
