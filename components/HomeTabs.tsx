@@ -11,6 +11,7 @@ import WomensDayBackground from "@/components/WomensDayBackground";
 import { useCurrentUserRole } from "@/lib/useCurrentUserRole";
 import AppHeader from "@/components/AppHeader";
 import QAPage from "./qa/QAPage";
+import ApprovalsPage from "./approvals/ApprovalsPage";
 
 export default function HomeTabs() {
   const router = useRouter();
@@ -26,7 +27,8 @@ export default function HomeTabs() {
       savedTab === "home" ||
       savedTab === "tracking" ||
       savedTab === "data" ||
-      savedTab === "qa"
+      savedTab === "qa" ||
+      savedTab === "approvals"
     ) {
       setActiveTab(savedTab);
     }
@@ -94,6 +96,17 @@ export default function HomeTabs() {
             className={activeTab === "qa" ? "mt-0 w-full" : "mt-0 hidden"}
           >
             <QAPage
+              isAdmin={isAdmin}
+              currentUserId={currentUserId}
+            />
+          </TabsContent>
+
+          <TabsContent
+            value="approvals"
+            forceMount
+            className={activeTab === "approvals" ? "mt-0 w-full" : "mt-0 hidden"}
+          >
+            <ApprovalsPage
               isAdmin={isAdmin}
               currentUserId={currentUserId}
             />

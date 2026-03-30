@@ -16,6 +16,7 @@ import {
   BarChart3,
   Users,
   MessageSquareText,
+  ClipboardCheck,
 } from "lucide-react";
 
 function getInitialsFromEmail(email?: string | null) {
@@ -93,6 +94,11 @@ export default function AppHeader({
             <TabsTrigger value="qa" className={tabClass}>
               <MessageSquareText className="mr-2 h-5 w-5" />
               Q&A
+            </TabsTrigger>
+
+            <TabsTrigger value="approvals" className={tabClass}>
+              <ClipboardCheck className="mr-2 h-5 w-5" />
+              Approvals
             </TabsTrigger>
           </TabsList>
         </div>
