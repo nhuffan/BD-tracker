@@ -87,19 +87,20 @@ export default function CustomerTrackingPage({
   }, []);
 
   const monthOptions = useMemo(() => {
-    const months = Array.from(
-      new Set(rows.map((r) => r.event_date?.slice(0, 7)).filter(Boolean))
-    ).sort((a, b) => b.localeCompare(a));
+    const selectedMonth = filters.month;
+    const currentMonth = getCurrentMonth();
 
-    const currentMonth = filters.month;
-    if (
-      currentMonth &&
-      currentMonth !== ALL &&
-      !months.includes(currentMonth)
-    ) {
-      months.unshift(currentMonth);
-      months.sort((a, b) => b.localeCompare(a));
-    }
+    const months = Array.from(
+      new Set(
+        [
+          currentMonth,
+          selectedMonth,
+          ...rows.map((r) => r.event_date?.slice(0, 7)).filter(Boolean),
+        ].filter(Boolean) as string[]
+      )
+    )
+      .filter((month) => month !== ALL)
+      .sort((a, b) => b.localeCompare(a));
 
     return [ALL, ...months];
   }, [rows, filters.month]);

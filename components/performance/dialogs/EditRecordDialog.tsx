@@ -12,6 +12,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 import { db } from "@/lib/db";
 import { syncPending } from "@/lib/sync";
@@ -36,12 +43,15 @@ export default function EditRecordDialog({
   onOpenChange,
   record,
   onSaved,
+  bdLevelOptions,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   record: RecordVM | null;
   onSaved: () => void;
+  bdLevelOptions: Array<{ id: string; label: string }>;
 }) {
+  const [bdLevelId, setBdLevelId] = useState("");
   const [pointsInput, setPointsInput] = useState("");
   const [moneyInput, setMoneyInput] = useState("");
   const [note, setNote] = useState("");
@@ -49,12 +59,15 @@ export default function EditRecordDialog({
 
   function resetFormFromRecord(target: RecordVM | null) {
     if (!target) {
+      setBdLevelId("");
       setPointsInput("");
       setMoneyInput("");
       setPackageAmountInput("");
       setNote("");
       return;
     }
+
+    setBdLevelId(target.bd_level_id ?? "");
 
     setPointsInput(
       target.points !== null && target.points !== undefined
@@ -87,21 +100,24 @@ export default function EditRecordDialog({
   const parsedMoney = parseNumberInput(moneyInput);
   const parsedPackageAmount = parseNumberInput(packageAmountInput);
 
+  const originalBdLevelId = record?.bd_level_id ?? "";
   const originalPoints = record?.points ?? 0;
   const originalMoney = record?.money ?? null;
   const originalPackageAmount = record?.package_amount ?? null;
   const originalNote = record?.note ?? "";
 
-  const hasChanges = !!record &&
-  (
-    parsedPoints !== originalPoints ||
-    parsedMoney !== originalMoney ||
-    parsedPackageAmount !== originalPackageAmount ||
-    note !== originalNote
-  );
+  const hasChanges =
+    !!record &&
+    (
+      bdLevelId !== originalBdLevelId ||
+      parsedPoints !== originalPoints ||
+      parsedMoney !== originalMoney ||
+      parsedPackageAmount !== originalPackageAmount ||
+      note !== originalNote
+    );
 
   const isSaveDisabled =
-    !record || parsedPoints <= 0 || !hasChanges;
+    !record || !bdLevelId || parsedPoints <= 0 || !hasChanges;
 
   async function handleSave() {
     if (!record || isSaveDisabled) return;
@@ -111,25 +127,26 @@ export default function EditRecordDialog({
     const baseRecord: LocalRecord = existing
       ? existing
       : {
-          id: record.id,
-          event_date: record.event_date,
-          bd_id: record.bd_id,
-          bd_level_id: record.bd_level_id,
-          customer_name: record.customer_name,
-          customer_type_id: record.customer_type_id,
-          point_type_id: record.point_type_id,
-          points: record.points,
-          money: record.money,
-          package_amount: record.package_amount,
-          note: record.note,
-          created_at: record.created_at,
-          updated_at: record.updated_at,
-          sync_status: "pending",
-          updated_at_local: Date.now(),
-        };
+        id: record.id,
+        event_date: record.event_date,
+        bd_id: record.bd_id,
+        bd_level_id: record.bd_level_id,
+        customer_name: record.customer_name,
+        customer_type_id: record.customer_type_id,
+        point_type_id: record.point_type_id,
+        points: record.points,
+        money: record.money,
+        package_amount: record.package_amount,
+        note: record.note,
+        created_at: record.created_at,
+        updated_at: record.updated_at,
+        sync_status: "pending",
+        updated_at_local: Date.now(),
+      };
 
     const updatedRecord: LocalRecord = {
       ...baseRecord,
+      bd_level_id: bdLevelId,
       points: parsedPoints,
       money: parsedMoney,
       package_amount: parsedPackageAmount,
@@ -170,6 +187,24 @@ export default function EditRecordDialog({
         </DialogHeader>
 
         <div className="space-y-3">
+          <div>
+            <p className="mb-1.5 text-sm font-medium text-foreground">
+              BD Level
+            </p>
+            <Select value={bdLevelId} onValueChange={setBdLevelId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select BD level" />
+              </SelectTrigger>
+              <SelectContent>
+                {bdLevelOptions.map((item) => (
+                  <SelectItem key={item.id} value={item.id}>
+                    {item.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div>
             <p className="mb-1.5 text-sm font-medium text-foreground">
               Package Amount

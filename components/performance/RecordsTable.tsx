@@ -322,6 +322,7 @@ export default function RecordsTable({
             onOpenChange={setEditOpen}
             record={editing}
             onSaved={onChanged}
+            bdLevelOptions={Object.entries(levelMap).map(([id, label]) => ({ id, label }))}
           />
         )}
       </>

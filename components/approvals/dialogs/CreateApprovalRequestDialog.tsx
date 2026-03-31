@@ -36,7 +36,10 @@ import AttachmentLoadingIndicator from "@/components/qa/utils/AttachmentLoadingI
 import type { ApprovalImage } from "../utils/types";
 
 const fieldClass =
-  "h-11 w-full min-w-0 rounded-lg border border-input bg-background px-3 text-sm shadow-none";
+  "!h-11 h-11 w-full min-w-0 rounded-lg border border-input bg-background px-3 text-sm shadow-none";
+
+const infoFieldClass =
+  "flex h-11 w-full min-w-0 items-center rounded-lg border border-input bg-muted/60 px-3 text-sm text-foreground";
 
 const labelClass =
   "mb-2 block text-[11px] font-bold uppercase tracking-wide text-muted-foreground";
@@ -81,15 +84,11 @@ export default function CreateApprovalRequestDialog({
     "idle" | "uploading_attachments" | "creating_request"
   >("idle");
   const [dragging, setDragging] = useState(false);
-
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-
   const bdOptions = useMemo(() => {
     return [...bdList].sort((a, b) => a.label.localeCompare(b.label));
   }, [bdList]);
-
-  const createdAtText = useMemo(() => formatCreatedDate(new Date()), [open]);
-
+  const [createdAtText, setCreatedAtText] = useState("");
   const isDisabled = !askedByBdId || !storeName.trim() || saving;
 
   async function mergeFiles(fileList: FileList | File[]) {
@@ -167,6 +166,11 @@ export default function CreateApprovalRequestDialog({
     setDragging(false);
     setSaving(false);
     setSubmitStage("idle");
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    setCreatedAtText(formatCreatedDate(new Date()));
   }, [open]);
 
   async function uploadAttachments(files: LocalAttachment[]) {
@@ -287,17 +291,17 @@ export default function CreateApprovalRequestDialog({
 
             <div className="w-full min-w-0">
               <label className={labelClass}>Created At</label>
-              <Input value={createdAtText} readOnly className={fieldClass} />
+              <div className={infoFieldClass}>{createdAtText || "—"}</div>
             </div>
           </div>
 
           <div>
-            <label className={labelClass}>Description</label>
+            <label className={labelClass}>Description (optional)</label>
             <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Add request details for admin..."
-              className="min-h-[140px] whitespace-pre-wrap break-all"
+              className="min-h-[60px] whitespace-pre-wrap break-all"
             />
           </div>
 

@@ -482,7 +482,10 @@ export default function MasterManager({
                     : realIndex + 1;
 
                 return (
-                  <tr key={it.id} className="border-t odd:bg-muted/30">
+                  <tr
+                    key={it.id}
+                    className="border-t odd:bg-muted/40 even:bg-background"
+                  >
                     {/* # */}
                     <td className="p-2 pl-5 text-left text-muted-foreground">
                       {category === "bd" && bdMedalMap[it.id] ? (

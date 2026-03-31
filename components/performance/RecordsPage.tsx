@@ -130,17 +130,26 @@ export default function RecordsPage({ isAdmin }: { isAdmin: boolean }) {
     };
   }, []);
 
+  const ALL = "__all__";
+
   const monthOptions = useMemo(() => {
+    const selectedMonth = filters.month;
+    const currentMonth = getCurrentMonth();
+
     const months = Array.from(
       new Set(
-        rows
-          .map((r) => r.event_date?.slice(0, 7))
-          .filter(Boolean)
+        [
+          currentMonth,
+          selectedMonth,
+          ...rows.map((r) => r.event_date?.slice(0, 7)).filter(Boolean),
+        ].filter(Boolean) as string[]
       )
-    ).sort((a, b) => b.localeCompare(a));
+    )
+      .filter((month) => month !== ALL)
+      .sort((a, b) => b.localeCompare(a));
 
-    return ["__all__", ...months];
-  }, [rows]);
+    return [ALL, ...months];
+  }, [rows, filters.month]);
 
   const filtered = useMemo(() => {
     return [...rows]
