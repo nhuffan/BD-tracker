@@ -61,17 +61,26 @@ function getStatusChipClass(status?: string) {
     }
 }
 
-function getResultBadgeClass(status: ApprovalRequest["status"]) {
-    if (status === "approved") {
-        return "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200";
-    }
+function getDecisionButtonClass(
+  type: "approved" | "rejected",
+  selected: boolean
+) {
+  const activeClass =
+    type === "approved"
+      ? "border-emerald-300 bg-emerald-50"
+      : "border-red-300 bg-red-50";
 
-    if (status === "rejected") {
-        return "bg-red-50 text-red-700 ring-1 ring-inset ring-red-200";
-    }
+  const hoverClass =
+    type === "approved"
+      ? "border-border bg-background hover:border-emerald-300 hover:bg-emerald-50"
+      : "border-border bg-background hover:border-red-300 hover:bg-red-50";
 
-    return "bg-muted text-muted-foreground";
+  return [
+    "group flex min-h-[86px] flex-col items-center justify-center rounded-xl border px-4 text-center transition disabled:opacity-60",
+    selected ? activeClass : hoverClass,
+  ].join(" ");
 }
+
 function getAttachmentOpenUrl(item: ApprovalImage) {
     const baseUrl = item.secure_url || item.url || item.thumbnail_url || null;
     if (!baseUrl) return null;
@@ -456,7 +465,7 @@ export default function ApprovalRequestDetailPanel({
 
                 <aside className="xl:sticky xl:top-6 xl:self-start">
                     <section className="overflow-hidden rounded-xl border border-border bg-white">
-                        <div className="border-b px-5 py-4">
+                        <div className="border-b px-5 py-4 bg-muted/30">
                             <h3 className="text-2xl font-bold tracking-tight text-foreground">
                                 Review Action
                             </h3>
@@ -479,21 +488,21 @@ export default function ApprovalRequestDetailPanel({
                                             type="button"
                                             onClick={() => setDecision("approved")}
                                             disabled={saving}
-                                            className={`group flex min-h-[86px] flex-col items-center justify-center rounded-xl border bg-white px-4 text-center transition disabled:opacity-60 ${decision === "approved"
-                                                    ? "border-emerald-300 bg-emerald-50"
-                                                    : "border-border hover:border-emerald-300 hover:bg-emerald-50"
-                                                }`}
+                                            className={getDecisionButtonClass(
+                                                "approved",
+                                                decision === "approved"
+                                            )}
                                         >
                                             <CheckCircle2
                                                 className={`mb-2 h-5 w-5 transition ${decision === "approved"
-                                                        ? "text-emerald-600"
-                                                        : "text-slate-400 group-hover:text-emerald-600"
+                                                    ? "text-emerald-600"
+                                                    : "text-slate-400 group-hover:text-emerald-600"
                                                     }`}
                                             />
                                             <span
                                                 className={`text-sm font-bold uppercase tracking-wide transition ${decision === "approved"
-                                                        ? "text-emerald-700"
-                                                        : "text-slate-600 group-hover:text-emerald-700"
+                                                    ? "text-emerald-700"
+                                                    : "text-slate-600 group-hover:text-emerald-700"
                                                     }`}
                                             >
                                                 Approve
@@ -504,21 +513,21 @@ export default function ApprovalRequestDetailPanel({
                                             type="button"
                                             onClick={() => setDecision("rejected")}
                                             disabled={saving}
-                                            className={`group flex min-h-[86px] flex-col items-center justify-center rounded-xl border bg-white px-4 text-center transition disabled:opacity-60 ${decision === "rejected"
-                                                    ? "border-red-300 bg-red-50"
-                                                    : "border-border hover:border-red-300 hover:bg-red-50"
-                                                }`}
+                                            className={getDecisionButtonClass(
+                                                "rejected",
+                                                decision === "rejected"
+                                            )}
                                         >
                                             <CircleX
                                                 className={`mb-2 h-5 w-5 transition ${decision === "rejected"
-                                                        ? "text-red-600"
-                                                        : "text-slate-400 group-hover:text-red-600"
+                                                    ? "text-red-600"
+                                                    : "text-slate-400 group-hover:text-red-600"
                                                     }`}
                                             />
                                             <span
                                                 className={`text-sm font-bold uppercase tracking-wide transition ${decision === "rejected"
-                                                        ? "text-red-700"
-                                                        : "text-slate-600 group-hover:text-red-700"
+                                                    ? "text-red-700"
+                                                    : "text-slate-600 group-hover:text-red-700"
                                                     }`}
                                             >
                                                 Reject
@@ -527,7 +536,7 @@ export default function ApprovalRequestDetailPanel({
                                     </div>
 
                                     {decision === "approved" && (
-                                        <>
+                                        <div className="grid gap-4 md:grid-cols-2">
                                             <div>
                                                 <label className={labelClass}>KPI Point Award</label>
                                                 <Input
@@ -541,15 +550,20 @@ export default function ApprovalRequestDetailPanel({
 
                                             <div>
                                                 <label className={labelClass}>Bonus Amount</label>
-                                                <Input
-                                                    inputMode="numeric"
-                                                    value={bonusAmount}
-                                                    onChange={(e) => setBonusAmount(formatNumberInput(e.target.value))}
-                                                    placeholder="0"
-                                                    className="h-12 rounded-lg bg-white"
-                                                />
+                                                <div className="relative">
+                                                    <Input
+                                                        inputMode="numeric"
+                                                        value={bonusAmount}
+                                                        onChange={(e) => setBonusAmount(formatNumberInput(e.target.value))}
+                                                        placeholder="0"
+                                                        className="h-12 rounded-lg bg-white pr-14"
+                                                    />
+                                                    <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm font-medium text-muted-foreground">
+                                                        VND
+                                                    </span>
+                                                </div>
                                             </div>
-                                        </>
+                                        </div>
                                     )}
 
                                     <div>

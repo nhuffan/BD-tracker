@@ -113,25 +113,27 @@ export default function MasterManager({
           .from("records")
           .select("bd_id, points, money, package_amount, event_date");
 
-        const { data: trackingStats, error: trackingError } = await supabase
-          .from("bd_tracking_stats")
-          .select("bd_id, new_customers, new_hot_list");
+        const { data: trackingRows, error: trackingError } = await supabase
+          .from("customer_tracking")
+          .select("bd_id, event_date, branch, in_hot_list, combo_voucher");
 
         if (recordsError) {
           console.error("Failed to fetch records:", recordsError);
         }
 
         if (trackingError) {
-          console.error("Failed to fetch bd_tracking_stats:", trackingError);
+          console.error("Failed to fetch customer_tracking:", trackingError);
         }
 
         const allRecords = records ?? [];
+        const allTrackingRows = trackingRows ?? [];
 
         const months = Array.from(
           new Set(
-            allRecords
-              .map((r) => r.event_date?.slice(0, 7))
-              .filter(Boolean) as string[]
+            [
+              ...allRecords.map((r) => r.event_date?.slice(0, 7)),
+              ...allTrackingRows.map((r) => r.event_date?.slice(0, 7)),
+            ].filter(Boolean) as string[]
           )
         ).sort((a, b) => b.localeCompare(a));
 
@@ -167,18 +169,31 @@ export default function MasterManager({
 
         setTotals(map);
 
+        const filteredTrackingRows =
+          selectedMonth === ALL_TIME
+            ? allTrackingRows
+            : allTrackingRows.filter(
+              (r) => r.event_date?.slice(0, 7) === selectedMonth
+            );
+
         const trackingMap: Record<
           string,
           { newCustomers: number; newHotList: number }
         > = {};
 
-        (trackingStats ?? []).forEach((r) => {
+        filteredTrackingRows.forEach((r) => {
           if (!r.bd_id) return;
+          if (r.combo_voucher !== true) return;
 
-          trackingMap[r.bd_id] = {
-            newCustomers: r.new_customers ?? 0,
-            newHotList: r.new_hot_list ?? 0,
-          };
+          if (!trackingMap[r.bd_id]) {
+            trackingMap[r.bd_id] = {
+              newCustomers: 0,
+              newHotList: 0,
+            };
+          }
+
+          trackingMap[r.bd_id].newCustomers += r.branch ?? 0;
+          trackingMap[r.bd_id].newHotList += r.in_hot_list ?? 0;
         });
 
         setTrackingTotals(trackingMap);

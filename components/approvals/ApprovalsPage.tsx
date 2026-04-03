@@ -412,16 +412,16 @@ export default function ApprovalsPage({
           )}
         </div>
 
-        <Button onClick={() => setCreateOpen(true)} className="ml-auto">
+        <Button onClick={() => setCreateOpen(true)} className="h-10 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer">
           <Plus className="mr-2 h-4 w-4" />
           New Request
         </Button>
       </div>
 
       {isAdmin && viewTab === "pending" ? (
-        <div className="overflow-hidden rounded-xl border bg-background/60">
-          <div className="grid min-h-[720px] lg:grid-cols-[360px_minmax(0,1fr)]">
-            <aside className="bg-muted/30">
+        <div className="overflow-hidden rounded-2xl bg-muted/10">
+          <div className="grid lg:grid-cols-[360px_minmax(0,1fr)] bg-muted/10">
+            <aside className="bg-muted/10">
               <div className="p-4">
                 <div className="relative">
                   <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -434,7 +434,7 @@ export default function ApprovalsPage({
                 </div>
               </div>
 
-              <div className="space-y-3 px-3 pb-3">
+              <div className="space-y-3 pl-3 pr-3 pb-3">
                 {loading && (
                   <div className="rounded-xl border bg-background p-4 text-sm text-muted-foreground">
                     Loading...
@@ -451,48 +451,63 @@ export default function ApprovalsPage({
                   const active = selectedRequest?.id === request.id;
 
                   return (
-                    <button
+                    <div
                       key={request.id}
-                      type="button"
-                      onClick={() => openDetail(request)}
-                      className={`w-full rounded-2xl border bg-background p-4 text-left transition hover:border-primary/40 hover:shadow-sm ${
-                        active
-                          ? "border-primary bg-primary/[0.03] ring-1 ring-primary/15"
-                          : "border-border"
-                      }`}
+                      className={active ? "-mr-3 relative z-20" : ""}
                     >
-                      <div className="flex gap-3">
-                        <div className="w-1 shrink-0 rounded-full bg-primary" />
 
-                        <div className="min-w-0 flex-1">
-                          <div className="line-clamp-2 text-lg font-bold text-foreground">
-                            {request.store_name}
-                          </div>
+                      <button
+                        type="button"
+                        onClick={() => openDetail(request)}
+                        className={[
+                          "w-full p-4 text-left transition hover:border-primary/40 hover:shadow-sm",
+                          active
+                            ? "rounded-l-2xl rounded-r-none border border-r-0 border-border bg-primary/[0.03]"
+                            : "rounded-2xl border border-border bg-background"
+                        ].join(" ")}
+                      >
 
-                          <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
-                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-bold text-muted-foreground">
-                              {getInitials(request.asked_by_name)}
+                        <div className="flex gap-3">
+                          <div className="w-1 shrink-0 rounded-full bg-primary" />
+
+                          <div className="min-w-0 flex-1">
+                            <div className="line-clamp-2 text-lg font-bold text-foreground">
+                              {request.store_name}
                             </div>
 
-                            <div className="min-w-0 flex-1">
-                              <div className="truncate font-medium text-foreground">
-                                {request.asked_by_name ?? "—"}
+                            <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
+                              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-bold text-muted-foreground">
+                                {getInitials(request.asked_by_name)}
+                              </div>
+
+                              <div className="min-w-0 flex-1">
+                                <div className="truncate font-medium text-foreground">
+                                  {request.asked_by_name ?? "—"}
+                                </div>
                               </div>
                             </div>
-                          </div>
 
-                          <div className="mt-2 text-sm text-muted-foreground">
-                            {formatRelativeTime(request.created_at)}
+                            <div className="mt-2 text-sm text-muted-foreground">
+                              {formatRelativeTime(request.created_at)}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </button>
+                      </button>
+                    </div>
                   );
                 })}
               </div>
             </aside>
 
-            <section className="min-h-[720px] border-l border-border/60 bg-muted/10">
+            <section
+              className={[
+                "relative h-fit overflow-hidden transition-all",
+                selectedRequest
+                  ? "rounded-2xl border border-l-0 border-border bg-muted/20"
+                  : "bg-transparent",
+              ].join(" ")}
+            >
+
               <ApprovalRequestDetailPanel
                 request={selectedRequest}
                 isAdmin={isAdmin}
