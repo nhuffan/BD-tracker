@@ -33,13 +33,16 @@ import {
   getOversizedFiles,
 } from "@/components/qa/utils/attachmentHelpers";
 import AttachmentLoadingIndicator from "@/components/qa/utils/AttachmentLoadingIndicator";
-import type { ApprovalImage } from "../utils/types";
+import type { ApprovalImage, ApprovalRequestVM } from "./utils/types";
 
 const fieldClass =
   "!h-11 h-11 w-full min-w-0 rounded-lg border border-input bg-background px-3 text-sm shadow-none";
 
 const infoFieldClass =
   "flex h-11 w-full min-w-0 items-center rounded-lg border border-input bg-muted/60 px-3 text-sm text-foreground";
+
+const readonlyTextAreaClass =
+  "min-h-[100px] rounded-lg border border-input bg-muted/60 px-3 py-2 text-sm text-foreground whitespace-pre-wrap break-all";
 
 const labelClass =
   "mb-2 block text-[11px] font-bold uppercase tracking-wide text-muted-foreground";
@@ -54,8 +57,14 @@ function getLocalAttachmentOpenUrl(item: LocalAttachment) {
   return item.local_preview_url || item.secure_url || item.url || null;
 }
 
-function formatCreatedDate(value: Date) {
-  return value.toLocaleString("en-US", {
+function formatCreatedDate(value?: string | Date | null) {
+  if (!value) return "—";
+
+  const date = value instanceof Date ? value : new Date(value);
+
+  if (Number.isNaN(date.getTime())) return "—";
+
+  return date.toLocaleString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -64,32 +73,152 @@ function formatCreatedDate(value: Date) {
   });
 }
 
+function mapRemoteAttachments(items?: ApprovalImage[] | null): LocalAttachment[] {
+  return (items ?? []).map((item) => ({
+    ...item,
+    file: undefined,
+    local_preview_url: null,
+    upload_status: "uploaded",
+  }));
+}
+
+function getAttachmentKey(item: {
+  public_id?: string | null;
+  name: string;
+  size: number;
+  type: string;
+}) {
+  return item.public_id || `${item.name}-${item.size}-${item.type}`;
+}
+
+function formatNumberInput(value: string) {
+  const digits = value.replace(/[^\d]/g, "");
+  if (!digits) return "";
+  return Number(digits).toLocaleString("en-US");
+}
+
+function parseFormattedNumber(value: string) {
+  const digits = value.replace(/[^\d]/g, "");
+  return digits ? Number(digits) : null;
+}
+
+function getStatusLabel(status?: ApprovalRequestVM["status"] | null) {
+  if (!status) return "—";
+  if (status === "pending") return "Pending";
+  if (status === "approved") return "Approved";
+  if (status === "rejected") return "Rejected";
+  return status;
+}
+
+function getStatusFieldClass(status?: ApprovalRequestVM["status"] | null) {
+  if (status === "approved") {
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  }
+
+  if (status === "rejected") {
+    return "border-red-200 bg-red-50 text-red-700";
+  }
+
+  if (status === "pending") {
+    return "border-amber-200 bg-amber-50 text-amber-700";
+  }
+
+  return "border-border bg-slate-100 text-foreground";
+}
+
 export default function CreateApprovalRequestDialog({
   open,
   onOpenChange,
   onSaved,
+  request,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSaved: () => void;
+  onSaved: () => void | Promise<void>;
+  request?: ApprovalRequestVM | null;
 }) {
   const { items: bdList } = useMasters("bd");
+
+  const isEditMode = !!request;
 
   const [askedByBdId, setAskedByBdId] = useState("");
   const [storeName, setStoreName] = useState("");
   const [description, setDescription] = useState("");
+  const [adminRemark, setAdminRemark] = useState("");
+  const [kpiAwarded, setKpiAwarded] = useState("");
+  const [bonusAmount, setBonusAmount] = useState("");
   const [attachments, setAttachments] = useState<LocalAttachment[]>([]);
   const [saving, setSaving] = useState(false);
   const [submitStage, setSubmitStage] = useState<
-    "idle" | "uploading_attachments" | "creating_request"
+    "idle" | "uploading_attachments" | "creating_request" | "updating_request"
   >("idle");
   const [dragging, setDragging] = useState(false);
+  const [createdAtText, setCreatedAtText] = useState("");
+
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
   const bdOptions = useMemo(() => {
     return [...bdList].sort((a, b) => a.label.localeCompare(b.label));
   }, [bdList]);
-  const [createdAtText, setCreatedAtText] = useState("");
-  const isDisabled = !askedByBdId || !storeName.trim() || saving;
+
+  const selectedBdLabel = useMemo(() => {
+    if (!askedByBdId) return "—";
+    return bdOptions.find((item) => item.id === askedByBdId)?.label ?? "—";
+  }, [askedByBdId, bdOptions]);
+
+  const hasChanges = useMemo(() => {
+    if (!isEditMode || !request) {
+      return !!askedByBdId && !!storeName.trim();
+    }
+
+    const originalStoreName = request.store_name ?? "";
+    const originalUserNote = request.user_note ?? "";
+    const originalAdminNote = request.admin_note ?? "";
+    const originalKpiAwarded =
+      request.kpi_point_award != null ? String(request.kpi_point_award) : "";
+    const originalBonusAmount =
+      request.bonus_amount != null ? String(request.bonus_amount) : "";
+
+    const normalizedCurrentKpi = kpiAwarded.replace(/[^\d]/g, "");
+    const normalizedCurrentBonus = bonusAmount.replace(/[^\d]/g, "");
+
+    const infoChanged =
+      storeName.trim() !== originalStoreName ||
+      description !== originalUserNote ||
+      adminRemark !== originalAdminNote ||
+      normalizedCurrentKpi !== originalKpiAwarded ||
+      normalizedCurrentBonus !== originalBonusAmount;
+
+    const currentAttachmentKeys = attachments
+      .map((item) => getAttachmentKey(item))
+      .sort();
+
+    const originalAttachmentKeys = (request.images ?? [])
+      .map((item) => getAttachmentKey(item))
+      .sort();
+
+    const attachmentChanged =
+      currentAttachmentKeys.length !== originalAttachmentKeys.length ||
+      currentAttachmentKeys.some((key, index) => key !== originalAttachmentKeys[index]);
+
+    return infoChanged || attachmentChanged;
+  }, [
+    isEditMode,
+    request,
+    askedByBdId,
+    storeName,
+    description,
+    adminRemark,
+    kpiAwarded,
+    bonusAmount,
+    attachments,
+  ]);
+
+  const isDisabled =
+    saving ||
+    !storeName.trim() ||
+    (!isEditMode && !askedByBdId) ||
+    (isEditMode && !hasChanges);
 
   async function mergeFiles(fileList: FileList | File[]) {
     const rawFiles = Array.from(fileList);
@@ -147,36 +276,82 @@ export default function CreateApprovalRequestDialog({
   function handleRemoveAttachment(id: string) {
     setAttachments((prev) => {
       const target = prev.find((item) => item.id === id);
-      if (target?.local_preview_url) URL.revokeObjectURL(target.local_preview_url);
+      if (target?.local_preview_url) {
+        URL.revokeObjectURL(target.local_preview_url);
+      }
       return prev.filter((item) => item.id !== id);
     });
   }
 
   useEffect(() => {
+    if (!open) return;
+
+    if (request) {
+      setAskedByBdId(request.asked_by_bd_id ?? "");
+      setStoreName(request.store_name ?? "");
+      setDescription(request.user_note ?? "");
+      setAdminRemark(request.admin_note ?? "");
+      setKpiAwarded(
+        typeof request.kpi_point_award === "number"
+          ? Number(request.kpi_point_award).toLocaleString("en-US")
+          : ""
+      );
+      setBonusAmount(
+        typeof request.bonus_amount === "number"
+          ? Number(request.bonus_amount).toLocaleString("en-US")
+          : ""
+      );
+      setAttachments(mapRemoteAttachments(request.images));
+      setCreatedAtText(formatCreatedDate(request.created_at));
+      setDragging(false);
+      setSaving(false);
+      setSubmitStage("idle");
+      return;
+    }
+
+    setAskedByBdId("");
+    setStoreName("");
+    setDescription("");
+    setAdminRemark("");
+    setKpiAwarded("");
+    setBonusAmount("");
+    setAttachments([]);
+    setCreatedAtText(formatCreatedDate(new Date()));
+    setDragging(false);
+    setSaving(false);
+    setSubmitStage("idle");
+  }, [open, request]);
+
+  useEffect(() => {
     if (open) return;
 
     attachments.forEach((item) => {
-      if (item.local_preview_url) URL.revokeObjectURL(item.local_preview_url);
+      if (item.local_preview_url) {
+        URL.revokeObjectURL(item.local_preview_url);
+      }
     });
 
     setAskedByBdId("");
     setStoreName("");
     setDescription("");
+    setAdminRemark("");
+    setKpiAwarded("");
+    setBonusAmount("");
     setAttachments([]);
     setDragging(false);
     setSaving(false);
     setSubmitStage("idle");
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-    setCreatedAtText(formatCreatedDate(new Date()));
+    setCreatedAtText("");
   }, [open]);
 
   async function uploadAttachments(files: LocalAttachment[]) {
+    const fileItems = files.filter((item) => item.file);
+
+    if (fileItems.length === 0) return [];
+
     const formData = new FormData();
 
-    files.forEach((item) => {
+    fileItems.forEach((item) => {
       if (item.file) {
         formData.append("files", item.file);
       }
@@ -208,38 +383,88 @@ export default function CreateApprovalRequestDialog({
         data: { user },
       } = await supabase.auth.getUser();
 
+      const existingAttachments = attachments
+        .filter((item) => !item.file)
+        .map<ApprovalImage>((item) => ({
+          id: item.id,
+          name: item.name,
+          size: item.size,
+          type: item.type,
+          resource_type: item.resource_type,
+          public_id: item.public_id,
+          url: item.url,
+          secure_url: item.secure_url,
+          format: item.format,
+          version: item.version,
+          thumbnail_url: item.thumbnail_url,
+        }));
+
+      const newLocalAttachments = attachments.filter((item) => !!item.file);
+
       let uploadedAttachments: ApprovalImage[] = [];
 
-      if (attachments.length > 0) {
+      if (newLocalAttachments.length > 0) {
         setSubmitStage("uploading_attachments");
-        uploadedAttachments = await uploadAttachments(attachments);
+        uploadedAttachments = await uploadAttachments(newLocalAttachments);
       }
 
-      setSubmitStage("creating_request");
+      const mergedAttachments = [...existingAttachments, ...uploadedAttachments];
 
-      const payload = {
-        asked_by_bd_id: askedByBdId,
-        created_by_user_id: user?.id ?? null,
-        store_name: storeName.trim(),
-        user_note: description.trim() || null,
-        images: uploadedAttachments,
-        status: "pending",
-      };
+      if (isEditMode && request?.id) {
+        setSubmitStage("updating_request");
 
-      const { error } = await supabase.from("approval_requests").insert(payload);
+        const payload = {
+          store_name: storeName.trim(),
+          user_note: description.trim() || null,
+          admin_note: adminRemark.trim() || null,
+          kpi_point_award: parseFormattedNumber(kpiAwarded),
+          bonus_amount: parseFormattedNumber(bonusAmount),
+          images: mergedAttachments,
+          updated_at: new Date().toISOString(),
+        };
 
-      if (error) {
-        console.error("Failed to create approval request:", error);
-        alert(error.message);
-        return;
+        const { error } = await supabase
+          .from("approval_requests")
+          .update(payload)
+          .eq("id", request.id);
+
+        if (error) {
+          console.error("Failed to update approval request:", error);
+          alert(error.message);
+          return;
+        }
+      } else {
+        setSubmitStage("creating_request");
+
+        const payload = {
+          asked_by_bd_id: askedByBdId,
+          created_by_user_id: user?.id ?? null,
+          store_name: storeName.trim(),
+          user_note: description.trim() || null,
+          admin_note: null,
+          kpi_point_award: null,
+          bonus_amount: null,
+          images: mergedAttachments,
+          status: "pending",
+        };
+
+        const { error } = await supabase.from("approval_requests").insert(payload);
+
+        if (error) {
+          console.error("Failed to create approval request:", error);
+          alert(error.message);
+          return;
+        }
       }
 
       attachments.forEach((item) => {
-        if (item.local_preview_url) URL.revokeObjectURL(item.local_preview_url);
+        if (item.local_preview_url) {
+          URL.revokeObjectURL(item.local_preview_url);
+        }
       });
 
       onOpenChange(false);
-      onSaved();
+      await onSaved();
     } finally {
       setSaving(false);
       setSubmitStage("idle");
@@ -254,14 +479,16 @@ export default function CreateApprovalRequestDialog({
       >
         <DialogHeader className="border-b px-6 py-4">
           <DialogTitle className="text-2xl font-bold tracking-tight text-foreground">
-            Create Approval Request
+            {isEditMode ? "Edit Approval Request" : "Create Approval Request"}
           </DialogTitle>
           <DialogDescription className="mt-1 text-sm text-muted-foreground">
-            Submit store visit evidence for admin review.
+            {isEditMode
+              ? "Update request information and attachments."
+              : "Submit store visit evidence for admin review."}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 space-y-4 overflow-y-auto px-6 ">
+        <div className="flex-1 space-y-4 overflow-y-auto px-6">
           <div>
             <label className={labelClass}>Store Name</label>
             <Input
@@ -272,38 +499,110 @@ export default function CreateApprovalRequestDialog({
             />
           </div>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div
+            className={[
+              "grid grid-cols-1 gap-4",
+              isEditMode ? "md:grid-cols-3" : "md:grid-cols-2",
+            ].join(" ")}
+          >
             <div className="w-full min-w-0">
               <label className={labelClass}>BD Name</label>
-              <Select value={askedByBdId} onValueChange={setAskedByBdId}>
-                <SelectTrigger className={fieldClass}>
-                  <SelectValue placeholder="Select BD" />
-                </SelectTrigger>
-                <SelectContent>
-                  {bdOptions.map((item) => (
-                    <SelectItem key={item.id} value={item.id}>
-                      {item.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+
+              {isEditMode ? (
+                <div className={infoFieldClass}>{selectedBdLabel}</div>
+              ) : (
+                <Select value={askedByBdId} onValueChange={setAskedByBdId}>
+                  <SelectTrigger className={fieldClass}>
+                    <SelectValue placeholder="Select BD" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {bdOptions.map((item) => (
+                      <SelectItem key={item.id} value={item.id}>
+                        {item.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
             <div className="w-full min-w-0">
               <label className={labelClass}>Created At</label>
               <div className={infoFieldClass}>{createdAtText || "—"}</div>
             </div>
+
+            {isEditMode && (
+              <div className="w-full min-w-0">
+                <label className={labelClass}>Result</label>
+                <div
+                  className={[
+                    "flex h-11 w-full min-w-0 items-center rounded-lg border px-3 text-sm font-medium",
+                    getStatusFieldClass(request?.status),
+                  ].join(" ")}
+                >
+                  {getStatusLabel(request?.status)}
+                </div>
+              </div>
+            )}
           </div>
 
-          <div>
-            <label className={labelClass}>Description (optional)</label>
-            <Textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Add request details for admin..."
-              className="min-h-[60px] whitespace-pre-wrap break-all"
-            />
-          </div>
+          {isEditMode ? (
+            <>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="w-full min-w-0">
+                  <label className={labelClass}>User Description</label>
+                  <div className={readonlyTextAreaClass}>
+                    {description?.trim() || "—"}
+                  </div>
+                </div>
+
+                <div className="w-full min-w-0">
+                  <label className={labelClass}>Admin Remarks</label>
+                  <Textarea
+                    value={adminRemark}
+                    onChange={(e) => setAdminRemark(e.target.value)}
+                    placeholder="Add admin remarks..."
+                    rows={4}
+                    className="h-[100px] min-h-[100px] max-h-[100px] resize-none overflow-y-auto whitespace-pre-wrap break-all"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="w-full min-w-0">
+                  <label className={labelClass}>KPI Awarded</label>
+                  <Input
+                    value={kpiAwarded}
+                    onChange={(e) => setKpiAwarded(formatNumberInput(e.target.value))}
+                    placeholder="Enter KPI awarded"
+                    inputMode="numeric"
+                    className={fieldClass}
+                  />
+                </div>
+
+                <div className="w-full min-w-0">
+                  <label className={labelClass}>Bonus</label>
+                  <Input
+                    value={bonusAmount}
+                    onChange={(e) => setBonusAmount(formatNumberInput(e.target.value))}
+                    placeholder="Enter bonus amount"
+                    inputMode="numeric"
+                    className={fieldClass}
+                  />
+                </div>
+              </div>
+            </>
+          ) : (
+            <div>
+              <label className={labelClass}>Description (optional)</label>
+              <Textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Add request details for admin..."
+                className="min-h-[100px] whitespace-pre-wrap break-all"
+              />
+            </div>
+          )}
 
           <div>
             <label className={labelClass}>Attachments (optional)</label>
@@ -374,7 +673,14 @@ export default function CreateApprovalRequestDialog({
             ) : (
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 {attachments.map((item) => {
-                  const isImage = isImageFile(item.type);
+                  const isPreviewImage =
+                    isImageFile(item.type) &&
+                    !!(
+                      item.local_preview_url ||
+                      item.thumbnail_url ||
+                      item.secure_url ||
+                      item.url
+                    );
 
                   return (
                     <div
@@ -410,9 +716,14 @@ export default function CreateApprovalRequestDialog({
                         <Trash2 className="h-4 w-4" />
                       </button>
 
-                      {isImage && item.local_preview_url ? (
+                      {isPreviewImage ? (
                         <img
-                          src={item.local_preview_url}
+                          src={
+                            item.local_preview_url ||
+                            item.thumbnail_url ||
+                            item.secure_url ||
+                            item.url
+                          }
                           alt={item.name}
                           className="h-10 w-10 shrink-0 rounded-lg object-cover"
                         />
@@ -463,8 +774,11 @@ export default function CreateApprovalRequestDialog({
                 <AttachmentLoadingIndicator
                   text={
                     submitStage === "uploading_attachments"
-                      ? `Uploading ${attachments.length} file${attachments.length > 1 ? "s" : ""}...`
-                      : "Submitting request..."
+                      ? `Uploading ${attachments.filter((item) => item.file).length} file${attachments.filter((item) => item.file).length > 1 ? "s" : ""
+                      }...`
+                      : isEditMode
+                        ? "Updating request..."
+                        : "Submitting request..."
                   }
                 />
               )}
@@ -487,7 +801,7 @@ export default function CreateApprovalRequestDialog({
                 onClick={handleSave}
                 disabled={isDisabled}
               >
-                Submit Request
+                {isEditMode ? "Save Changes" : "Submit Request"}
               </Button>
             </div>
           </div>

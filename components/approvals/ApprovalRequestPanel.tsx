@@ -62,23 +62,23 @@ function getStatusChipClass(status?: string) {
 }
 
 function getDecisionButtonClass(
-  type: "approved" | "rejected",
-  selected: boolean
+    type: "approved" | "rejected",
+    selected: boolean
 ) {
-  const activeClass =
-    type === "approved"
-      ? "border-emerald-300 bg-emerald-50"
-      : "border-red-300 bg-red-50";
+    const activeClass =
+        type === "approved"
+            ? "border-emerald-300 bg-emerald-50"
+            : "border-red-300 bg-red-50";
 
-  const hoverClass =
-    type === "approved"
-      ? "border-border bg-background hover:border-emerald-300 hover:bg-emerald-50"
-      : "border-border bg-background hover:border-red-300 hover:bg-red-50";
+    const hoverClass =
+        type === "approved"
+            ? "border-border bg-background hover:border-emerald-300 hover:bg-emerald-50"
+            : "border-border bg-background hover:border-red-300 hover:bg-red-50";
 
-  return [
-    "group flex min-h-[86px] flex-col items-center justify-center rounded-xl border px-4 text-center transition disabled:opacity-60",
-    selected ? activeClass : hoverClass,
-  ].join(" ");
+    return [
+        "group flex min-h-[86px] flex-col items-center justify-center rounded-xl border px-4 text-center transition disabled:opacity-60 cursor-pointer",
+        selected ? activeClass : hoverClass,
+    ].join(" ");
 }
 
 function getAttachmentOpenUrl(item: ApprovalImage) {
@@ -572,12 +572,13 @@ export default function ApprovalRequestDetailPanel({
                                             value={adminNote}
                                             onChange={(e) => setAdminNote(e.target.value)}
                                             placeholder="Enter internal feedback or rejection reason..."
-                                            className="min-h-[104px] rounded-xl"
+                                            rows={4}
+                                            className="h-[100px] min-h-[100px] max-h-[100px] resize-none overflow-y-auto rounded-xl"
                                         />
                                     </div>
 
                                     <Button
-                                        className="h-12 w-full rounded-lg text-base font-semibold"
+                                        className="h-12 w-full rounded-lg text-base font-semibold cursor-pointer"
                                         onClick={handleConfirmDecision}
                                         disabled={
                                             saving ||
