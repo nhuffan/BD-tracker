@@ -9,7 +9,7 @@ import {
   Pencil,
   Trash2,
   Clock3,
-  Paperclip,
+  History,
 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
@@ -121,6 +121,21 @@ function getAttachmentOpenUrl(item: ApprovalImage) {
 
   const separator = baseUrl.includes("?") ? "&" : "?";
   return `${baseUrl}${separator}fl_attachment=${encodeURIComponent(item.name)}`;
+}
+
+function getTopTabClass(active: boolean) {
+  return [
+    "group inline-flex h-12 items-center gap-2 rounded-xl px-4 text-sm font-semibold transition cursor-pointer whitespace-nowrap",
+    active
+      ? "bg-background text-foreground shadow-sm ring-1 ring-border"
+      : "text-muted-foreground hover:bg-background/70 hover:text-foreground",
+  ].join(" ");
+}
+
+function getTopTabIconClass(active: boolean) {
+  return active
+    ? "text-primary"
+    : "text-muted-foreground group-hover:text-foreground";
 }
 
 function AttachmentPreviewCell({
@@ -378,50 +393,75 @@ export default function ApprovalsPage({
   return (
     <TooltipProvider>
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="w-full max-w-[360px]">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
+          <div className="min-w-0">
             {isAdmin ? (
-              <div className="grid w-full grid-cols-2 rounded-lg bg-muted/30 p-1">
-                <button
-                  type="button"
-                  onClick={() => setViewTab("pending")}
-                  className={[
-                    "inline-flex h-10 w-full items-center justify-center rounded-md px-4 text-sm font-medium transition",
-                    viewTab === "pending"
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground",
-                  ].join(" ")}
-                >
-                  Pending Approvals ({pendingRequests.length})
-                </button>
+              <div className="w-full max-w-[520px]">
+                <div className="flex items-center gap-6 border-b">
+                  <button
+                    type="button"
+                    onClick={() => setViewTab("pending")}
+                    className={[
+                      "inline-flex h-12 items-center gap-2 border-b-2 px-1 text-sm font-semibold transition",
+                      viewTab === "pending"
+                        ? "border-primary text-foreground"
+                        : "border-transparent text-muted-foreground hover:text-foreground",
+                    ].join(" ")}
+                  >
+                    <Clock3
+                      className={[
+                        "h-4 w-4 shrink-0",
+                        viewTab === "pending" ? "text-primary" : "text-muted-foreground",
+                      ].join(" ")}
+                    />
+                    <span>Pending Review</span>
+                    <span
+                      className={[
+                        "ml-1 inline-flex min-w-[22px] items-center justify-center rounded-full px-1.5 py-0.5 text-[11px] font-bold",
+                        viewTab === "pending"
+                          ? "bg-primary/10 text-primary"
+                          : "bg-muted text-muted-foreground",
+                      ].join(" ")}
+                    >
+                      {pendingRequests.length}
+                    </span>
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={() => setViewTab("archive")}
-                  className={[
-                    "inline-flex h-10 w-full items-center justify-center rounded-md px-4 text-sm font-medium transition",
-                    viewTab === "archive"
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground",
-                  ].join(" ")}
-                >
-                  Recent History
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewTab("archive")}
+                    className={[
+                      "inline-flex h-12 items-center gap-2 border-b-2 px-1 text-sm font-semibold transition",
+                      viewTab === "archive"
+                        ? "border-primary text-foreground"
+                        : "border-transparent text-muted-foreground hover:text-foreground",
+                    ].join(" ")}
+                  >
+                    <History
+                      className={[
+                        "h-4 w-4 shrink-0",
+                        viewTab === "archive" ? "text-primary" : "text-muted-foreground",
+                      ].join(" ")}
+                    />
+                    <span>Recent History</span>
+                  </button>
+                </div>
               </div>
             ) : (
-              <div className="grid w-full grid-cols-1 rounded-lg bg-muted/30 p-1">
-                <button
-                  type="button"
-                  onClick={() => setViewTab("archive")}
-                  className="inline-flex h-10 w-full items-center justify-center rounded-md bg-background px-4 text-sm font-medium text-foreground shadow-sm"
-                >
+              <div>
+                <h1 className="text-[30px] font-extrabold tracking-tight text-slate-950">
                   Recent History
-                </button>
+                </h1>
               </div>
             )}
           </div>
 
-          <Button onClick={() => setCreateOpen(true)} className="h-10 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer">
+          <div className="flex-1" />
+
+          <Button
+            onClick={() => setCreateOpen(true)}
+            className="h-10 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer"
+          >
             <Plus className="mr-2 h-4 w-4" />
             New Request
           </Button>

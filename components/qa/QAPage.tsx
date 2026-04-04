@@ -505,10 +505,10 @@ export default function QAPage({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
         <div>
-          <h1 className="text-[32px] font-extrabold tracking-tight text-slate-950">
+          <h1 className="text-[30px] font-extrabold tracking-tight text-slate-950">
             Ticket Dashboard <span className="text-slate-950">({stats.active})</span>
           </h1>
         </div>
