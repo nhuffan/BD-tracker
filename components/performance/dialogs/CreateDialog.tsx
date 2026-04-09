@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DatePickerDMY } from "@/components/ui/date-picker-dmy";
-import { useMasters } from "@/lib/useMasters";
+import { useMasters, useMastersActive } from "@/lib/useMasters";
 
 import { db } from "@/lib/db";
 import { syncPending } from "@/lib/sync";
@@ -49,7 +49,7 @@ export default function CreateDialog({
 }) {
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
-  const { items: bdList } = useMasters("bd");
+  const bdList = useMastersActive("bd");
   const { items: levelList } = useMasters("bd_level");
   const { items: customerTypes } = useMasters("customer_type");
   const { items: pointTypes } = useMasters("point_type");

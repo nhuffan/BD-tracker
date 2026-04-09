@@ -39,14 +39,15 @@ export default function RecordsPage({ isAdmin }: { isAdmin: boolean }) {
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
 
-  const { items: bdList } = useMasters("bd");
+  const { items: allBdList, loading: mastersLoading } = useMasters("bd");
   const { items: levelList } = useMasters("bd_level");
   const { items: customerTypes } = useMasters("customer_type");
   const { items: pointTypes } = useMasters("point_type");
 
+  // All masters (including inactive) for name lookup in existing records
   const bdMap = useMemo(
-    () => Object.fromEntries(bdList.map((x) => [x.id, x.label])),
-    [bdList]
+    () => Object.fromEntries(allBdList.map((x) => [x.id, x.label])),
+    [allBdList]
   );
 
   const levelMap = useMemo(
@@ -235,7 +236,7 @@ export default function RecordsPage({ isAdmin }: { isAdmin: boolean }) {
 
       <RecordsTable
         rows={filtered}
-        loading={loading}
+        loading={loading || mastersLoading}
         onChanged={refresh}
         onRefresh={refresh}
         bdMap={bdMap}

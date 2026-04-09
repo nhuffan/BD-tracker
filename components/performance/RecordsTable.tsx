@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { db } from "@/lib/db";
 import { syncPending } from "@/lib/sync";
 import { formatDMY } from "@/lib/date";
-import { FileText, Search, RefreshCw } from "lucide-react";
+import { FileText, Search, RefreshCw, Loader2 } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -110,7 +110,11 @@ export default function RecordsTable({
   }
 
   if (loading) {
-    return <div className="text-sm text-muted-foreground">Loading...</div>;
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
   }
 
   return (

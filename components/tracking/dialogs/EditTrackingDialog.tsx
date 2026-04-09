@@ -18,7 +18,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { useMasters } from "@/lib/useMasters";
+import { useMastersActive } from "@/lib/useMasters";
 import { supabase } from "@/lib/supabaseClient";
 import type { TrackingRecordVM } from "../types";
 
@@ -46,7 +46,7 @@ export default function EditTrackingDialog({
     record: TrackingRecordVM | null;
     onSaved: () => void;
 }) {
-    const { items: bdList } = useMasters("bd");
+    const bdList = useMastersActive("bd");
 
     const [form, setForm] = useState({
         customer_name: "",

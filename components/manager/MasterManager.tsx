@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -17,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 
 import type { MasterCategory, MasterItem } from "@/lib/masters";
 import {
@@ -28,7 +30,7 @@ import {
 import { MASTER_CATEGORY_UI } from "@/lib/masterUi";
 import { supabase } from "@/lib/supabaseClient";
 import { invalidateMastersCache } from "@/lib/useMasters";
-import { Pencil, Trash2, ArrowUpDown, CalendarDays, Plus } from "lucide-react";
+import { Pencil, Trash2, ArrowUpDown, CalendarDays, Plus, Loader2 } from "lucide-react";
 
 function normalizeName(value: string) {
   return value
@@ -81,6 +83,7 @@ export default function MasterManager({
   const [editing, setEditing] = useState<MasterItem | null>(null);
 
   const [label, setLabel] = useState("");
+  const [isActive, setIsActive] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
   const [showInUseDialog, setShowInUseDialog] = useState(false);
@@ -265,6 +268,7 @@ export default function MasterManager({
   function openCreate() {
     setEditing(null);
     setLabel("");
+    setIsActive(true);
     setErrorMessage("");
     setOpen(true);
   }
@@ -272,6 +276,7 @@ export default function MasterManager({
   function openEdit(item: MasterItem) {
     setEditing(item);
     setLabel(item.label);
+    setIsActive(item.is_active);
     setErrorMessage("");
     setOpen(true);
   }
@@ -308,6 +313,24 @@ export default function MasterManager({
       return arr;
     }
 
+    // Helper: does this BD have any records in the selected month scope?
+    function hasAnyRecord(id: string) {
+      const monthData = totals[id];
+      const monthTracking = trackingTotals[id];
+      const hasRecords =
+        (monthData?.points ?? 0) > 0 ||
+        (monthData?.money ?? 0) > 0 ||
+        (monthData?.packageAmount ?? 0) > 0 ||
+        (monthTracking?.newCustomers ?? 0) > 0 ||
+        (monthTracking?.newHotList ?? 0) > 0;
+      return hasRecords;
+    }
+
+    // Hide inactive BD who have no records in the selected month
+    const visible = arr.filter(
+      (item) => item.is_active || hasAnyRecord(item.id)
+    );
+
     function getSortValue(id: string, field: BdSortField) {
       switch (field) {
         case "newCustomers":
@@ -322,7 +345,7 @@ export default function MasterManager({
       }
     }
 
-    arr.sort((a, b) => {
+    visible.sort((a, b) => {
       const primaryA = getSortValue(a.id, bdSortField);
       const primaryB = getSortValue(b.id, bdSortField);
 
@@ -357,7 +380,7 @@ export default function MasterManager({
       return a.label.localeCompare(b.label);
     });
 
-    return arr;
+    return visible;
   }, [items, totals, trackingTotals, category, bdSortField, bdSortDirection]);
 
   const bdMedalMap = useMemo(() => {
@@ -407,6 +430,7 @@ export default function MasterManager({
     if (editing) {
       await updateMaster(editing.id, {
         label: trimmedLabel,
+        is_active: isActive,
       });
     } else {
       const generatedCode = generateCode(trimmedLabel);
@@ -430,6 +454,15 @@ export default function MasterManager({
   }
 
   async function onDelete(id: string) {
+    if (category === "bd") {
+      // Soft-delete: set is_active = false instead of hard delete
+      await updateMaster(id, { is_active: false });
+      invalidateMastersCache(category);
+      await refresh();
+      window.dispatchEvent(new Event("masters-updated"));
+      return;
+    }
+
     const columnMap: Record<MasterCategory, string> = {
       bd: "bd_id",
       bd_level: "bd_level_id",
@@ -514,7 +547,26 @@ export default function MasterManager({
 
                     {/* Name */}
                     <td className="truncate p-2 text-center" title={it.label}>
-                      {it.label}
+                      <div className="flex items-center justify-center gap-1.5">
+                        <span>{it.label}</span>
+                        {!it.is_active && (
+                          <Badge
+                            className="
+      inline-flex items-center gap-1.5
+      rounded-lg
+      bg-red-50
+      px-2.5 py-1
+      text-xs font-semibold
+      text-red-600
+      border-0
+      shadow-none
+    "
+                          >
+                            <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                            Inactive
+                          </Badge>
+                        )}
+                      </div>
                     </td>
 
                     {category === "bd" && (
@@ -663,19 +715,19 @@ export default function MasterManager({
         </div>
       </div>
 
-      {renderTable(sortedItems, 0)}
-
-      {!loading && items.length === 0 && (
+      {loading ? (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      ) : items.length === 0 ? (
         <div className="p-4 text-sm text-muted-foreground">No data</div>
-      )}
-
-      {loading && (
-        <div className="p-4 text-sm text-muted-foreground">Loading...</div>
+      ) : (
+        renderTable(sortedItems, 0)
       )}
 
       {isAdmin && (
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogContent className="max-w-lg">
+          <DialogContent className="max-w-lg" onOpenAutoFocus={(e) => e.preventDefault()}>
             <DialogHeader>
               <DialogTitle className="text-xl font-semibold tracking-tight">
                 {editing ? ui.editDialogTitle : ui.addDialogTitle}
@@ -700,6 +752,21 @@ export default function MasterManager({
                   </p>
                 )}
               </div>
+
+              {editing && (
+                <div className="flex items-center justify-between rounded-md border px-3 py-2">
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium text-foreground">Active</span>
+                    <span className="text-xs text-muted-foreground">
+                      Inactive users disappear from selection lists
+                    </span>
+                  </div>
+                  <Switch
+                    checked={isActive}
+                    onCheckedChange={setIsActive}
+                  />
+                </div>
+              )}
             </div>
 
             <DialogFooter>

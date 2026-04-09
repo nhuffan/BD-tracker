@@ -73,3 +73,8 @@ export function useMasters(category: MasterCategory) {
 
   return { items, loading };
 }
+
+export function useMastersActive(category: MasterCategory) {
+  const { items } = useMasters(category);
+  return items.filter((item) => item.is_active);
+}

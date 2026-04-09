@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Archive, CheckCircle2, CircleDashed, Clock3, Plus, Search, Paperclip } from "lucide-react";
+import { Archive, CheckCircle2, CircleDashed, Clock3, Plus, Search, Paperclip, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -136,7 +136,7 @@ export default function QAPage({
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [adminNameMap, setAdminNameMap] = useState<Record<string, string>>({});
 
-  const { items: bdList } = useMasters("bd");
+  const { items: bdList, loading: bdLoading } = useMasters("bd");
 
   const bdNameMap = useMemo(() => {
     return Object.fromEntries(bdList.map((item) => [item.id, item.label]));
@@ -638,8 +638,10 @@ export default function QAPage({
           )}
         </div>
 
-        {loading ? (
-          <div className="p-5 text-sm text-slate-500">Loading...</div>
+        {(loading || bdLoading) ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
         ) : displayTickets.length === 0 ? (
           <div className="p-5 text-sm text-slate-500">No tickets found</div>
         ) : (

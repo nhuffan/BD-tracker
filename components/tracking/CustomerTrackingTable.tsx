@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Search, RefreshCw } from "lucide-react";
+import { Search, RefreshCw, Loader2 } from "lucide-react";
 import type { TrackingRecordVM } from "./types";
 import { formatDMY } from "@/lib/date";
 import {
@@ -88,7 +88,11 @@ export default function CustomerTrackingTable({
     }
 
     if (loading) {
-        return <div className="text-sm text-muted-foreground">Loading...</div>;
+        return (
+            <div className="flex items-center justify-center py-20">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+        );
     }
 
     return (

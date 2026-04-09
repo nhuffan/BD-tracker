@@ -28,11 +28,12 @@ export default function CustomerTrackingPage({
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
 
-  const { items: bdList } = useMasters("bd");
+  const { items: allBdList, loading: mastersLoading } = useMasters("bd");
 
+  // All masters (including inactive) for name lookup in existing records
   const bdMap = useMemo(
-    () => Object.fromEntries(bdList.map((x) => [x.id, x.label])),
-    [bdList]
+    () => Object.fromEntries(allBdList.map((x) => [x.id, x.label])),
+    [allBdList]
   );
 
   async function refresh() {
@@ -191,7 +192,7 @@ export default function CustomerTrackingPage({
 
       <CustomerTrackingTable
         rows={filtered}
-        loading={loading}
+        loading={loading || mastersLoading}
         onChanged={refresh}
         onRefresh={refresh}
         isAdmin={isAdmin}

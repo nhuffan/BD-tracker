@@ -10,6 +10,7 @@ import {
   Trash2,
   Clock3,
   History,
+  Loader2,
 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
@@ -230,7 +231,7 @@ export default function ApprovalsPage({
   const [selectedRequest, setSelectedRequest] = useState<ApprovalRequestVM | null>(null);
   const [editingRequest, setEditingRequest] = useState<ApprovalRequestVM | null>(null);
 
-  const { items: bdList } = useMasters("bd");
+  const { items: bdList, loading: bdLoading } = useMasters("bd");
 
   const bdNameMap = useMemo(() => {
     return Object.fromEntries(bdList.map((item) => [item.id, item.label]));
@@ -484,19 +485,19 @@ export default function ApprovalsPage({
                 </div>
 
                 <div className="space-y-3 pl-3 pr-3 pb-3">
-                  {loading && (
-                    <div className="rounded-xl border bg-background p-4 text-sm text-muted-foreground">
-                      Loading...
+                  {(loading || bdLoading) && (
+                    <div className="flex items-center justify-center py-10">
+                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                     </div>
                   )}
 
-                  {!loading && pendingRequests.length === 0 && (
+                  {!loading && !bdLoading && pendingRequests.length === 0 && (
                     <div className="p-2 text-sm text-muted-foreground">
                       No pending request.
                     </div>
                   )}
 
-                  {pendingRequests.map((request) => {
+                  {!loading && !bdLoading && pendingRequests.map((request) => {
                     const active = selectedRequest?.id === request.id;
 
                     return (
@@ -770,13 +771,13 @@ export default function ApprovalsPage({
                     </tr>
                   )}
 
-                  {loading && (
+                  {(loading || bdLoading) && (
                     <tr>
                       <td
                         colSpan={isAdmin ? 9 : 8}
-                        className="p-5 text-sm text-muted-foreground"
+                        className="p-5 text-center"
                       >
-                        Loading...
+                        <Loader2 className="inline-block h-5 w-5 animate-spin text-muted-foreground" />
                       </td>
                     </tr>
                   )}

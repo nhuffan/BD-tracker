@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/select";
 import type { Filters } from "../RecordsPage";
 import { DatePickerDMY } from "@/components/ui/date-picker-dmy";
-import { useMasters } from "@/lib/useMasters";
+import { useMasters, useMastersActive } from "@/lib/useMasters";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
@@ -45,7 +45,7 @@ export default function FilterDialog({
   onApply: (f: Filters) => void;
 }) {
   const [draft, setDraft] = useState<Filters>(filters);
-  const { items: bdList } = useMasters("bd");
+  const bdList = useMastersActive("bd");
   const { items: customerTypes } = useMasters("customer_type");
   const { items: pointTypes } = useMasters("point_type");
   const ALL = "__all__";

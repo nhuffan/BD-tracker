@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { TrackingFilters } from "../types";
-import { useMasters } from "@/lib/useMasters";
+import { useMastersActive } from "@/lib/useMasters";
 
 const ALL_VALUE = "__all__";
 
@@ -34,7 +34,7 @@ export default function TrackingFilterDialog({
   onApply: (filters: TrackingFilters) => void;
 }) {
   const [draft, setDraft] = useState<TrackingFilters>(filters);
-  const { items: bdList } = useMasters("bd");
+  const bdList = useMastersActive("bd");
 
   useEffect(() => {
     setDraft(filters);

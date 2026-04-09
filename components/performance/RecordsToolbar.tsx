@@ -42,12 +42,13 @@ export default function RecordsToolbar({
   const [openFilter, setOpenFilter] = useState(false);
   const [openCreate, setOpenCreate] = useState(false);
 
-  const { items: bdList } = useMasters("bd");
+  const { items: allBdList } = useMasters("bd");
   const { items: levelList } = useMasters("bd_level");
   const { items: customerTypes } = useMasters("customer_type");
   const { items: pointTypes } = useMasters("point_type");
 
-  const bdMap = Object.fromEntries(bdList.map((x) => [x.id, x.label]));
+  // All masters (including inactive) for name lookup in existing records
+  const bdMap = Object.fromEntries(allBdList.map((x) => [x.id, x.label]));
   const levelMap = Object.fromEntries(levelList.map((x) => [x.id, x.label]));
   const customerTypeMap = Object.fromEntries(customerTypes.map((x) => [x.id, x.label]));
   const pointTypeMap = Object.fromEntries(pointTypes.map((x) => [x.id, x.label]));

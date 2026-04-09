@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DatePickerDMY } from "@/components/ui/date-picker-dmy";
-import { useMasters } from "@/lib/useMasters";
+import { useMastersActive } from "@/lib/useMasters";
 import { supabase } from "@/lib/supabaseClient";
 
 function formatNumberInput(value: string) {
@@ -45,7 +45,7 @@ export default function CreateTrackingDialog({
   onCreated: () => void;
 }) {
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
-  const { items: bdList } = useMasters("bd");
+  const bdList = useMastersActive("bd");
 
   const [form, setForm] = useState({
     event_date: today,
