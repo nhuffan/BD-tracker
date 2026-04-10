@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import type { QAPriority, QATicketAttachment } from "../utils/types";
-import { useMasters } from "@/lib/useMasters";
+import { useMastersActive } from "@/lib/useMasters";
 import {
   attachmentCardClass,
   interactiveCardClass,
@@ -68,7 +68,7 @@ export default function CreateQATicketDialog({
   const [submitStage, setSubmitStage] = useState<
     "idle" | "uploading_attachments" | "creating_ticket"
   >("idle");
-  const { items: bdList } = useMasters("bd");
+  const bdList = useMastersActive("bd");
   const [attachments, setAttachments] = useState<LocalAttachment[]>([]);
   const [dragging, setDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);

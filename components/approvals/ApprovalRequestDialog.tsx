@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { UploadCloud, Trash2 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
-import { useMasters } from "@/lib/useMasters";
+import { useMastersActive } from "@/lib/useMasters";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -137,7 +137,7 @@ export default function CreateApprovalRequestDialog({
   onSaved: () => void | Promise<void>;
   request?: ApprovalRequestVM | null;
 }) {
-  const { items: bdList } = useMasters("bd");
+  const bdList = useMastersActive("bd");
 
   const isEditMode = !!request;
 
@@ -438,7 +438,6 @@ export default function CreateApprovalRequestDialog({
 
         const payload = {
           asked_by_bd_id: askedByBdId,
-          created_by_user_id: user?.id ?? null,
           store_name: storeName.trim(),
           user_note: description.trim() || null,
           admin_note: null,
