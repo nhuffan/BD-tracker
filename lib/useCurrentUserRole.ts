@@ -7,10 +7,13 @@ import { supabase } from "@/lib/supabaseClient";
 
 export type AppRole = "admin" | "viewer";
 
+const SUPER_ADMIN_UID = "a7d27d0a-3f3a-4473-9bae-09ecdb703093";
+
 
 export function useCurrentUserRole() {
   const [role, setRole] = useState<AppRole>("viewer");
   const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
 
 
   useEffect(() => {
@@ -25,7 +28,6 @@ export function useCurrentUserRole() {
         data: { user },
       } = await supabase.auth.getUser();
 
-
       if (!user) {
         if (mounted) {
           setRole("viewer");
@@ -33,6 +35,8 @@ export function useCurrentUserRole() {
         }
         return;
       }
+
+      if (mounted) setUserId(user.id);
 
 
       const { data, error } = await supabase
@@ -67,5 +71,6 @@ export function useCurrentUserRole() {
     loading,
     isAdmin: role === "admin",
     isViewer: role === "viewer",
+    isSuperAdmin: userId === SUPER_ADMIN_UID,
   };
 }

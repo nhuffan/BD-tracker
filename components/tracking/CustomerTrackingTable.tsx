@@ -13,6 +13,8 @@ import {
 } from "@/components/ui/tooltip";
 import EditTrackingDialog from "./dialogs/EditTrackingDialog";
 import { supabase } from "@/lib/supabaseClient";
+import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 export default function CustomerTrackingTable({
     rows,
@@ -43,6 +45,8 @@ export default function CustomerTrackingTable({
     const [selected, setSelected] = useState<Record<string, boolean>>({});
     const [editing, setEditing] = useState<TrackingRecordVM | null>(null);
     const [editOpen, setEditOpen] = useState(false);
+    const [deleteOpen, setDeleteOpen] = useState(false);
+    const [deleting, setDeleting] = useState(false);
 
     const selectedIds = Object.keys(selected).filter((id) => selected[id]);
 
@@ -61,30 +65,41 @@ export default function CustomerTrackingTable({
         setEditOpen(true);
     }
 
-    async function handleDelete() {
+    function openDeleteConfirm() {
+        if (!isAdmin) return;
         if (!selectionMode) {
             setSelectionMode(true);
             return;
         }
-
         if (selectedIds.length === 0) {
             setSelectionMode(false);
+            setSelected({});
             return;
         }
+        setDeleteOpen(true);
+    }
 
-        const { error } = await supabase
-            .from("customer_tracking")
-            .delete()
-            .in("id", selectedIds);
+    async function handleDeleteConfirmed() {
+        setDeleting(true);
+        try {
+            const { error } = await supabase
+                .from("customer_tracking")
+                .delete()
+                .in("id", selectedIds);
 
-        if (error) {
-            console.error("Failed to delete customer records:", error);
-            return;
+            if (error) {
+                toast.error("Failed to delete records.");
+                return;
+            }
+
+            toast.success(`Successfully deleted ${selectedIds.length} record(s).`);
+            setDeleteOpen(false);
+            setSelected({});
+            setSelectionMode(false);
+            onChanged();
+        } finally {
+            setDeleting(false);
         }
-
-        setSelected({});
-        setSelectionMode(false);
-        onChanged();
     }
 
     if (loading) {
@@ -141,7 +156,7 @@ export default function CustomerTrackingTable({
                                     <Button
                                         className="cursor-pointer"
                                         variant={selectionMode ? "destructive" : "secondary"}
-                                        onClick={handleDelete}
+                                        onClick={openDeleteConfirm}
                                     >
                                         {selectionMode ? `Delete (${selectedIds.length})` : "Delete"}
                                     </Button>
@@ -296,12 +311,23 @@ export default function CustomerTrackingTable({
                 </div>
 
                 {isAdmin && (
+                    <>
                     <EditTrackingDialog
                         open={editOpen}
                         onOpenChange={setEditOpen}
                         record={editing}
                         onSaved={onChanged}
                     />
+
+                    <ConfirmDialog
+                        open={deleteOpen}
+                        onOpenChange={setDeleteOpen}
+                        title="Confirm Delete"
+                        description={`Are you sure you want to delete ${selectedIds.length} selected record(s)? This action cannot be undone.`}
+                        onConfirm={handleDeleteConfirmed}
+                        loading={deleting}
+                    />
+                    </>
                 )}
             </>
         </TooltipProvider>

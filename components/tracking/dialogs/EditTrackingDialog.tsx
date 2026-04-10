@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { useMastersActive } from "@/lib/useMasters";
 import { supabase } from "@/lib/supabaseClient";
+import { toast } from "sonner";
 import type { TrackingRecordVM } from "../types";
 
 function formatNumberInput(value: string) {
@@ -109,10 +110,11 @@ export default function EditTrackingDialog({
             .eq("id", record.id);
 
         if (error) {
-            console.error("Failed to update tracking record:", error);
+            toast.error("Failed to update record.");
             return;
         }
 
+        toast.success("Record updated successfully.");
         onOpenChange(false);
         onSaved();
     }

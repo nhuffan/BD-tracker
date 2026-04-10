@@ -9,6 +9,7 @@ import {
     Store,
 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -242,17 +243,16 @@ export default function ApprovalRequestDetailPanel({
                 .select("*");
 
             if (error) {
-                setConflictMessage(error.message || "Failed to update request.");
+                toast.error("Failed to reject request.");
                 return;
             }
 
             if (!data || data.length === 0) {
-                setConflictMessage(
-                    "This request was updated by another admin. Please reload the latest data."
-                );
+                toast.error("This request was updated by another admin. Please reload and try again.");
                 return;
             }
 
+            toast.success("Request rejected successfully.");
             onSaved();
         } finally {
             setSaving(false);
@@ -294,17 +294,16 @@ export default function ApprovalRequestDetailPanel({
                 .select("*");
 
             if (error) {
-                setConflictMessage(error.message || "Failed to update request.");
+                toast.error("Failed to approve request.");
                 return;
             }
 
             if (!data || data.length === 0) {
-                setConflictMessage(
-                    "This request was updated by another admin. Please reload the latest data."
-                );
+                toast.error("This request was updated by another admin. Please reload and try again.");
                 return;
             }
 
+            toast.success("Request approved successfully.");
             onSaved();
         } finally {
             setSaving(false);

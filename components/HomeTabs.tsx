@@ -16,7 +16,7 @@ import { Loader2 } from "lucide-react";
 
 export default function HomeTabs() {
   const router = useRouter();
-  const { isAdmin, loading } = useCurrentUserRole();
+  const { isAdmin, isSuperAdmin, loading } = useCurrentUserRole();
   const [activeTab, setActiveTab] = useState("home");
   const [email, setEmail] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string>("");
@@ -112,7 +112,7 @@ export default function HomeTabs() {
             className={activeTab === "approvals" ? "mt-0 w-full" : "mt-0 hidden"}
           >
             <ApprovalsPage
-              isAdmin={isAdmin}
+              isAdmin={isSuperAdmin}
               currentUserId={currentUserId}
             />
           </TabsContent>

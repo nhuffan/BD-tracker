@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { UploadCloud, Trash2 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { useMastersActive } from "@/lib/useMasters";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -429,10 +430,10 @@ export default function CreateApprovalRequestDialog({
           .eq("id", request.id);
 
         if (error) {
-          console.error("Failed to update approval request:", error);
-          alert(error.message);
+          toast.error("Failed to update request.");
           return;
         }
+        toast.success("Request updated successfully.");
       } else {
         setSubmitStage("creating_request");
 
@@ -450,10 +451,10 @@ export default function CreateApprovalRequestDialog({
         const { error } = await supabase.from("approval_requests").insert(payload);
 
         if (error) {
-          console.error("Failed to create approval request:", error);
-          alert(error.message);
+          toast.error("Failed to create request.");
           return;
         }
+        toast.success("Request created successfully.");
       }
 
       attachments.forEach((item) => {

@@ -19,6 +19,8 @@ import {
 } from "docx";
 import { Download } from "lucide-react";
 import { useMasters } from "@/lib/useMasters";
+import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 type QAViewTab = "active" | "in_progress" | "done" | "archive";
 
@@ -135,6 +137,8 @@ export default function QAPage({
   const [selectionMode, setSelectionMode] = useState(false);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [adminNameMap, setAdminNameMap] = useState<Record<string, string>>({});
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const { items: bdList, loading: bdLoading } = useMasters("bd");
 
@@ -343,20 +347,22 @@ export default function QAPage({
     }));
   }
 
-  async function handleDelete() {
+  function openDeleteConfirm() {
     if (!isAdmin) return;
-
     if (!selectionMode) {
       setSelectionMode(true);
       return;
     }
-
     if (selectedIds.length === 0) {
       setSelectionMode(false);
       setSelected({});
       return;
     }
+    setDeleteOpen(true);
+  }
 
+  async function handleDeleteConfirmed() {
+    setDeleting(true);
     try {
       const ticketsToDelete = tickets.filter((ticket) =>
         selectedIds.includes(ticket.id)
@@ -383,9 +389,7 @@ export default function QAPage({
         });
 
         if (!deleteFilesRes.ok) {
-          const err = await deleteFilesRes.json().catch(() => null);
-          console.error("Failed to delete cloudinary files:", err);
-          alert("Failed to delete attachments from Cloudinary.");
+          toast.error("Failed to delete attachments.");
           return;
         }
       }
@@ -396,17 +400,19 @@ export default function QAPage({
         .in("id", selectedIds);
 
       if (error) {
-        console.error("Failed to delete qa tickets:", error);
-        alert("Failed to delete tickets.");
+        toast.error("Failed to delete tickets.");
         return;
       }
 
+      toast.success(`Successfully deleted ${selectedIds.length} ticket(s).`);
+      setDeleteOpen(false);
       setSelected({});
       setSelectionMode(false);
       await refresh();
     } catch (error) {
-      console.error("Delete flow failed:", error);
-      alert("Delete failed.");
+      toast.error("Delete failed.");
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -631,7 +637,7 @@ export default function QAPage({
             <Button
               variant={selectionMode ? "destructive" : "secondary"}
               className="rounded-lg cursor-pointer"
-              onClick={handleDelete}
+              onClick={openDeleteConfirm}
             >
               {selectionMode ? `Delete (${selectedIds.length})` : "Delete"}
             </Button>
@@ -822,6 +828,15 @@ export default function QAPage({
             };
           });
         }}
+      />
+
+      <ConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Confirm Delete"
+        description={`Are you sure you want to delete ${selectedIds.length} selected ticket(s)? This action cannot be undone.`}
+        onConfirm={handleDeleteConfirmed}
+        loading={deleting}
       />
     </div>
   );

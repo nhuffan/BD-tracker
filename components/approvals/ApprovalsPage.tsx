@@ -16,6 +16,8 @@ import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useMasters } from "@/lib/useMasters";
+import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { ApprovalRequest, ApprovalRequestVM, ApprovalImage } from "./utils/types";
 import CreateApprovalRequestDialog from "./ApprovalRequestDialog";
 import ApprovalRequestDetailPanel from "./ApprovalRequestPanel";
@@ -230,6 +232,8 @@ export default function ApprovalsPage({
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<ApprovalRequestVM | null>(null);
   const [editingRequest, setEditingRequest] = useState<ApprovalRequestVM | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const { items: bdList, loading: bdLoading } = useMasters("bd");
 
@@ -269,23 +273,31 @@ export default function ApprovalsPage({
     setCreateOpen(true);
   }
 
-  async function handleDeleteRequest(id: string) {
-    const ok = window.confirm("Are you sure you want to delete this request?");
-    if (!ok) return;
+  function openDeleteRequest(id: string, name: string) {
+    setDeleteTarget({ id, name });
+  }
 
-    const { error } = await supabase
-      .from("approval_requests")
-      .delete()
-      .eq("id", id);
+  async function handleDeleteRequest() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("approval_requests")
+        .delete()
+        .eq("id", deleteTarget.id);
 
-    if (error) {
-      console.error("Failed to delete approval request:", error);
-      alert("Failed to delete request.");
-      return;
+      if (error) {
+        toast.error("Failed to delete request.");
+        return;
+      }
+
+      toast.success("Request deleted successfully.");
+      setDeleteTarget(null);
+      setSelectedRequest((prev) => (prev?.id === deleteTarget.id ? null : prev));
+      await refresh();
+    } finally {
+      setDeleting(false);
     }
-
-    setSelectedRequest((prev) => (prev?.id === id ? null : prev));
-    await refresh();
   }
 
   useEffect(() => {
@@ -750,7 +762,7 @@ export default function ApprovalsPage({
                               size="icon"
                               variant="ghost"
                               className="h-8 w-8 cursor-pointer"
-                              onClick={() => handleDeleteRequest(request.id)}
+                              onClick={() => openDeleteRequest(request.id, request.store_name)}
                             >
                               <Trash2 className="h-4 w-4 text-muted-foreground" />
                             </Button>
@@ -798,6 +810,15 @@ export default function ApprovalsPage({
             setEditingRequest(null);
             await refresh();
           }}
+        />
+
+        <ConfirmDialog
+          open={!!deleteTarget}
+          onOpenChange={(open) => !open && setDeleteTarget(null)}
+          title="Confirm Delete"
+          description={`Are you sure you want to delete request "${deleteTarget?.name}"? This action cannot be undone.`}
+          onConfirm={handleDeleteRequest}
+          loading={deleting}
         />
       </div>
     </TooltipProvider>

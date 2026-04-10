@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { AttachmentIcon, isImageFile, isVideoFile } from "@/components/qa/utils/AttachmentIcon";
 import { supabase } from "@/lib/supabaseClient";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -546,16 +547,15 @@ export default function QATicketDetailDialog({
           .select("*");
 
         if (error) {
-          console.error("Failed to update qa ticket:", error);
+          toast.error("Failed to update ticket.");
           return;
         }
 
         if (!data || data.length === 0) {
-          setConflictMessage(
-            "This ticket was updated by another admin. Please reopen it to load the latest data."
-          );
+          toast.error("This ticket was updated by another user. Please reload and try again.");
           return;
         }
+        toast.success("Ticket updated successfully.");
       } else {
         const extra = additionalDescription.trim();
 
@@ -624,20 +624,12 @@ export default function QATicketDetailDialog({
           .select("*");
 
         if (error) {
-          console.error("Failed to update ticket:", {
-            message: error.message,
-            details: error.details,
-            hint: error.hint,
-            code: error.code,
-          });
-          setConflictMessage(error.message || "Failed to update ticket.");
+          toast.error("Failed to update ticket.");
           return;
         }
 
         if (!data || data.length === 0) {
-          setConflictMessage(
-            "This ticket was updated by another admin. Please reopen it to load the latest data."
-          );
+          toast.error("This ticket was updated by another user. Please reload and try again.");
           return;
         }
 
@@ -668,6 +660,7 @@ export default function QATicketDetailDialog({
         }
       }
 
+      toast.success("Ticket updated successfully.");
       onOpenChange(false);
       onSaved();
     } finally {
