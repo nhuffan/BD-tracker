@@ -78,8 +78,7 @@ export default function CreateDialog({
     !form.bd_level_id ||
     !form.customer_name.trim() ||
     !form.customer_type_id ||
-    !form.point_type_id ||
-    form.points <= 0;
+    !form.point_type_id;
 
   async function submit() {
     if (isSaveDisabled) return;

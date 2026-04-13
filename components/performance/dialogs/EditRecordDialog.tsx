@@ -117,7 +117,7 @@ export default function EditRecordDialog({
     );
 
   const isSaveDisabled =
-    !record || !bdLevelId || parsedPoints <= 0 || !hasChanges;
+    !record || !bdLevelId || !hasChanges;
 
   async function handleSave() {
     if (!record || isSaveDisabled) return;
