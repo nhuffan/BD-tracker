@@ -23,6 +23,7 @@ import { useMasters, useMastersActive } from "@/lib/useMasters";
 
 import { db } from "@/lib/db";
 import { syncPending } from "@/lib/sync";
+import { toast } from "sonner";
 import type { RecordRow } from "@/lib/types";
 
 function formatNumberInput(value: string) {
@@ -91,6 +92,8 @@ export default function CreateDialog({
       sync_status: "pending",
       updated_at_local: Date.now(),
     });
+
+    toast.success("Record created successfully.");
 
     if (navigator.onLine) {
       await syncPending();

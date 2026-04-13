@@ -22,6 +22,7 @@ import {
 
 import { db } from "@/lib/db";
 import { syncPending } from "@/lib/sync";
+import { toast } from "sonner";
 import type { RecordVM } from "../RecordsPage";
 import type { LocalRecord } from "@/lib/db";
 
@@ -157,6 +158,8 @@ export default function EditRecordDialog({
     };
 
     await db.records.put(updatedRecord);
+
+    toast.success("Record updated successfully.");
 
     if (navigator.onLine) {
       await syncPending();

@@ -34,6 +34,7 @@ import {
   getOversizedFiles,
 } from "../utils/attachmentHelpers";
 import AttachmentLoadingIndicator from "../utils/AttachmentLoadingIndicator";
+import { toast } from "sonner";
 
 const fieldClass =
   "h-11 w-full min-w-0 rounded-lg border border-input bg-background px-3 text-sm shadow-none";
@@ -87,7 +88,7 @@ export default function CreateQATicketDialog({
 
     const oversizedFiles = getOversizedFiles(rawFiles);
     if (oversizedFiles.length > 0) {
-      alert(
+      toast.error(
         oversizedFiles.map((file) => `${file.name} exceeds the 10MB limit.`).join("\n")
       );
     }
@@ -201,7 +202,7 @@ export default function CreateQATicketDialog({
 
       if (error) {
         console.error("Failed to create qa ticket:", error);
-        alert(error.message);
+        toast.error(error.message || "Failed to create ticket.");
         return;
       }
 
@@ -209,11 +210,11 @@ export default function CreateQATicketDialog({
       setTitle("");
       setIssueDetail("");
       setPriority("medium");
-      console.log("attachments ui only:", attachments);
       attachments.forEach((item) => {
         if (item.local_preview_url) URL.revokeObjectURL(item.local_preview_url);
       });
       setAttachments([]);
+      toast.success("Question submitted successfully.");
       onOpenChange(false);
       onSaved();
     } finally {

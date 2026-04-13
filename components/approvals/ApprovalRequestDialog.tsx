@@ -228,7 +228,7 @@ export default function CreateApprovalRequestDialog({
 
     const oversizedFiles = getOversizedFiles(rawFiles);
     if (oversizedFiles.length > 0) {
-      alert(
+      toast.error(
         oversizedFiles.map((file) => `${file.name} exceeds the 10MB limit.`).join("\n")
       );
     }

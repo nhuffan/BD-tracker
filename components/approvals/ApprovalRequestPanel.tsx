@@ -264,12 +264,12 @@ export default function ApprovalRequestDetailPanel({
         if (!currentRequest || !isAdmin || !isPending || saving) return;
 
         if (!kpiPointAward.trim()) {
-            alert("Please enter KPI Point Award.");
+            toast.error("Please enter KPI Point Award.");
             return;
         }
 
         if (!bonusAmount.trim()) {
-            alert("Please enter Bonus Amount.");
+            toast.error("Please enter Bonus Amount.");
             return;
         }
 
