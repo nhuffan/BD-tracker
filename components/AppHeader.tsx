@@ -17,6 +17,7 @@ import {
   Users,
   MessageSquareText,
   ClipboardCheck,
+  Megaphone,
 } from "lucide-react";
 
 function getInitialsFromEmail(email?: string | null) {
@@ -100,6 +101,12 @@ export default function AppHeader({
               <ClipboardCheck className="mr-2 h-5 w-5" />
               Approvals
             </TabsTrigger>
+
+            <TabsTrigger value="ads-tracking" className={tabClass}>
+              <Megaphone className="mr-2 h-5 w-5" />
+              Ads Tracking
+            </TabsTrigger>
+
           </TabsList>
         </div>
 

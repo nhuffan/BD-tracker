@@ -4,15 +4,16 @@ import { useEffect, useState } from "react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
+import { useCurrentUserRole } from "@/lib/useCurrentUserRole";
+import AppHeader from "@/components/AppHeader";
+import { Loader2 } from "lucide-react";
 import RecordsPage from "./performance/RecordsPage";
 import CustomerTrackingPage from "./tracking/CustomerTrackingPage";
 import ManagementPage from "@/components/manager/ManagementPage";
 import WomensDayBackground from "@/components/WomensDayBackground";
-import { useCurrentUserRole } from "@/lib/useCurrentUserRole";
-import AppHeader from "@/components/AppHeader";
 import QAPage from "./qa/QAPage";
 import ApprovalsPage from "./approvals/ApprovalsPage";
-import { Loader2 } from "lucide-react";
+import AdsTrackingPage from "./ads-tracking/AdsTrackingPage";
 
 export default function HomeTabs() {
   const router = useRouter();
@@ -29,7 +30,8 @@ export default function HomeTabs() {
       savedTab === "tracking" ||
       savedTab === "data" ||
       savedTab === "qa" ||
-      savedTab === "approvals"
+      savedTab === "approvals" ||
+      savedTab === "ads-tracking"
     ) {
       setActiveTab(savedTab);
     }
@@ -116,6 +118,18 @@ export default function HomeTabs() {
               currentUserId={currentUserId}
             />
           </TabsContent>
+
+          <TabsContent
+            value="ads-tracking"
+            forceMount
+            className={activeTab === "ads-tracking" ? "mt-0 w-full" : "mt-0 hidden"}
+          >
+            <AdsTrackingPage
+              isAdmin={isAdmin}
+              currentUserId={currentUserId}
+            />
+          </TabsContent>
+
         </main>
       </Tabs>
     </div>

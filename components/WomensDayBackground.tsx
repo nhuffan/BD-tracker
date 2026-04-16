@@ -19,7 +19,7 @@ export default function WomensDayBackground() {
     const day = today.getDate();
 
 
-    if (month === 3 && day <= 8) {
+    if (month === 3 && day === 8) {
       setShow(true);
 
 
