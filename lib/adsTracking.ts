@@ -4,21 +4,37 @@ export const ADS_TRACKING_POINT_TYPE_CODES = [
 ] as const;
 
 export function calculateAdsEndDate(startDate: string, pointTypeCode: string) {
-  const date = new Date(startDate);
-  if (Number.isNaN(date.getTime())) return "";
+  const [y, m, d] = startDate.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
 
+  // database bị ngược
   if (pointTypeCode === "LEN_QC_COMBO_1_NAM") {
-    date.setFullYear(date.getFullYear() + 1);
-  } else if (pointTypeCode === "LEN_QC_COMBO_3_THANG") {
     date.setMonth(date.getMonth() + 3);
+  } else if (pointTypeCode === "LEN_QC_COMBO_3_THANG") {
+    date.setFullYear(date.getFullYear() + 1);
   }
 
-  return date.toISOString().slice(0, 10);
+  const yy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  return `${yy}-${mm}-${dd}`;
 }
 
-export function getAdsTrackingStatus(endDate: string) {
+export function getAdsTrackingStatus(
+  startDate: string | null,
+  endDate: string | null
+) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+
+  if (!startDate) return "not_started";
+
+  const start = new Date(startDate);
+  start.setHours(0, 0, 0, 0);
+
+  if (today < start) return "not_started";
+
+  if (!endDate) return "active";
 
   const end = new Date(endDate);
   end.setHours(0, 0, 0, 0);
@@ -28,6 +44,7 @@ export function getAdsTrackingStatus(endDate: string) {
   );
 
   if (diffDays < 0) return "expired";
-  if (diffDays <= 7) return "expiring_soon";
+  if (diffDays <= 3) return "expiring_soon";
+
   return "active";
 }

@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(curl -s 'https://rqzbmlgacobyviuiethb.supabase.co/rest/v1/masters?category=eq.point_type&select=id,code,label,is_active' -H 'apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJxemJtbGdhY29ieXZpdWlldGhiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MDc4MjYsImV4cCI6MjA4ODI4MzgyNn0.3u66VIa9hFg62NRDlA4MK33-Lh5KbVXCtKfZgKbRxGE' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJxemJtbGdhY29ieXZpdWlldGhiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MDc4MjYsImV4cCI6MjA4ODI4MzgyNn0.3u66VIa9hFg62NRDlA4MK33-Lh5KbVXCtKfZgKbRxGE')",
+      "Bash(curl -s 'https://rqzbmlgacobyviuiethb.supabase.co/rest/v1/records?select=id,customer_name,point_type_id&limit=5' -H 'apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJxemJtbGdhY29ieXZpdWlldGhiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MDc4MjYsImV4cCI6MjA4ODI4MzgyNn0.3u66VIa9hFg62NRDlA4MK33-Lh5KbVXCtKfZgKbRxGE' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJxemJtbGdhY29ieXZpdWlldGhiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MDc4MjYsImV4cCI6MjA4ODI4MzgyNn0.3u66VIa9hFg62NRDlA4MK33-Lh5KbVXCtKfZgKbRxGE')",
+      "Bash(curl -s 'https://rqzbmlgacobyviuiethb.supabase.co/rest/v1/?limit=3' -H 'apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJxemJtbGdhY29ieXZpdWlldGhiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MDc4MjYsImV4cCI6MjA4ODI4MzgyNn0.3u66VIa9hFg62NRDlA4MK33-Lh5KbVXCtKfZgKbRxGE' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJxemJtbGdhY29ieXZpdWlldGhiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MDc4MjYsImV4cCI6MjA4ODI4MzgyNn0.3u66VIa9hFg62NRDlA4MK33-Lh5KbVRxGE')"
     ]
   }
 }

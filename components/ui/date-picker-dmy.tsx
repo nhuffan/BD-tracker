@@ -13,9 +13,10 @@ type Props = {
   value?: string; // "YYYY-MM-DD"
   onChange: (iso?: string) => void;
   placeholder?: string;
+  className?: string;
 };
 
-export function DatePickerDMY({ value, onChange, placeholder = "Chọn ngày" }: Props) {
+export function DatePickerDMY({ value, onChange, placeholder = "Chọn ngày", className }: Props) {
   const selected = value ? new Date(value + "T00:00:00") : undefined;
 
   return (
@@ -23,7 +24,7 @@ export function DatePickerDMY({ value, onChange, placeholder = "Chọn ngày" }:
       <PopoverTrigger asChild>
         <Button
           variant="outline"
-          className={cn("w-full justify-start text-left font-normal", !value && "text-muted-foreground")}
+          className={cn("w-full justify-start text-left font-normal", !value && "text-muted-foreground", className)}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
           {value ? format(selected!, "dd/MM/yyyy") : placeholder}

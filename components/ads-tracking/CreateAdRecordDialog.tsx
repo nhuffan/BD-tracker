@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
     Dialog,
     DialogContent,
@@ -25,12 +26,13 @@ import {
     ADS_TRACKING_POINT_TYPE_CODES,
     calculateAdsEndDate,
 } from "@/lib/adsTracking";
+import { formatDMY } from "@/lib/date";
 
 const fieldClass =
     "!h-11 h-11 w-full min-w-0 rounded-lg border border-input bg-background px-3 text-sm shadow-none";
 
 const infoFieldClass =
-    "flex h-11 w-full min-w-0 items-center rounded-lg border border-input bg-muted/60 px-3 text-sm text-foreground";
+    "flex h-10 w-full min-w-0 items-center rounded-lg border border-input bg-muted/60 px-3 text-sm text-foreground";
 
 const labelClass =
     "mb-2 block text-[11px] font-bold uppercase tracking-wide text-muted-foreground";
@@ -63,6 +65,7 @@ export default function CreateAdRecordDialog({
     const [pointTypes, setPointTypes] = useState<PointTypeMaster[]>([]);
     const [selectedRecordId, setSelectedRecordId] = useState("");
     const [startDate, setStartDate] = useState("");
+    const [note, setNote] = useState("");
     const [saving, setSaving] = useState(false);
 
     useEffect(() => {
@@ -102,10 +105,10 @@ export default function CreateAdRecordDialog({
 
             const deduped = Array.from(
                 new Map(
-                    ((recordRows ?? []) as EligibleRecord[]).map((item) => [
-                        item.customer_name,
-                        item,
-                    ])
+                    ((recordRows ?? []) as EligibleRecord[])
+                        .slice()
+                        .reverse()
+                        .map((item) => [item.customer_name, item])
                 ).values()
             );
 
@@ -119,6 +122,7 @@ export default function CreateAdRecordDialog({
         if (!open) {
             setSelectedRecordId("");
             setStartDate("");
+            setNote("");
             setSaving(false);
         }
     }, [open]);
@@ -138,13 +142,14 @@ export default function CreateAdRecordDialog({
     }, [startDate, selectedPointType]);
 
     const durationText = useMemo(() => {
-        if (!selectedPointType?.code) return "—";
-        if (selectedPointType.code === "ONE_YEAR_PACKAGE") return "1 Year Cycle";
-        if (selectedPointType.code === "THREE_MONTH_PACKAGE") return "90 Day Cycle";
+        if (!startDate || !selectedPointType?.code) return "—";
+        // database bị ngược
+        if (selectedPointType.code === "LEN_QC_COMBO_1_NAM") return "90 Days";
+        if (selectedPointType.code === "LEN_QC_COMBO_3_THANG") return "1 Year";
         return "—";
-    }, [selectedPointType]);
+    }, [startDate, selectedPointType]);
 
-    const isDisabled = saving || !selectedRecord || !startDate || !endDate;
+    const isDisabled = saving || !selectedRecord;
 
     async function handleSave() {
         if (isDisabled || !selectedRecord) return;
@@ -155,8 +160,9 @@ export default function CreateAdRecordDialog({
             source_record_id: selectedRecord.id,
             customer_name: selectedRecord.customer_name,
             point_type_id: selectedRecord.point_type_id,
-            start_date: startDate,
-            end_date: endDate,
+            start_date: startDate || null,
+            end_date: endDate || null,
+            note: note.trim() || null,
             created_by_user_id: currentUserId || null,
             updated_at: new Date().toISOString(),
         });
@@ -164,7 +170,8 @@ export default function CreateAdRecordDialog({
         setSaving(false);
 
         if (error) {
-            toast.error("Failed to create ad record.");
+            console.error("create ad record error:", error);
+            toast.error(error.message || "Failed to create ad record.");
             return;
         }
 
@@ -191,7 +198,7 @@ export default function CreateAdRecordDialog({
                 <div className="space-y-5 px-6 py-2">
                     <div>
                         <label className={labelClass}>Select Customer</label>
-                        <Select value={selectedRecordId} onValueChange={setSelectedRecordId}>
+                        <Select value={selectedRecordId} onValueChange={(v) => { setSelectedRecordId(v); setStartDate(""); }}>
                             <SelectTrigger className={fieldClass}>
                                 <SelectValue placeholder="Select customer" />
                             </SelectTrigger>
@@ -222,8 +229,20 @@ export default function CreateAdRecordDialog({
                                 value={startDate || undefined}
                                 onChange={(iso) => setStartDate(iso ?? "")}
                                 placeholder="Select start date"
+                                className="!h-10 h-10"
                             />
                         </div>
+                    </div>
+
+                    <div>
+                        <label className={labelClass}>Note (optional)</label>
+                        <Textarea
+                            value={note}
+                            onChange={(e) => setNote(e.target.value)}
+                            placeholder="Add any notes for this ad record..."
+                            rows={3}
+                            className="min-h-[80px] max-h-[80px] resize-none overflow-y-auto whitespace-pre-wrap break-all"
+                        />
                     </div>
 
                     <div className="grid grid-cols-1 gap-4 rounded-xl border bg-muted/30 p-4 md:grid-cols-2">
@@ -232,7 +251,7 @@ export default function CreateAdRecordDialog({
                                 Calculated Term End
                             </div>
                             <div className="mt-2 text-lg font-semibold text-foreground">
-                                {endDate || "—"}
+                                {endDate ? formatDMY(endDate) : "—"}
                             </div>
                         </div>
 
