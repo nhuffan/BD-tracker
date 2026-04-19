@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -21,7 +21,11 @@ import type { Filters } from "../RecordsPage";
 import { DatePickerDMY } from "@/components/ui/date-picker-dmy";
 import { useMasters, useMastersActive } from "@/lib/useMasters";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 function toggleMultiValue(
   current: string[] | undefined,
@@ -54,7 +58,10 @@ export default function FilterDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg" onOpenAutoFocus={(e) => e.preventDefault()}>
+      <DialogContent
+        className="max-w-lg"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold tracking-tight">
             Filter
@@ -122,6 +129,31 @@ export default function FilterDialog({
             />
           </div>
 
+          <div className="w-full">
+            <p className="mb-1.5 text-sm font-medium text-foreground">Category</p>
+            <Select
+              value={draft.category ?? ALL}
+              onValueChange={(v) =>
+                setDraft((d) => ({
+                  ...d,
+                  category:
+                    v === ALL
+                      ? undefined
+                      : (v as "entertainment" | "restaurant"),
+                }))
+              }
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>All</SelectItem>
+                <SelectItem value="entertainment">Entertainment</SelectItem>
+                <SelectItem value="restaurant">Restaurant</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="grid grid-cols-2 gap-2">
             <div className="w-full">
               <p className="mb-1.5 text-sm font-medium text-foreground">Customer Type</p>
@@ -137,7 +169,9 @@ export default function FilterDialog({
                       {!draft.customer_type_ids?.length
                         ? "All"
                         : draft.customer_type_ids.length === 1
-                        ? customerTypes.find((x) => x.id === draft.customer_type_ids?.[0])?.label
+                        ? customerTypes.find(
+                            (x) => x.id === draft.customer_type_ids?.[0]
+                          )?.label
                         : `${draft.customer_type_ids.length} selected`}
                     </span>
                   </Button>
@@ -171,7 +205,10 @@ export default function FilterDialog({
                             onCheckedChange={() =>
                               setDraft((d) => ({
                                 ...d,
-                                customer_type_ids: toggleMultiValue(d.customer_type_ids, x.id),
+                                customer_type_ids: toggleMultiValue(
+                                  d.customer_type_ids,
+                                  x.id
+                                ),
                               }))
                             }
                           />
@@ -232,7 +269,10 @@ export default function FilterDialog({
                             onCheckedChange={() =>
                               setDraft((d) => ({
                                 ...d,
-                                point_type_ids: toggleMultiValue(d.point_type_ids, x.id),
+                                point_type_ids: toggleMultiValue(
+                                  d.point_type_ids,
+                                  x.id
+                                ),
                               }))
                             }
                           />

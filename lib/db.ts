@@ -8,6 +8,7 @@ export type LocalRecord = RecordRow & {
   updated_at_local: number; // Date.now()
   last_error?: string;
   deleted?: boolean; // soft delete locally
+  _failed_retries?: number; // retry count for failed records
 };
 
 class AppDB extends Dexie {

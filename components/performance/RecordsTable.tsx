@@ -9,7 +9,14 @@ import { Input } from "@/components/ui/input";
 import { db } from "@/lib/db";
 import { syncPending } from "@/lib/sync";
 import { formatDMY } from "@/lib/date";
-import { FileText, Search, RefreshCw, Loader2 } from "lucide-react";
+import {
+  FileText,
+  Search,
+  RefreshCw,
+  Loader2,
+  Sparkles,
+  Store,
+} from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -122,10 +129,10 @@ export default function RecordsTable({
       <>
         <div className="border rounded-xl overflow-hidden">
           <div className="flex items-center gap-3 p-2 border-b">
-            <div className="relative w-[260px]">
+            <div className="relative w-[320px]">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search BD, customer or note..."
+                placeholder="Search BD, customer, category or note..."
                 value={search}
                 onChange={(e) => onSearchChange(e.target.value)}
                 className="pl-8 h-9"
@@ -178,13 +185,13 @@ export default function RecordsTable({
                   <th className="p-2 text-left w-[80px]">Date</th>
                   <th className="p-2 text-left w-[100px]">BD Name</th>
                   <th className="p-2 text-left w-[100px]">BD Level</th>
-                  <th className="p-2 text-left w-[180px]">Customer Name</th>
+                  <th className="p-2 text-left w-[220px]">Customer Name</th>
                   <th className="p-2 text-left w-[160px]">Customer Type</th>
                   <th className="p-2 text-left w-[200px]">Point Type</th>
                   <th className="p-2 text-left w-[100px]">Package Amount</th>
                   <th className="p-2 text-left w-[100px]">Points</th>
                   <th className="p-2 text-left w-[100px]">Bonus</th>
-                  <th className="p-2 text-left w-[60px]">Note</th>
+                  <th className="p-2 text-center w-[60px]">Note</th>
                   {selectionMode && (
                     <th className="p-2 w-[50px] text-right"></th>
                   )}
@@ -194,6 +201,7 @@ export default function RecordsTable({
               <tbody>
                 {rows.map((r) => {
                   const isSelected = !!selected[r.id];
+                  const isRestaurant = r.category === "restaurant";
 
                   return (
                     <tr
@@ -233,7 +241,24 @@ export default function RecordsTable({
                         className="p-2 whitespace-nowrap overflow-hidden text-ellipsis"
                         title={r.customer_name}
                       >
-                        {r.customer_name}
+                        <div className="flex items-center gap-2 overflow-hidden">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="shrink-0 text-muted-foreground">
+                                {isRestaurant ? (
+                                  <Store className="h-4 w-4" />
+                                ) : (
+                                  <Sparkles className="h-4 w-4" />
+                                )}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {isRestaurant ? "Restaurant" : "Entertainment"}
+                            </TooltipContent>
+                          </Tooltip>
+
+                          <span className="truncate">{r.customer_name}</span>
+                        </div>
                       </td>
 
                       <td
@@ -268,7 +293,7 @@ export default function RecordsTable({
                           : "—"}
                       </td>
 
-                      <td className="p-2 text-left">
+                      <td className="p-2 text-center">
                         {r.note ? (
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -326,7 +351,10 @@ export default function RecordsTable({
             onOpenChange={setEditOpen}
             record={editing}
             onSaved={onChanged}
-            bdLevelOptions={Object.entries(levelMap).map(([id, label]) => ({ id, label }))}
+            bdLevelOptions={Object.entries(levelMap).map(([id, label]) => ({
+              id,
+              label,
+            }))}
           />
         )}
       </>

@@ -8,7 +8,7 @@ import { useCurrentUserRole } from "@/lib/useCurrentUserRole";
 import AppHeader from "@/components/AppHeader";
 import { Loader2 } from "lucide-react";
 import RecordsPage from "./performance/RecordsPage";
-import CustomerTrackingPage from "./tracking/CustomerTrackingPage";
+import CustomerTrackingPage from "./customer/CustomerTrackingPage";
 import ManagementPage from "@/components/manager/ManagementPage";
 import WomensDayBackground from "@/components/WomensDayBackground";
 import QAPage from "./qa/QAPage";

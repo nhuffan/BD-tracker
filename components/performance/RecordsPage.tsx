@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { db } from "@/lib/db";
 import { syncPending } from "@/lib/sync";
@@ -16,6 +16,7 @@ export type Filters = {
   bd_id?: string;
   customer_name?: string;
   note?: string;
+  category?: "entertainment" | "restaurant";
   customer_type_ids?: string[];
   point_type_ids?: string[];
 };
@@ -44,7 +45,6 @@ export default function RecordsPage({ isAdmin }: { isAdmin: boolean }) {
   const { items: customerTypes } = useMasters("customer_type");
   const { items: pointTypes } = useMasters("point_type");
 
-  // All masters (including inactive) for name lookup in existing records
   const bdMap = useMemo(
     () => Object.fromEntries(allBdList.map((x) => [x.id, x.label])),
     [allBdList]
@@ -65,7 +65,13 @@ export default function RecordsPage({ isAdmin }: { isAdmin: boolean }) {
     [pointTypes]
   );
 
-  async function refresh() {
+  const scrollRestoreRef = useRef<number | null>(null);
+
+  async function refresh(options?: { preserveScroll?: boolean }) {
+    if (options?.preserveScroll) {
+      scrollRestoreRef.current = window.scrollY;
+    }
+
     setLoading(true);
 
     const local = await db.records.toArray();
@@ -131,6 +137,17 @@ export default function RecordsPage({ isAdmin }: { isAdmin: boolean }) {
     };
   }, []);
 
+  useEffect(() => {
+    if (!loading && scrollRestoreRef.current !== null) {
+      const y = scrollRestoreRef.current;
+      scrollRestoreRef.current = null;
+
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: y, behavior: "auto" });
+      });
+    }
+  }, [loading]);
+
   const ALL = "__all__";
 
   const monthOptions = useMemo(() => {
@@ -163,6 +180,8 @@ export default function RecordsPage({ isAdmin }: { isAdmin: boolean }) {
         if (filters.from && r.event_date < filters.from) return false;
         if (filters.to && r.event_date > filters.to) return false;
         if (filters.bd_id && r.bd_id !== filters.bd_id) return false;
+        if (filters.category && r.category !== filters.category) return false;
+
         if (
           filters.customer_type_ids?.length &&
           !filters.customer_type_ids.includes(r.customer_type_id)
@@ -196,8 +215,12 @@ export default function RecordsPage({ isAdmin }: { isAdmin: boolean }) {
         if (search) {
           const keyword = search.toLowerCase();
 
+          const categoryLabel =
+            r.category === "restaurant" ? "restaurant" : "entertainment";
+
           const match =
             r.customer_name?.toLowerCase().includes(keyword) ||
+            categoryLabel.includes(keyword) ||
             (r.note ?? "").toLowerCase().includes(keyword) ||
             (bdMap[r.bd_id] ?? "").toLowerCase().includes(keyword) ||
             (customerTypeMap[r.customer_type_id] ?? "")
@@ -235,18 +258,18 @@ export default function RecordsPage({ isAdmin }: { isAdmin: boolean }) {
       />
 
       <RecordsTable
-        rows={filtered}
-        loading={loading || mastersLoading}
-        onChanged={refresh}
-        onRefresh={refresh}
-        bdMap={bdMap}
-        levelMap={levelMap}
-        customerTypeMap={customerTypeMap}
-        pointTypeMap={pointTypeMap}
-        isAdmin={isAdmin}
-        search={search}
-        onSearchChange={setSearch}
-      />
+  rows={filtered}
+  loading={loading || mastersLoading}
+  onChanged={() => refresh({ preserveScroll: true })}
+  onRefresh={() => refresh({ preserveScroll: true })}
+  bdMap={bdMap}
+  levelMap={levelMap}
+  customerTypeMap={customerTypeMap}
+  pointTypeMap={pointTypeMap}
+  isAdmin={isAdmin}
+  search={search}
+  onSearchChange={setSearch}
+/>
     </div>
   );
 }

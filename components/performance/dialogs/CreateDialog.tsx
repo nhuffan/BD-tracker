@@ -25,6 +25,7 @@ import { db } from "@/lib/db";
 import { syncPending } from "@/lib/sync";
 import { toast } from "sonner";
 import type { RecordRow } from "@/lib/types";
+import { Loader2 } from "lucide-react";
 
 function formatNumberInput(value: string) {
   if (!value) return "";
@@ -46,7 +47,7 @@ export default function CreateDialog({
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  onCreated: () => void;
+  onCreated: () => Promise<void> | void;
 }) {
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
@@ -63,6 +64,7 @@ export default function CreateDialog({
     customer_name: "",
     customer_type_id: "",
     point_type_id: "",
+    category: "entertainment",
     points: 0,
     money: null,
     package_amount: null,
@@ -72,6 +74,7 @@ export default function CreateDialog({
   const [pointsInput, setPointsInput] = useState("");
   const [moneyInput, setMoneyInput] = useState("");
   const [packageAmountInput, setPackageAmountInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const isSaveDisabled =
     !form.event_date ||
@@ -79,50 +82,66 @@ export default function CreateDialog({
     !form.bd_level_id ||
     !form.customer_name.trim() ||
     !form.customer_type_id ||
-    !form.point_type_id;
+    !form.point_type_id ||
+    !form.category;
 
   async function submit() {
-    if (isSaveDisabled) return;
+    if (isSaveDisabled || isLoading) return;
 
-    const id = crypto.randomUUID();
-    const row: RecordRow = { ...form, id };
+    setIsLoading(true);
 
-    await db.records.put({
-      ...row,
-      sync_status: "pending",
-      updated_at_local: Date.now(),
-    });
+    try {
+      const id = crypto.randomUUID();
+      const row: RecordRow = { ...form, id };
 
-    toast.success("Record created successfully.");
+      await db.records.put({
+        ...row,
+        sync_status: "pending",
+        updated_at_local: Date.now(),
+      });
 
-    if (navigator.onLine) {
-      await syncPending();
+      if (navigator.onLine) {
+        await syncPending();
+      }
+
+      setForm({
+        id: "",
+        event_date: today,
+        bd_id: "",
+        bd_level_id: "",
+        customer_name: "",
+        customer_type_id: "",
+        point_type_id: "",
+        category: "entertainment",
+        points: 0,
+        money: null,
+        package_amount: null,
+        note: null,
+      });
+      setPointsInput("");
+      setMoneyInput("");
+      setPackageAmountInput("");
+
+      onOpenChange(false);
+      await onCreated();
+
+      window.dispatchEvent(new Event("records-updated"));
+      toast.success("Record created successfully.");
+    } catch (e) {
+      toast.error("Failed to create record.");
+    } finally {
+      setIsLoading(false);
     }
-
-    onOpenChange(false);
-    onCreated();
-
-    window.dispatchEvent(new Event("records-updated"))
-    
-    setForm({
-      id: "",
-      event_date: today,
-      bd_id: "",
-      bd_level_id: "",
-      customer_name: "",
-      customer_type_id: "",
-      point_type_id: "",
-      points: 0,
-      money: null,
-      package_amount: null,
-      note: null,
-    });
-    setPointsInput("");
-    setMoneyInput("");
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (isLoading) return;
+        onOpenChange(nextOpen);
+      }}
+    >
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold tracking-tight">
@@ -194,6 +213,24 @@ export default function CreateDialog({
           </div>
 
           <div className="w-full">
+            <p className="mb-1.5 text-sm font-medium text-foreground">Category</p>
+            <Select
+              value={form.category}
+              onValueChange={(v: "entertainment" | "restaurant") =>
+                setForm((f) => ({ ...f, category: v }))
+              }
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="entertainment">Entertainment</SelectItem>
+                <SelectItem value="restaurant">Restaurant</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="w-full">
             <p className="mb-1.5 text-sm font-medium text-foreground">
               Customer Type
             </p>
@@ -235,7 +272,7 @@ export default function CreateDialog({
             </Select>
           </div>
 
-          <div>
+          <div className="w-full min-w-0">
             <p className="mb-1.5 text-sm font-medium text-foreground">
               Package Amount (optional)
             </p>
@@ -256,7 +293,7 @@ export default function CreateDialog({
             />
           </div>
 
-          <div>
+          <div className="w-full min-w-0">
             <p className="mb-1.5 text-sm font-medium text-foreground">Points</p>
             <Input
               inputMode="numeric"
@@ -275,7 +312,7 @@ export default function CreateDialog({
             />
           </div>
 
-          <div className="col-span-2">
+          <div className="w-full min-w-0">
             <p className="mb-1.5 text-sm font-medium text-foreground">Bonus (optional)</p>
             <Input
               inputMode="numeric"
@@ -307,11 +344,27 @@ export default function CreateDialog({
         </div>
 
         <DialogFooter>
-          <Button className="cursor-pointer" variant="secondary" onClick={() => onOpenChange(false)}>
+          <Button
+            className="cursor-pointer"
+            variant="secondary"
+            onClick={() => onOpenChange(false)}
+            disabled={isLoading}
+          >
             Cancel
           </Button>
-          <Button className="cursor-pointer" onClick={submit} disabled={isSaveDisabled}>
-            Save
+          <Button
+            className="cursor-pointer"
+            onClick={submit}
+            disabled={isSaveDisabled || isLoading}
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              "Save"
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

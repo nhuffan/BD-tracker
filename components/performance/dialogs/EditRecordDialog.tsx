@@ -25,6 +25,7 @@ import { syncPending } from "@/lib/sync";
 import { toast } from "sonner";
 import type { RecordVM } from "../RecordsPage";
 import type { LocalRecord } from "@/lib/db";
+import { Loader2 } from "lucide-react";
 
 function formatNumberInput(value: string) {
   if (!value) return "";
@@ -49,18 +50,23 @@ export default function EditRecordDialog({
   open: boolean;
   onOpenChange: (v: boolean) => void;
   record: RecordVM | null;
-  onSaved: () => void;
+  onSaved: () => Promise<void> | void;
   bdLevelOptions: Array<{ id: string; label: string }>;
 }) {
   const [bdLevelId, setBdLevelId] = useState("");
+  const [category, setCategory] = useState<"entertainment" | "restaurant">(
+    "restaurant"
+  );
   const [pointsInput, setPointsInput] = useState("");
   const [moneyInput, setMoneyInput] = useState("");
   const [note, setNote] = useState("");
   const [packageAmountInput, setPackageAmountInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   function resetFormFromRecord(target: RecordVM | null) {
     if (!target) {
       setBdLevelId("");
+      setCategory("entertainment");
       setPointsInput("");
       setMoneyInput("");
       setPackageAmountInput("");
@@ -69,6 +75,10 @@ export default function EditRecordDialog({
     }
 
     setBdLevelId(target.bd_level_id ?? "");
+    setCategory(
+      (target.category as "entertainment" | "restaurant" | undefined) ??
+        "entertainment"
+    );
 
     setPointsInput(
       target.points !== null && target.points !== undefined
@@ -102,6 +112,9 @@ export default function EditRecordDialog({
   const parsedPackageAmount = parseNumberInput(packageAmountInput);
 
   const originalBdLevelId = record?.bd_level_id ?? "";
+  const originalCategory =
+    (record?.category as "entertainment" | "restaurant" | undefined) ??
+    "entertainment";
   const originalPoints = record?.points ?? 0;
   const originalMoney = record?.money ?? null;
   const originalPackageAmount = record?.package_amount ?? null;
@@ -111,6 +124,7 @@ export default function EditRecordDialog({
     !!record &&
     (
       bdLevelId !== originalBdLevelId ||
+      category !== originalCategory ||
       parsedPoints !== originalPoints ||
       parsedMoney !== originalMoney ||
       parsedPackageAmount !== originalPackageAmount ||
@@ -118,59 +132,71 @@ export default function EditRecordDialog({
     );
 
   const isSaveDisabled =
-    !record || !bdLevelId || !hasChanges;
+    !record || !bdLevelId || !category || !hasChanges || isLoading;
 
   async function handleSave() {
     if (!record || isSaveDisabled) return;
 
-    const existing = await db.records.get(record.id);
+    setIsLoading(true);
 
-    const baseRecord: LocalRecord = existing
-      ? existing
-      : {
-        id: record.id,
-        event_date: record.event_date,
-        bd_id: record.bd_id,
-        bd_level_id: record.bd_level_id,
-        customer_name: record.customer_name,
-        customer_type_id: record.customer_type_id,
-        point_type_id: record.point_type_id,
-        points: record.points,
-        money: record.money,
-        package_amount: record.package_amount,
-        note: record.note,
-        created_at: record.created_at,
-        updated_at: record.updated_at,
+    try {
+      const existing = await db.records.get(record.id);
+
+      const baseRecord: LocalRecord = existing
+        ? existing
+        : {
+            id: record.id,
+            event_date: record.event_date,
+            bd_id: record.bd_id,
+            bd_level_id: record.bd_level_id,
+            customer_name: record.customer_name,
+            customer_type_id: record.customer_type_id,
+            point_type_id: record.point_type_id,
+            category: originalCategory,
+            points: record.points,
+            money: record.money,
+            package_amount: record.package_amount,
+            note: record.note,
+            created_at: record.created_at,
+            updated_at: record.updated_at,
+            sync_status: "pending",
+            updated_at_local: Date.now(),
+          };
+
+      const updatedRecord: LocalRecord = {
+        ...baseRecord,
+        bd_level_id: bdLevelId,
+        category,
+        points: parsedPoints,
+        money: parsedMoney,
+        package_amount: parsedPackageAmount,
+        note: note || null,
         sync_status: "pending",
         updated_at_local: Date.now(),
+        last_error: undefined,
       };
 
-    const updatedRecord: LocalRecord = {
-      ...baseRecord,
-      bd_level_id: bdLevelId,
-      points: parsedPoints,
-      money: parsedMoney,
-      package_amount: parsedPackageAmount,
-      note: note || null,
-      sync_status: "pending",
-      updated_at_local: Date.now(),
-      last_error: undefined,
-    };
+      await db.records.put(updatedRecord);
 
-    await db.records.put(updatedRecord);
+      if (navigator.onLine) {
+        await syncPending();
+      }
 
-    toast.success("Record updated successfully.");
+      onOpenChange(false);
+      await onSaved();
 
-    if (navigator.onLine) {
-      await syncPending();
+      window.dispatchEvent(new Event("records-updated"));
+      toast.success("Record updated successfully.");
+    } catch (e) {
+      toast.error("Failed to update record.");
+    } finally {
+      setIsLoading(false);
     }
-
-    onOpenChange(false);
-    onSaved();
-    window.dispatchEvent(new Event("records-updated"));
   }
 
   function handleOpenChange(nextOpen: boolean) {
+    if (isLoading) return;
+
     if (!nextOpen) {
       resetFormFromRecord(record);
     }
@@ -190,22 +216,44 @@ export default function EditRecordDialog({
         </DialogHeader>
 
         <div className="space-y-3">
-          <div>
-            <p className="mb-1.5 text-sm font-medium text-foreground">
-              BD Level
-            </p>
-            <Select value={bdLevelId} onValueChange={setBdLevelId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select BD level" />
-              </SelectTrigger>
-              <SelectContent>
-                {bdLevelOptions.map((item) => (
-                  <SelectItem key={item.id} value={item.id}>
-                    {item.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="w-full min-w-0">
+              <p className="mb-1.5 text-sm font-medium text-foreground">
+                BD Level
+              </p>
+              <Select value={bdLevelId} onValueChange={setBdLevelId}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select BD level" />
+                </SelectTrigger>
+                <SelectContent>
+                  {bdLevelOptions.map((item) => (
+                    <SelectItem key={item.id} value={item.id}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="w-full min-w-0">
+              <p className="mb-1.5 text-sm font-medium text-foreground">
+                Category
+              </p>
+              <Select
+                value={category}
+                onValueChange={(v: "entertainment" | "restaurant") =>
+                  setCategory(v)
+                }
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="entertainment">Entertainment</SelectItem>
+                  <SelectItem value="restaurant">Restaurant</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div>
@@ -222,32 +270,34 @@ export default function EditRecordDialog({
             />
           </div>
 
-          <div>
-            <p className="mb-1.5 text-sm font-medium text-foreground">
-              Points
-            </p>
-            <Input
-              inputMode="numeric"
-              value={pointsInput}
-              onChange={(e) =>
-                setPointsInput(formatNumberInput(e.target.value))
-              }
-              placeholder="Enter points"
-            />
-          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="w-full min-w-0">
+              <p className="mb-1.5 text-sm font-medium text-foreground">
+                Points
+              </p>
+              <Input
+                inputMode="numeric"
+                value={pointsInput}
+                onChange={(e) =>
+                  setPointsInput(formatNumberInput(e.target.value))
+                }
+                placeholder="Enter points"
+              />
+            </div>
 
-          <div>
-            <p className="mb-1.5 text-sm font-medium text-foreground">
-              Bonus
-            </p>
-            <Input
-              inputMode="numeric"
-              value={moneyInput}
-              onChange={(e) =>
-                setMoneyInput(formatNumberInput(e.target.value))
-              }
-              placeholder="Enter bonus"
-            />
+            <div className="w-full min-w-0">
+              <p className="mb-1.5 text-sm font-medium text-foreground">
+                Bonus
+              </p>
+              <Input
+                inputMode="numeric"
+                value={moneyInput}
+                onChange={(e) =>
+                  setMoneyInput(formatNumberInput(e.target.value))
+                }
+                placeholder="Enter bonus"
+              />
+            </div>
           </div>
 
           <div>
@@ -267,6 +317,7 @@ export default function EditRecordDialog({
             variant="secondary"
             className="cursor-pointer"
             onClick={() => handleOpenChange(false)}
+            disabled={isLoading}
           >
             Cancel
           </Button>
@@ -276,7 +327,14 @@ export default function EditRecordDialog({
             onClick={handleSave}
             disabled={isSaveDisabled}
           >
-            Save
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              "Save"
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>
