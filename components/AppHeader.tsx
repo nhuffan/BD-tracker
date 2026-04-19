@@ -64,9 +64,9 @@ export default function AppHeader({
     <header className="sticky top-0 z-20 border-b border-border bg-white/95 backdrop-blur">
       <div className="mx-auto grid h-16 w-full grid-cols-[1fr_auto_1fr] items-center px-6">
         <div className="flex items-center">
-          <div className="hidden md:flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
-              <Database className="h-5 w-5" />
+          <div className="hidden xl:flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+              <Database className="h-4 w-4" />
             </div>
 
             <div className="text-xl font-extrabold tracking-tight text-foreground">
@@ -75,42 +75,43 @@ export default function AppHeader({
           </div>
         </div>
 
-        <div className="flex justify-center">
-          <TabsList className="h-16 rounded-none border-0 bg-transparent p-0 shadow-none">
-            <TabsTrigger value="home" className={tabClass}>
-              <BarChart3 className="mr-2 h-5 w-5" />
-              Team Performance
-            </TabsTrigger>
+        <div className="flex justify-center min-w-0 flex-1">
+          <TabsList className="h-16 w-full min-w-0 rounded-none border-0 bg-transparent p-0 shadow-none">
+            <div className="flex min-w-0 overflow-x-auto scrollbar-hide">
+              <TabsTrigger value="home" className={tabClass}>
+                <BarChart3 className="mr-2 h-6 w-6" />
+                Team Performance
+              </TabsTrigger>
 
-            <TabsTrigger value="tracking" className={tabClass}>
-              <Users className="mr-2 h-5 w-5" />
-              Customers
-            </TabsTrigger>
+              <TabsTrigger value="tracking" className={tabClass}>
+                <Users className="mr-2 h-5 w-5" />
+                Customers
+              </TabsTrigger>
 
-            <TabsTrigger value="data" className={tabClass}>
-              <ShieldCheck className="mr-2 h-5 w-5" />
-              Management
-            </TabsTrigger>
+              <TabsTrigger value="data" className={tabClass}>
+                <ShieldCheck className="mr-2 h-5 w-5" />
+                Management
+              </TabsTrigger>
 
-            <TabsTrigger value="qa" className={tabClass}>
-              <MessageSquareText className="mr-2 h-5 w-5" />
-              Q&A
-            </TabsTrigger>
+              <TabsTrigger value="qa" className={tabClass}>
+                <MessageSquareText className="mr-2 h-5 w-5" />
+                Q&A
+              </TabsTrigger>
 
-            <TabsTrigger value="approvals" className={tabClass}>
-              <ClipboardCheck className="mr-2 h-5 w-5" />
-              Approvals
-            </TabsTrigger>
+              <TabsTrigger value="approvals" className={tabClass}>
+                <ClipboardCheck className="mr-2 h-5 w-5" />
+                Approvals
+              </TabsTrigger>
 
-            <TabsTrigger value="ads-tracking" className={tabClass}>
-              <Megaphone className="mr-2 h-5 w-5" />
-              Ads Tracking
-            </TabsTrigger>
-
+              <TabsTrigger value="ads-tracking" className={tabClass}>
+                <Megaphone className="mr-2 h-5 w-5" />
+                Ads Tracking
+              </TabsTrigger>
+            </div>
           </TabsList>
         </div>
 
-        <div className="flex justify-end">
+        <div className="flex justify-end pl-4">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="rounded-full outline-none ring-offset-background transition focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">

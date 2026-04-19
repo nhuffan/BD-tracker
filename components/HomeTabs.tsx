@@ -66,13 +66,13 @@ export default function HomeTabs() {
   }
 
   return (
-    <div className="relative min-h-screen bg-muted/30">
+    <div className="relative h-screen overflow-hidden bg-muted/30">
       <WomensDayBackground />
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <AppHeader email={email} onLogout={handleLogout} />
 
-        <main className="relative z-10 px-6 py-8">
+        <main className="relative z-10 h-[calc(100vh-64px)] overflow-y-auto px-6 py-8">
           <TabsContent
             value="home"
             forceMount

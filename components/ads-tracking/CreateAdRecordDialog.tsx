@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
     Dialog,
@@ -15,13 +14,13 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { DatePickerDMY } from "@/components/ui/date-picker-dmy";
+import { Check, Loader2, Search } from "lucide-react";
+import { cn } from "@/lib/utils";
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
+    Popover,
+    PopoverAnchor,
+    PopoverContent,
+} from "@/components/ui/popover";
 import {
     ADS_TRACKING_POINT_TYPE_CODES,
     calculateAdsEndDate,
@@ -29,13 +28,18 @@ import {
 import { formatDMY } from "@/lib/date";
 
 const fieldClass =
-    "!h-11 h-11 w-full min-w-0 rounded-lg border border-input bg-background px-3 text-sm shadow-none";
+    "!h-11 h-11 w-full min-w-0 rounded-lg border border-input bg-background px-3 text-sm shadow-none transition-colors hover:border-border focus-visible:ring-1 focus-visible:ring-ring";
+
+const customerInputClass =
+    "h-11 w-full min-w-0 rounded-lg border border-input bg-background pl-9 pr-10 text-sm shadow-none outline-none transition-colors placeholder:text-muted-foreground hover:border-border focus:border-ring focus-visible:ring-1 focus-visible:ring-ring";
 
 const infoFieldClass =
     "flex h-10 w-full min-w-0 items-center rounded-lg border border-input bg-muted/60 px-3 text-sm text-foreground";
 
 const labelClass =
     "mb-2 block text-[11px] font-bold uppercase tracking-wide text-muted-foreground";
+
+const helperTextClass = "mt-2 text-xs leading-5 text-muted-foreground";
 
 type EligibleRecord = {
     id: string;
@@ -64,14 +68,25 @@ export default function CreateAdRecordDialog({
     const [eligibleRecords, setEligibleRecords] = useState<EligibleRecord[]>([]);
     const [pointTypes, setPointTypes] = useState<PointTypeMaster[]>([]);
     const [selectedRecordId, setSelectedRecordId] = useState("");
+    const [customerQuery, setCustomerQuery] = useState("");
     const [startDate, setStartDate] = useState("");
     const [note, setNote] = useState("");
     const [saving, setSaving] = useState(false);
+    const [loadingCustomers, setLoadingCustomers] = useState(false);
+    const [customerOpen, setCustomerOpen] = useState(false);
+    const [customerDropdownWidth, setCustomerDropdownWidth] = useState<number | null>(
+        null
+    );
+
+    const customerInputRef = useRef<HTMLInputElement | null>(null);
+    const customerAnchorRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
         if (!open) return;
 
         async function loadData() {
+            setLoadingCustomers(true);
+
             const { data: masterRows, error: masterError } = await supabase
                 .from("masters")
                 .select("id, code, label")
@@ -81,6 +96,7 @@ export default function CreateAdRecordDialog({
             if (masterError || !masterRows?.length) {
                 setPointTypes([]);
                 setEligibleRecords([]);
+                setLoadingCustomers(false);
                 return;
             }
 
@@ -100,6 +116,7 @@ export default function CreateAdRecordDialog({
 
             if (recordError) {
                 setEligibleRecords([]);
+                setLoadingCustomers(false);
                 return;
             }
 
@@ -113,6 +130,7 @@ export default function CreateAdRecordDialog({
             );
 
             setEligibleRecords(deduped);
+            setLoadingCustomers(false);
         }
 
         loadData();
@@ -121,11 +139,55 @@ export default function CreateAdRecordDialog({
     useEffect(() => {
         if (!open) {
             setSelectedRecordId("");
+            setCustomerQuery("");
             setStartDate("");
             setNote("");
             setSaving(false);
+            setCustomerOpen(false);
+            setLoadingCustomers(false);
+            setCustomerDropdownWidth(null);
         }
     }, [open]);
+
+    useEffect(() => {
+        if (!open) return;
+
+        const updateWidth = () => {
+            if (customerAnchorRef.current) {
+                setCustomerDropdownWidth(customerAnchorRef.current.offsetWidth);
+            }
+        };
+
+        updateWidth();
+
+        const resizeObserver =
+            typeof ResizeObserver !== "undefined"
+                ? new ResizeObserver(() => updateWidth())
+                : null;
+
+        if (customerAnchorRef.current && resizeObserver) {
+            resizeObserver.observe(customerAnchorRef.current);
+        }
+
+        window.addEventListener("resize", updateWidth);
+
+        return () => {
+            window.removeEventListener("resize", updateWidth);
+            resizeObserver?.disconnect();
+        };
+    }, [open]);
+
+    useEffect(() => {
+        if (!customerOpen) return;
+
+        const id = requestAnimationFrame(() => {
+            customerInputRef.current?.focus();
+            const len = customerInputRef.current?.value.length ?? 0;
+            customerInputRef.current?.setSelectionRange(len, len);
+        });
+
+        return () => cancelAnimationFrame(id);
+    }, [customerOpen]);
 
     const selectedRecord = useMemo(() => {
         return eligibleRecords.find((item) => item.id === selectedRecordId) ?? null;
@@ -136,6 +198,15 @@ export default function CreateAdRecordDialog({
         return pointTypes.find((item) => item.id === selectedRecord.point_type_id) ?? null;
     }, [pointTypes, selectedRecord]);
 
+    const filteredRecords = useMemo(() => {
+        const q = customerQuery.trim().toLowerCase();
+        if (!q) return eligibleRecords;
+
+        return eligibleRecords.filter((item) =>
+            item.customer_name.toLowerCase().includes(q)
+        );
+    }, [eligibleRecords, customerQuery]);
+
     const endDate = useMemo(() => {
         if (!startDate || !selectedPointType?.code) return "";
         return calculateAdsEndDate(startDate, selectedPointType.code);
@@ -143,13 +214,44 @@ export default function CreateAdRecordDialog({
 
     const durationText = useMemo(() => {
         if (!startDate || !selectedPointType?.code) return "—";
-        // database bị ngược
         if (selectedPointType.code === "LEN_QC_COMBO_1_NAM") return "90 Days";
         if (selectedPointType.code === "LEN_QC_COMBO_3_THANG") return "1 Year";
         return "—";
     }, [startDate, selectedPointType]);
 
     const isDisabled = saving || !selectedRecord;
+
+    function handleCustomerOpenChange(nextOpen: boolean) {
+        setCustomerOpen(nextOpen);
+
+        if (!nextOpen) {
+            setCustomerQuery(selectedRecord?.customer_name ?? "");
+        }
+    }
+
+    function handleCustomerInputFocus() {
+        setCustomerOpen(true);
+    }
+
+    function handleCustomerInputChange(value: string) {
+        setCustomerQuery(value);
+
+        if (!customerOpen) {
+            setCustomerOpen(true);
+        }
+
+        if (selectedRecord && value !== selectedRecord.customer_name) {
+            setSelectedRecordId("");
+            setStartDate("");
+        }
+    }
+
+    function handleSelectCustomer(item: EligibleRecord) {
+        setSelectedRecordId(item.id);
+        setCustomerQuery(item.customer_name);
+        setStartDate("");
+        setCustomerOpen(false);
+    }
 
     async function handleSave() {
         if (isDisabled || !selectedRecord) return;
@@ -183,36 +285,87 @@ export default function CreateAdRecordDialog({
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent
-                className="max-w-2xl rounded-xl p-0"
+                className="max-w-2xl overflow-hidden rounded-2xl border border-border bg-background p-0 shadow-xl"
                 onOpenAutoFocus={(e) => e.preventDefault()}
             >
-                <DialogHeader className="border-b px-6 py-4">
+                <DialogHeader className="border-b border-border px-6 py-4">
                     <DialogTitle className="text-2xl font-bold tracking-tight text-foreground">
                         Create Ad Record
                     </DialogTitle>
-                    <DialogDescription className="mt-1 text-sm text-muted-foreground">
+                    <DialogDescription className="mt-1 text-sm leading-6 text-muted-foreground">
                         Initialize a new advertising tracking sequence.
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="space-y-5 px-6 py-2">
-                    <div>
+                <div className="space-y-5 px-6 py-5">
+                    <div className="space-y-0">
                         <label className={labelClass}>Select Customer</label>
-                        <Select value={selectedRecordId} onValueChange={(v) => { setSelectedRecordId(v); setStartDate(""); }}>
-                            <SelectTrigger className={fieldClass}>
-                                <SelectValue placeholder="Select customer" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {eligibleRecords.map((item) => (
-                                    <SelectItem key={item.id} value={item.id}>
-                                        {item.customer_name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                            
-                        </Select>
 
-                        <p className="mt-2 text-xs text-muted-foreground">
+                        <Popover open={customerOpen} onOpenChange={handleCustomerOpenChange}>
+                            <PopoverAnchor asChild>
+                                <div ref={customerAnchorRef} className="w-full">
+                                    <div className="relative w-full">
+                                        <Search className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+
+                                        <input
+                                            ref={customerInputRef}
+                                            value={customerQuery}
+                                            onChange={(e) => handleCustomerInputChange(e.target.value)}
+                                            onFocus={handleCustomerInputFocus}
+                                            onClick={handleCustomerInputFocus}
+                                            placeholder="Search customer..."
+                                            className={customerInputClass}
+                                        />
+
+                                        {loadingCustomers && (
+                                            <Loader2 className="pointer-events-none absolute right-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+                                        )}
+                                    </div>
+                                </div>
+                            </PopoverAnchor>
+
+                            <PopoverContent
+                                align="start"
+                                sideOffset={6}
+                                onOpenAutoFocus={(e) => e.preventDefault()}
+                                onCloseAutoFocus={(e) => e.preventDefault()}
+                                className="z-50 w-[var(--radix-popover-trigger-width)] min-w-[var(--radix-popover-trigger-width)] max-w-[var(--radix-popover-trigger-width)] overflow-hidden rounded-xl border border-border bg-popover p-0 shadow-lg"
+                            >
+                                <div
+                                    className="max-h-72 w-full overflow-y-auto overscroll-contain p-1"
+                                    onWheel={(e) => e.stopPropagation()}
+                                    onTouchMove={(e) => e.stopPropagation()}
+                                >
+                                    {filteredRecords.length === 0 ? (
+                                        <div className="py-2 text-center text-sm text-muted-foreground">
+                                            No customer found.
+                                        </div>
+                                    ) : (
+                                        filteredRecords.map((item) => (
+                                            <button
+                                                key={item.id}
+                                                type="button"
+                                                onMouseDown={(e) => e.preventDefault()}
+                                                onClick={() => handleSelectCustomer(item)}
+                                                className="flex h-10 w-full min-w-0 items-center gap-2 rounded-md px-3 text-left text-sm text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                                            >
+                                                <Check
+                                                    className={cn(
+                                                        "h-4 w-4 shrink-0",
+                                                        selectedRecordId === item.id
+                                                            ? "opacity-100 text-primary"
+                                                            : "opacity-0"
+                                                    )}
+                                                />
+                                                <span className="flex-1 truncate">{item.customer_name}</span>
+                                            </button>
+                                        ))
+                                    )}
+                                </div>
+                            </PopoverContent>
+                        </Popover>
+
+                        <p className={helperTextClass}>
                             Customer must exist in performance records with eligible package.
                         </p>
                     </div>
@@ -220,7 +373,9 @@ export default function CreateAdRecordDialog({
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <div>
                             <label className={labelClass}>Point Type</label>
-                            <div className={infoFieldClass}>{selectedPointType?.label ?? "—"}</div>
+                            <div className={infoFieldClass}>
+                                {selectedPointType?.label ?? "—"}
+                            </div>
                         </div>
 
                         <div>
@@ -229,7 +384,7 @@ export default function CreateAdRecordDialog({
                                 value={startDate || undefined}
                                 onChange={(iso) => setStartDate(iso ?? "")}
                                 placeholder="Select start date"
-                                className="!h-10 h-10"
+                                className={cn(fieldClass, "!h-10 h-10")}
                             />
                         </div>
                     </div>
@@ -241,11 +396,11 @@ export default function CreateAdRecordDialog({
                             onChange={(e) => setNote(e.target.value)}
                             placeholder="Add any notes for this ad record..."
                             rows={3}
-                            className="min-h-[80px] max-h-[80px] resize-none overflow-y-auto whitespace-pre-wrap break-all"
+                            className="min-h-[88px] max-h-[88px] resize-none overflow-y-auto whitespace-pre-wrap break-all rounded-lg border border-input bg-background px-3 py-2 text-sm shadow-none transition-colors hover:border-border focus-visible:ring-1 focus-visible:ring-ring"
                         />
                     </div>
 
-                    <div className="grid grid-cols-1 gap-4 rounded-xl border bg-muted/30 p-4 md:grid-cols-2">
+                    <div className="grid grid-cols-1 gap-4 rounded-xl border border-border bg-muted/30 p-4 md:grid-cols-2">
                         <div>
                             <div className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
                                 Calculated Term End
@@ -255,7 +410,7 @@ export default function CreateAdRecordDialog({
                             </div>
                         </div>
 
-                        <div className="text-right">
+                        <div className="text-left md:text-right">
                             <div className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
                                 Duration
                             </div>
@@ -266,7 +421,7 @@ export default function CreateAdRecordDialog({
                     </div>
                 </div>
 
-                <DialogFooter className="border-t px-6 py-4">
+                <DialogFooter className="border-t border-border px-6 py-4">
                     <Button
                         type="button"
                         variant="ghost"
@@ -283,7 +438,14 @@ export default function CreateAdRecordDialog({
                         onClick={handleSave}
                         disabled={isDisabled}
                     >
-                        Create Record
+                        {saving ? (
+                            <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Creating...
+                            </>
+                        ) : (
+                            "Create Record"
+                        )}
                     </Button>
                 </DialogFooter>
             </DialogContent>

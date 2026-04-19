@@ -126,16 +126,21 @@ export default function AdsTrackingPage({
     const expiredCount = rows.filter(
         (x) => getAdsTrackingStatus(x.start_date, x.end_date) === "expired"
     ).length;
+    const statStyles = {
+        total: "border-primary/30 bg-muted/40",
+        active: "border-emerald-200 bg-emerald-50",
+        expiring: "border-amber-200 bg-amber-50",
+        expired: "border-red-200 bg-red-50",
+    };
 
     return (
         <div className="space-y-4">
             <div className="flex items-start justify-between gap-4">
                 <div>
-                    {/* <h1 className="text-[30px] font-extrabold tracking-tight text-slate-950"></h1> */}
                     <h1 className="text-2xl font-bold tracking-tight">Ads Tracking</h1>
-          <p className="text-sm text-muted-foreground">
-            Real-time oversight of customer promotional campaigns.
-          </p>
+                    <p className="text-sm text-muted-foreground">
+                        Real-time oversight of customer promotional campaigns.
+                    </p>
                 </div>
 
                 {isAdmin && (
@@ -150,14 +155,14 @@ export default function AdsTrackingPage({
             </div>
 
             <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-4">
-                <div className="rounded-xl border bg-muted/40 p-5">
+                <div className={`rounded-xl border ${statStyles.total} p-5`}>
                     <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                         Total Campaigns
                     </div>
                     <div className="mt-2 text-3xl font-bold">{totalCampaigns}</div>
                 </div>
 
-                <div className="rounded-xl border bg-emerald-50 p-5">
+                <div className={`rounded-xl border ${statStyles.active} p-5`}>
                     <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
                         Active Now
                     </div>
@@ -166,7 +171,7 @@ export default function AdsTrackingPage({
                     </div>
                 </div>
 
-                <div className="rounded-xl border bg-amber-50 p-5">
+                <div className={`rounded-xl border ${statStyles.expiring} p-5`}>
                     <div className="text-xs font-semibold uppercase tracking-wide text-amber-700">
                         Expiring Soon
                     </div>
@@ -175,7 +180,7 @@ export default function AdsTrackingPage({
                     </div>
                 </div>
 
-                <div className="rounded-xl border bg-red-50 p-5">
+                <div className={`rounded-xl border ${statStyles.expired} p-5`}>
                     <div className="text-xs font-semibold uppercase tracking-wide text-red-700">
                         Expired
                     </div>
