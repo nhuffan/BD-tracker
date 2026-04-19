@@ -22,6 +22,7 @@ import { useMastersActive } from "@/lib/useMasters";
 import { supabase } from "@/lib/supabaseClient";
 import { toast } from "sonner";
 import type { TrackingRecordVM } from "../types";
+import { Loader2 } from "lucide-react";
 
 function formatNumberInput(value: string) {
     if (!value) return "";
@@ -45,7 +46,7 @@ export default function EditTrackingDialog({
     open: boolean;
     onOpenChange: (v: boolean) => void;
     record: TrackingRecordVM | null;
-    onSaved: () => void;
+    onSaved: () => Promise<void> | void;
 }) {
     const bdList = useMastersActive("bd");
 
@@ -61,9 +62,10 @@ export default function EditTrackingDialog({
 
     const [branchInput, setBranchInput] = useState("0");
     const [hotListInput, setHotListInput] = useState("0");
+    const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
-        if (!record) return;
+        if (!open || !record) return;
 
         setForm({
             customer_name: record.customer_name ?? "",
@@ -86,42 +88,80 @@ export default function EditTrackingDialog({
                 ? Number(record.in_hot_list).toLocaleString("en-US")
                 : "0"
         );
-    }, [record]);
+    }, [open, record]);
 
     if (!record) return null;
 
-    const isSaveDisabled = !form.customer_name.trim() || !form.bd_id;
+    const currentRecord = record;
+
+    const normalizedCustomerName = form.customer_name.trim();
+    const normalizedNote = (form.note ?? "").trim();
+    const normalizedInfo = (form.info ?? "").trim();
+
+    const originalCustomerName = (currentRecord.customer_name ?? "").trim();
+    const originalBranch = currentRecord.branch ?? 0;
+    const originalHotList = currentRecord.in_hot_list ?? 0;
+    const originalBdId = currentRecord.bd_id ?? "";
+    const originalComboVoucher = currentRecord.combo_voucher ?? false;
+    const originalNote = (currentRecord.note ?? "").trim();
+    const originalInfo = (currentRecord.info ?? "").trim();
+
+    const hasChanges =
+        normalizedCustomerName !== originalCustomerName ||
+        form.branch !== originalBranch ||
+        form.in_hot_list !== originalHotList ||
+        form.bd_id !== originalBdId ||
+        form.combo_voucher !== originalComboVoucher ||
+        normalizedNote !== originalNote ||
+        normalizedInfo !== originalInfo;
+
+    const isSaveDisabled =
+        !normalizedCustomerName || !form.bd_id || !hasChanges || isLoading;
 
     async function handleSave() {
-        if (!record || isSaveDisabled) return;
+        if (isSaveDisabled) return;
 
-        const { error } = await supabase
-            .from("customer_tracking")
-            .update({
-                customer_name: form.customer_name.trim(),
-                branch: form.branch,
-                in_hot_list: form.in_hot_list,
-                bd_id: form.bd_id,
-                combo_voucher: form.combo_voucher,
-                note: form.note,
-                info: form.info,
-                updated_at: new Date().toISOString(),
-            })
-            .eq("id", record.id);
+        setIsLoading(true);
 
-        if (error) {
-            toast.error("Failed to update record.");
-            return;
+        try {
+            const { error } = await supabase
+                .from("customer_tracking")
+                .update({
+                    customer_name: normalizedCustomerName,
+                    branch: form.branch,
+                    in_hot_list: form.in_hot_list,
+                    bd_id: form.bd_id,
+                    combo_voucher: form.combo_voucher,
+                    note: normalizedNote || null,
+                    info: normalizedInfo || null,
+                    updated_at: new Date().toISOString(),
+                })
+                .eq("id", currentRecord.id);
+
+            if (error) {
+                toast.error("Failed to update record.");
+                return;
+            }
+
+            onOpenChange(false);
+            await onSaved();
+            toast.success("Record updated successfully.");
+        } finally {
+            setIsLoading(false);
         }
+    }
 
-        toast.success("Record updated successfully.");
-        onOpenChange(false);
-        onSaved();
+    function handleDialogOpenChange(nextOpen: boolean) {
+        if (isLoading) return;
+        onOpenChange(nextOpen);
     }
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-lg" onOpenAutoFocus={(e) => e.preventDefault()}>
+        <Dialog open={open} onOpenChange={handleDialogOpenChange}>
+            <DialogContent
+                className="max-w-lg"
+                onOpenAutoFocus={(e) => e.preventDefault()}
+            >
                 <DialogHeader>
                     <DialogTitle className="text-xl font-semibold tracking-tight">
                         Edit Customer
@@ -268,16 +308,25 @@ export default function EditTrackingDialog({
                     <Button
                         variant="secondary"
                         className="cursor-pointer"
-                        onClick={() => onOpenChange(false)}
+                        onClick={() => handleDialogOpenChange(false)}
+                        disabled={isLoading}
                     >
                         Cancel
                     </Button>
+
                     <Button
                         className="cursor-pointer"
                         onClick={handleSave}
                         disabled={isSaveDisabled}
                     >
-                        Save
+                        {isLoading ? (
+                            <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Saving...
+                            </>
+                        ) : (
+                            "Save"
+                        )}
                     </Button>
                 </DialogFooter>
             </DialogContent>

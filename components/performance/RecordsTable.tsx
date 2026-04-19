@@ -24,6 +24,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import EditRecordDialog from "./dialogs/EditRecordDialog";
+import { toast } from "sonner";
 
 export default function RecordsTable({
   rows,
@@ -40,8 +41,8 @@ export default function RecordsTable({
 }: {
   rows: RecordVM[];
   loading: boolean;
-  onChanged: () => void;
-  onRefresh: () => void;
+  onChanged: () => Promise<void> | void;
+  onRefresh: () => Promise<void> | void;
   bdMap: Record<string, string>;
   levelMap: Record<string, string>;
   customerTypeMap: Record<string, string>;
@@ -54,11 +55,13 @@ export default function RecordsTable({
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [editing, setEditing] = useState<RecordVM | null>(null);
   const [editOpen, setEditOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const selectedIds = Object.keys(selected).filter((id) => selected[id]);
+  const isBusy = loading || isDeleting;
 
   function toggleRowSelection(id: string) {
-    if (!selectionMode) return;
+    if (!selectionMode || isBusy) return;
 
     setSelected((prev) => ({
       ...prev,
@@ -67,12 +70,14 @@ export default function RecordsTable({
   }
 
   function openEditDialog(record: RecordVM) {
-    if (!isAdmin || selectionMode) return;
+    if (!isAdmin || selectionMode || isBusy) return;
     setEditing(record);
     setEditOpen(true);
   }
 
   async function handleDelete() {
+    if (isBusy) return;
+
     if (!selectionMode) {
       setSelectionMode(true);
       return;
@@ -83,59 +88,72 @@ export default function RecordsTable({
       return;
     }
 
-    for (const id of selectedIds) {
-      const existing = await db.records.get(id);
+    setIsDeleting(true);
 
-      if (existing) {
-        await db.records.put({
-          ...existing,
-          deleted: true,
-          sync_status: "pending",
-          updated_at_local: Date.now(),
-        });
-      } else {
-        const found = rows.find((r) => r.id === id);
-        if (!found) continue;
+    try {
+      for (const id of selectedIds) {
+        const existing = await db.records.get(id);
 
-        await db.records.put({
-          ...(found as any),
-          deleted: true,
-          sync_status: "pending",
-          updated_at_local: Date.now(),
-        });
+        if (existing) {
+          await db.records.put({
+            ...existing,
+            deleted: true,
+            sync_status: "pending",
+            updated_at_local: Date.now(),
+          });
+        } else {
+          const found = rows.find((r) => r.id === id);
+          if (!found) continue;
+
+          await db.records.put({
+            ...(found as any),
+            deleted: true,
+            sync_status: "pending",
+            updated_at_local: Date.now(),
+          });
+        }
       }
+
+      if (navigator.onLine) {
+        await syncPending();
+      }
+
+      setSelected({});
+      setSelectionMode(false);
+
+      await onChanged();
+      window.dispatchEvent(new Event("records-updated"));
+      toast.success(
+        selectedIds.length === 1
+          ? "Record deleted successfully."
+          : `${selectedIds.length} records deleted successfully.`
+      );
+    } catch (e) {
+      toast.error("Failed to delete record.");
+    } finally {
+      setIsDeleting(false);
     }
-
-    if (navigator.onLine) {
-      await syncPending();
-    }
-
-    setSelected({});
-    setSelectionMode(false);
-    onChanged();
-    window.dispatchEvent(new Event("records-updated"));
-  }
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    );
   }
 
   return (
     <TooltipProvider>
       <>
-        <div className="border rounded-xl overflow-hidden">
-          <div className="flex items-center gap-3 p-2 border-b">
+        <div className="relative overflow-hidden rounded-xl border">
+          {isBusy && (
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/55 backdrop-blur-[1px]">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          )}
+
+          <div className="flex items-center gap-3 border-b p-2">
             <div className="relative w-[320px]">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search BD, customer, category or note..."
                 value={search}
                 onChange={(e) => onSearchChange(e.target.value)}
-                className="pl-8 h-9"
+                className="h-9 pl-8"
+                disabled={isBusy}
               />
             </div>
 
@@ -146,6 +164,7 @@ export default function RecordsTable({
                 className="cursor-pointer"
                 variant="ghost"
                 onClick={onRefresh}
+                disabled={isBusy}
               >
                 <RefreshCw className="h-4 w-4" />
                 Refresh
@@ -158,9 +177,11 @@ export default function RecordsTable({
                       className="cursor-pointer"
                       variant="ghost"
                       onClick={() => {
+                        if (isBusy) return;
                         setSelectionMode(false);
                         setSelected({});
                       }}
+                      disabled={isBusy}
                     >
                       Cancel
                     </Button>
@@ -170,8 +191,18 @@ export default function RecordsTable({
                     className="cursor-pointer"
                     variant={selectionMode ? "destructive" : "secondary"}
                     onClick={handleDelete}
+                    disabled={isBusy}
                   >
-                    {selectionMode ? `Delete (${selectedIds.length})` : "Delete"}
+                    {isDeleting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Deleting...
+                      </>
+                    ) : selectionMode ? (
+                      `Delete (${selectedIds.length})`
+                    ) : (
+                      "Delete"
+                    )}
                   </Button>
                 </>
               )}
@@ -179,21 +210,21 @@ export default function RecordsTable({
           </div>
 
           <div className="w-full overflow-x-auto">
-            <table className="w-full text-sm table-fixed">
-              <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur border-b shadow-sm">
+            <table className="w-full table-fixed text-sm">
+              <thead className="sticky top-0 z-10 border-b bg-muted/90 shadow-sm backdrop-blur">
                 <tr>
-                  <th className="p-2 text-left w-[80px]">Date</th>
-                  <th className="p-2 text-left w-[100px]">BD Name</th>
-                  <th className="p-2 text-left w-[100px]">BD Level</th>
-                  <th className="p-2 text-left w-[220px]">Customer Name</th>
-                  <th className="p-2 text-left w-[160px]">Customer Type</th>
-                  <th className="p-2 text-left w-[200px]">Point Type</th>
-                  <th className="p-2 text-left w-[100px]">Package Amount</th>
-                  <th className="p-2 text-left w-[100px]">Points</th>
-                  <th className="p-2 text-left w-[100px]">Bonus</th>
-                  <th className="p-2 text-center w-[60px]">Note</th>
+                  <th className="w-[80px] p-2 text-left">Date</th>
+                  <th className="w-[100px] p-2 text-left">BD Name</th>
+                  <th className="w-[100px] p-2 text-left">BD Level</th>
+                  <th className="w-[220px] p-2 text-left">Customer Name</th>
+                  <th className="w-[160px] p-2 text-left">Customer Type</th>
+                  <th className="w-[200px] p-2 text-left">Point Type</th>
+                  <th className="w-[100px] p-2 text-left">Package Amount</th>
+                  <th className="w-[100px] p-2 text-left">Points</th>
+                  <th className="w-[100px] p-2 text-left">Bonus</th>
+                  <th className="w-[60px] p-2 text-center">Note</th>
                   {selectionMode && (
-                    <th className="p-2 w-[50px] text-right"></th>
+                    <th className="w-[50px] p-2 text-right"></th>
                   )}
                 </tr>
               </thead>
@@ -224,21 +255,21 @@ export default function RecordsTable({
                       </td>
 
                       <td
-                        className="p-2 whitespace-nowrap overflow-hidden text-ellipsis"
+                        className="overflow-hidden whitespace-nowrap p-2 text-ellipsis"
                         title={bdMap[r.bd_id] ?? r.bd_id}
                       >
                         {bdMap[r.bd_id] ?? r.bd_id}
                       </td>
 
                       <td
-                        className="p-2 whitespace-nowrap overflow-hidden text-ellipsis"
+                        className="overflow-hidden whitespace-nowrap p-2 text-ellipsis"
                         title={levelMap[r.bd_level_id] ?? r.bd_level_id}
                       >
                         {levelMap[r.bd_level_id] ?? r.bd_level_id}
                       </td>
 
                       <td
-                        className="p-2 whitespace-nowrap overflow-hidden text-ellipsis"
+                        className="overflow-hidden whitespace-nowrap p-2 text-ellipsis"
                         title={r.customer_name}
                       >
                         <div className="flex items-center gap-2 overflow-hidden">
@@ -262,7 +293,7 @@ export default function RecordsTable({
                       </td>
 
                       <td
-                        className="p-2 whitespace-nowrap overflow-hidden text-ellipsis"
+                        className="overflow-hidden whitespace-nowrap p-2 text-ellipsis"
                         title={
                           customerTypeMap[r.customer_type_id] ??
                           r.customer_type_id
@@ -273,7 +304,7 @@ export default function RecordsTable({
                       </td>
 
                       <td
-                        className="p-2 whitespace-nowrap overflow-hidden text-ellipsis"
+                        className="overflow-hidden whitespace-nowrap p-2 text-ellipsis"
                         title={pointTypeMap[r.point_type_id] ?? r.point_type_id}
                       >
                         {pointTypeMap[r.point_type_id] ?? r.point_type_id}
@@ -328,6 +359,7 @@ export default function RecordsTable({
                                 [r.id]: Boolean(v),
                               }))
                             }
+                            disabled={isBusy}
                           />
                         </td>
                       )}
@@ -337,7 +369,7 @@ export default function RecordsTable({
               </tbody>
             </table>
 
-            {rows.length === 0 && (
+            {rows.length === 0 && !isBusy && (
               <div className="p-4 text-sm text-muted-foreground">
                 No records found
               </div>

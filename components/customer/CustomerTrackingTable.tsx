@@ -8,13 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Search, RefreshCw, Loader2 } from "lucide-react";
 import type { TrackingRecordVM } from "./types";
 import { formatDMY } from "@/lib/date";
-import {
-    TooltipProvider,
-} from "@/components/ui/tooltip";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import EditTrackingDialog from "./dialogs/EditTrackingDialog";
 import { supabase } from "@/lib/supabaseClient";
 import { toast } from "sonner";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 export default function CustomerTrackingTable({
     rows,
@@ -29,8 +26,8 @@ export default function CustomerTrackingTable({
 }: {
     rows: TrackingRecordVM[];
     loading: boolean;
-    onChanged: () => void;
-    onRefresh: () => void;
+    onChanged: () => Promise<void> | void;
+    onRefresh: () => Promise<void> | void;
     isAdmin: boolean;
     search: string;
     onSearchChange: (value: string) => void;
@@ -45,13 +42,13 @@ export default function CustomerTrackingTable({
     const [selected, setSelected] = useState<Record<string, boolean>>({});
     const [editing, setEditing] = useState<TrackingRecordVM | null>(null);
     const [editOpen, setEditOpen] = useState(false);
-    const [deleteOpen, setDeleteOpen] = useState(false);
     const [deleting, setDeleting] = useState(false);
 
     const selectedIds = Object.keys(selected).filter((id) => selected[id]);
+    const isBusy = loading || deleting;
 
     function toggleRowSelection(id: string) {
-        if (!selectionMode) return;
+        if (!selectionMode || isBusy) return;
 
         setSelected((prev) => ({
             ...prev,
@@ -60,27 +57,27 @@ export default function CustomerTrackingTable({
     }
 
     function openEditDialog(record: TrackingRecordVM) {
-        if (!isAdmin || selectionMode) return;
+        if (!isAdmin || selectionMode || isBusy) return;
         setEditing(record);
         setEditOpen(true);
     }
 
-    function openDeleteConfirm() {
-        if (!isAdmin) return;
+    async function handleDelete() {
+        if (isBusy) return;
+
         if (!selectionMode) {
             setSelectionMode(true);
             return;
         }
+
         if (selectedIds.length === 0) {
             setSelectionMode(false);
             setSelected({});
             return;
         }
-        setDeleteOpen(true);
-    }
 
-    async function handleDeleteConfirmed() {
         setDeleting(true);
+
         try {
             const { error } = await supabase
                 .from("customer_tracking")
@@ -92,36 +89,39 @@ export default function CustomerTrackingTable({
                 return;
             }
 
-            toast.success(`Successfully deleted ${selectedIds.length} record(s).`);
-            setDeleteOpen(false);
             setSelected({});
             setSelectionMode(false);
-            onChanged();
+
+            await onChanged();
+            toast.success(
+                selectedIds.length === 1
+                    ? "Record deleted successfully."
+                    : `${selectedIds.length} records deleted successfully.`
+            );
         } finally {
             setDeleting(false);
         }
     }
 
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center py-20">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-        );
-    }
-
     return (
         <TooltipProvider>
             <>
-                <div className="border rounded-xl overflow-hidden">
-                    <div className="flex items-center gap-3 p-2 border-b">
+                <div className="relative overflow-hidden rounded-xl border">
+                    {isBusy && (
+                        <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/55 backdrop-blur-[1px]">
+                            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                        </div>
+                    )}
+
+                    <div className="flex items-center gap-3 border-b p-2">
                         <div className="relative w-[280px]">
                             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                             <Input
                                 placeholder="Search customer, BD, note or info..."
                                 value={search}
                                 onChange={(e) => onSearchChange(e.target.value)}
-                                className="pl-8 h-9"
+                                className="h-9 pl-8"
+                                disabled={isBusy}
                             />
                         </div>
 
@@ -132,11 +132,11 @@ export default function CustomerTrackingTable({
                                 className="cursor-pointer"
                                 variant="ghost"
                                 onClick={onRefresh}
+                                disabled={isBusy}
                             >
                                 <RefreshCw className="h-4 w-4" />
                                 Refresh
                             </Button>
-
 
                             {isAdmin && (
                                 <div className="flex items-center gap-2">
@@ -145,9 +145,11 @@ export default function CustomerTrackingTable({
                                             className="cursor-pointer"
                                             variant="ghost"
                                             onClick={() => {
+                                                if (isBusy) return;
                                                 setSelectionMode(false);
                                                 setSelected({});
                                             }}
+                                            disabled={isBusy}
                                         >
                                             Cancel
                                         </Button>
@@ -156,9 +158,19 @@ export default function CustomerTrackingTable({
                                     <Button
                                         className="cursor-pointer"
                                         variant={selectionMode ? "destructive" : "secondary"}
-                                        onClick={openDeleteConfirm}
+                                        onClick={handleDelete}
+                                        disabled={isBusy}
                                     >
-                                        {selectionMode ? `Delete (${selectedIds.length})` : "Delete"}
+                                        {deleting ? (
+                                            <>
+                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                Deleting...
+                                            </>
+                                        ) : selectionMode ? (
+                                            `Delete (${selectedIds.length})`
+                                        ) : (
+                                            "Delete"
+                                        )}
                                     </Button>
                                 </div>
                             )}
@@ -166,39 +178,39 @@ export default function CustomerTrackingTable({
                     </div>
 
                     <div className="w-full overflow-x-auto">
-                        <table className="w-full min-w-[1200px] text-sm table-fixed text-center">
-                            <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur border-b shadow-sm">
+                        <table className="w-full min-w-[1200px] table-fixed text-center text-sm">
+                            <thead className="sticky top-0 z-10 border-b bg-muted/90 shadow-sm backdrop-blur">
                                 <tr>
                                     <th className="w-[120px] p-2 pl-5 text-left">Date</th>
 
-                                    <th className="p-2 w-[240px] ">
+                                    <th className="w-[240px] p-2">
                                         Customers
                                         <span className="ml-2 inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
                                             {stats.totalCustomers.toLocaleString("en-US")}
                                         </span>
                                     </th>
 
-                                    <th className="p-2 w-[120px]">
+                                    <th className="w-[120px] p-2">
                                         Branches
                                         <span className="ml-2 inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
                                             {stats.totalBranches.toLocaleString("en-US")}
                                         </span>
                                     </th>
 
-                                    <th className="p-2 w-[120px]">
+                                    <th className="w-[120px] p-2">
                                         In hot list
                                         <span className="ml-2 inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
                                             {stats.totalHotList.toLocaleString("en-US")}
                                         </span>
                                     </th>
 
-                                    <th className="p-2 w-[120px]">BD Name</th>
-                                    <th className="p-2 w-[140px]">Combo/Voucher</th>
-                                    <th className="p-2 w-[140px]">Note</th>
-                                    <th className="p-2 w-[140px]">Information</th>
+                                    <th className="w-[120px] p-2">BD Name</th>
+                                    <th className="w-[140px] p-2">Combo/Voucher</th>
+                                    <th className="w-[140px] p-2">Note</th>
+                                    <th className="w-[140px] p-2">Information</th>
 
                                     {selectionMode && (
-                                        <th className="p-2 w-[60px] text-right"></th>
+                                        <th className="w-[60px] p-2 text-right"></th>
                                     )}
                                 </tr>
                             </thead>
@@ -228,9 +240,9 @@ export default function CustomerTrackingTable({
                                             </td>
 
                                             <td
-                                                className={`p-2 whitespace-nowrap overflow-hidden text-ellipsis ${(r.in_hot_list ?? 0) === 0
-                                                    ? "text-muted-foreground opacity-60"
-                                                    : ""
+                                                className={`overflow-hidden whitespace-nowrap p-2 text-ellipsis ${(r.in_hot_list ?? 0) === 0
+                                                        ? "text-muted-foreground opacity-60"
+                                                        : ""
                                                     }`}
                                                 title={r.customer_name}
                                             >
@@ -250,7 +262,7 @@ export default function CustomerTrackingTable({
                                             </td>
 
                                             <td
-                                                className="p-2 whitespace-nowrap overflow-hidden text-ellipsis"
+                                                className="overflow-hidden whitespace-nowrap p-2 text-ellipsis"
                                                 title={bdMap[r.bd_id ?? ""] ?? ""}
                                             >
                                                 {bdMap[r.bd_id ?? ""] ?? "—"}
@@ -267,14 +279,14 @@ export default function CustomerTrackingTable({
                                             </td>
 
                                             <td
-                                                className="p-2 whitespace-nowrap overflow-hidden text-ellipsis"
+                                                className="overflow-hidden whitespace-nowrap p-2 text-ellipsis"
                                                 title={r.note ?? ""}
                                             >
                                                 {r.note ?? "—"}
                                             </td>
 
                                             <td
-                                                className="p-2 whitespace-nowrap overflow-hidden text-ellipsis"
+                                                className="overflow-hidden whitespace-nowrap p-2 text-ellipsis"
                                                 title={r.info ?? ""}
                                             >
                                                 {r.info ?? "—"}
@@ -293,6 +305,7 @@ export default function CustomerTrackingTable({
                                                                 [r.id]: Boolean(v),
                                                             }))
                                                         }
+                                                        disabled={isBusy}
                                                     />
                                                 </td>
                                             )}
@@ -302,7 +315,7 @@ export default function CustomerTrackingTable({
                             </tbody>
                         </table>
 
-                        {rows.length === 0 && (
+                        {rows.length === 0 && !isBusy && (
                             <div className="p-4 text-sm text-muted-foreground">
                                 No records found
                             </div>
@@ -311,23 +324,12 @@ export default function CustomerTrackingTable({
                 </div>
 
                 {isAdmin && (
-                    <>
                     <EditTrackingDialog
                         open={editOpen}
                         onOpenChange={setEditOpen}
                         record={editing}
                         onSaved={onChanged}
                     />
-
-                    <ConfirmDialog
-                        open={deleteOpen}
-                        onOpenChange={setDeleteOpen}
-                        title="Confirm Delete"
-                        description={`Are you sure you want to delete ${selectedIds.length} selected record(s)? This action cannot be undone.`}
-                        onConfirm={handleDeleteConfirmed}
-                        loading={deleting}
-                    />
-                    </>
                 )}
             </>
         </TooltipProvider>

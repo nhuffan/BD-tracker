@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import CustomerTrackingToolbar from "./CustomerTrackingToolbar";
 import CustomerTrackingTable from "./CustomerTrackingTable";
@@ -28,20 +28,28 @@ export default function CustomerTrackingPage({
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
 
+  const scrollRestoreRef = useRef<number | null>(null);
+  const skipRealtimeRefreshUntilRef = useRef<number>(0);
+
   const { items: allBdList, loading: mastersLoading } = useMasters("bd");
 
-  // All masters (including inactive) for name lookup in existing records
   const bdMap = useMemo(
     () => Object.fromEntries(allBdList.map((x) => [x.id, x.label])),
     [allBdList]
   );
 
-  async function refresh() {
+  function markSkipRealtimeRefresh(ms = 1200) {
+    skipRealtimeRefreshUntilRef.current = Date.now() + ms;
+  }
+
+  async function refresh(options?: { preserveScroll?: boolean }) {
+    if (options?.preserveScroll) {
+      scrollRestoreRef.current = window.scrollY;
+    }
+
     setLoading(true);
 
-    const { data, error } = await supabase
-      .from("customer_tracking")
-      .select("*");
+    const { data, error } = await supabase.from("customer_tracking").select("*");
 
     if (error) {
       console.error("Failed to fetch customer tracking:", error);
@@ -75,7 +83,8 @@ export default function CustomerTrackingPage({
           table: "customer_tracking",
         },
         () => {
-          refresh();
+          if (Date.now() < skipRealtimeRefreshUntilRef.current) return;
+          refresh({ preserveScroll: true });
         }
       )
       .subscribe((status) => {
@@ -86,6 +95,17 @@ export default function CustomerTrackingPage({
       supabase.removeChannel(channel);
     };
   }, []);
+
+  useEffect(() => {
+    if (!loading && scrollRestoreRef.current !== null) {
+      const y = scrollRestoreRef.current;
+      scrollRestoreRef.current = null;
+
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: y, behavior: "auto" });
+      });
+    }
+  }, [loading]);
 
   const monthOptions = useMemo(() => {
     const selectedMonth = filters.month;
@@ -184,7 +204,7 @@ export default function CustomerTrackingPage({
         filters={filters}
         onChangeFilters={setFilters}
         rowsForExport={filtered}
-        onRefresh={refresh}
+        onRefresh={() => refresh({ preserveScroll: true })}
         isAdmin={isAdmin}
         bdMap={bdMap}
         monthOptions={monthOptions}
@@ -193,8 +213,11 @@ export default function CustomerTrackingPage({
       <CustomerTrackingTable
         rows={filtered}
         loading={loading || mastersLoading}
-        onChanged={refresh}
-        onRefresh={refresh}
+        onChanged={async () => {
+          markSkipRealtimeRefresh();
+          await refresh({ preserveScroll: true });
+        }}
+        onRefresh={() => refresh({ preserveScroll: true })}
         isAdmin={isAdmin}
         search={search}
         onSearchChange={setSearch}
