@@ -297,7 +297,7 @@ export default function CreateAdRecordDialog({
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="space-y-5 px-6 py-5">
+                <div className="space-y-5 px-6">
                     <div className="space-y-0">
                         <label className={labelClass}>Select Customer</label>
 
@@ -389,17 +389,6 @@ export default function CreateAdRecordDialog({
                         </div>
                     </div>
 
-                    <div>
-                        <label className={labelClass}>Note (optional)</label>
-                        <Textarea
-                            value={note}
-                            onChange={(e) => setNote(e.target.value)}
-                            placeholder="Add any notes for this ad record..."
-                            rows={3}
-                            className="min-h-[88px] max-h-[88px] resize-none overflow-y-auto whitespace-pre-wrap break-all rounded-lg border border-input bg-background px-3 py-2 text-sm shadow-none transition-colors hover:border-border focus-visible:ring-1 focus-visible:ring-ring"
-                        />
-                    </div>
-
                     <div className="grid grid-cols-1 gap-4 rounded-xl border border-border bg-muted/30 p-4 md:grid-cols-2">
                         <div>
                             <div className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
@@ -418,6 +407,17 @@ export default function CreateAdRecordDialog({
                                 {durationText}
                             </div>
                         </div>
+                    </div>
+
+                    <div>
+                        <label className={labelClass}>Note (optional)</label>
+                        <Textarea
+                            value={note}
+                            onChange={(e) => setNote(e.target.value)}
+                            placeholder="Add any notes for this ad record..."
+                            rows={3}
+                            className="min-h-[88px] max-h-[88px] resize-none overflow-y-auto whitespace-pre-wrap break-all rounded-lg border border-input bg-background px-3 py-2 text-sm shadow-none transition-colors hover:border-border focus-visible:ring-1 focus-visible:ring-ring"
+                        />
                     </div>
                 </div>
 

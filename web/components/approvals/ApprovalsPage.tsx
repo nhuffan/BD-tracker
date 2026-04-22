@@ -641,7 +641,7 @@ export default function ApprovalsPage({
                 <thead className="sticky top-0 z-10 border-b bg-muted/90 shadow-sm backdrop-blur">
                   <tr>
                     <th className="w-[120px] p-2 text-left text-sm font-semibold text-foreground">
-                      Created At
+                      Updated At
                     </th>
                     <th className="w-[100px] p-2 text-left text-sm font-semibold text-foreground">
                       BD Name

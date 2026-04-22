@@ -9,6 +9,7 @@ import { useMasters } from "@/lib/useMasters";
 import CreateAdRecordDialog from "./CreateAdRecordDialog";
 import EditAdRecordDialog from "./EditAdRecordDialog";
 import AdsTrackingTable from "./AdsTrackingTable";
+import AdsTrackingDetailDialog from "./AdsTrackingDetailDialog";
 
 export type AdTrackingRow = {
     id: string;
@@ -20,7 +21,54 @@ export type AdTrackingRow = {
     note: string | null;
     created_at: string;
     updated_at: string;
+
+    event_date?: string | null;
+    bd_id?: string | null;
+    bd_level_id?: string | null;
+    customer_type_id?: string | null;
+    category?: string | null;
+    package_amount?: number | null;
+    points?: number | null;
+    money?: number | null;
+    performance_note?: string | null;
 };
+
+type SourceRecordLite = {
+    id: string;
+    customer_name: string;
+    point_type_id: string;
+    event_date: string | null;
+    bd_id: string | null;
+    bd_level_id: string | null;
+    customer_type_id: string | null;
+    category: string | null;
+    package_amount: number | null;
+    points: number | null;
+    money: number | null;
+    note: string | null;
+};
+
+function mergePerformanceIntoAdRow(
+    row: AdTrackingRow,
+    source?: Partial<SourceRecordLite> | null
+): AdTrackingRow {
+    if (!source) return row;
+
+    return {
+        ...row,
+        customer_name: source.customer_name ?? row.customer_name,
+        point_type_id: source.point_type_id ?? row.point_type_id,
+        event_date: source.event_date ?? null,
+        bd_id: source.bd_id ?? null,
+        bd_level_id: source.bd_level_id ?? null,
+        customer_type_id: source.customer_type_id ?? null,
+        category: source.category ?? null,
+        package_amount: source.package_amount ?? null,
+        points: source.points ?? null,
+        money: source.money ?? null,
+        performance_note: source.note ?? null,
+    };
+}
 
 export default function AdsTrackingPage({
     isAdmin,
@@ -33,18 +81,41 @@ export default function AdsTrackingPage({
     const [loading, setLoading] = useState(true);
     const [openCreate, setOpenCreate] = useState(false);
     const [openEdit, setOpenEdit] = useState(false);
+    const [openView, setOpenView] = useState(false);
+
     const [selectedRow, setSelectedRow] = useState<
         (AdTrackingRow & { point_type_label: string }) | null
     >(null);
+    const [viewRow, setViewRow] = useState<AdTrackingRow | null>(null);
 
-    const { items: allMasters } = useMasters("point_type");
+    const { items: allPointTypes } = useMasters("point_type");
+    const { items: allBds } = useMasters("bd");
+    const { items: allBdLevels } = useMasters("bd_level");
+    const { items: allCustomerTypes } = useMasters("customer_type");
+
     const pointTypeMap = useMemo(() => {
         const map: Record<string, string> = {};
-        for (const item of allMasters) {
-            map[item.id] = item.label;
-        }
+        for (const item of allPointTypes) map[item.id] = item.label;
         return map;
-    }, [allMasters]);
+    }, [allPointTypes]);
+
+    const bdMap = useMemo(() => {
+        const map: Record<string, string> = {};
+        for (const item of allBds) map[item.id] = item.label;
+        return map;
+    }, [allBds]);
+
+    const bdLevelMap = useMemo(() => {
+        const map: Record<string, string> = {};
+        for (const item of allBdLevels) map[item.id] = item.label;
+        return map;
+    }, [allBdLevels]);
+
+    const customerTypeMap = useMemo(() => {
+        const map: Record<string, string> = {};
+        for (const item of allCustomerTypes) map[item.id] = item.label;
+        return map;
+    }, [allCustomerTypes]);
 
     async function refresh() {
         setLoading(true);
@@ -54,30 +125,49 @@ export default function AdsTrackingPage({
             .select("*")
             .order("created_at", { ascending: false });
 
-        if (!error) {
-            setRows((data ?? []) as AdTrackingRow[]);
+        if (error) {
+            setLoading(false);
+            return;
         }
 
+        const baseRows = (data ?? []) as AdTrackingRow[];
+        const sourceRecordIds = Array.from(
+            new Set(baseRows.map((row) => row.source_record_id).filter(Boolean))
+        ) as string[];
+
+        let sourceRecordMap: Record<string, SourceRecordLite> = {};
+
+        if (sourceRecordIds.length > 0) {
+            const { data: sourceRecords, error: sourceError } = await supabase
+                .from("records")
+                .select(
+                    "id, customer_name, point_type_id, event_date, bd_id, bd_level_id, customer_type_id, category, package_amount, points, money, note"
+                )
+                .in("id", sourceRecordIds);
+
+            if (!sourceError) {
+                sourceRecordMap = Object.fromEntries(
+                    ((sourceRecords ?? []) as SourceRecordLite[]).map((item) => [
+                        item.id,
+                        item,
+                    ])
+                );
+            }
+        }
+
+        const mergedRows: AdTrackingRow[] = baseRows.map((row) =>
+            mergePerformanceIntoAdRow(
+                row,
+                row.source_record_id ? sourceRecordMap[row.source_record_id] : null
+            )
+        );
+
+        setRows(mergedRows);
         setLoading(false);
     }
 
     useEffect(() => {
         refresh();
-
-        const channel = supabase
-            .channel("ad-tracking-realtime")
-            .on(
-                "postgres_changes",
-                { event: "*", schema: "public", table: "ad_tracking_records" },
-                () => {
-                    refresh();
-                }
-            )
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
     }, []);
 
     function handleOpenEdit(row: AdTrackingRow) {
@@ -90,17 +180,23 @@ export default function AdsTrackingPage({
 
     function handleCloseEdit(nextOpen: boolean) {
         setOpenEdit(nextOpen);
+        if (!nextOpen) setSelectedRow(null);
+    }
 
-        if (!nextOpen) {
-            setSelectedRow(null);
-        }
+    function handleOpenView(row: AdTrackingRow) {
+        setViewRow(row);
+        setOpenView(true);
+    }
+
+    function handleCloseView(nextOpen: boolean) {
+        setOpenView(nextOpen);
+        if (!nextOpen) setViewRow(null);
     }
 
     async function handleDelete(row: AdTrackingRow) {
         const confirmed = window.confirm(
             `Are you sure you want to delete ad record for "${row.customer_name}"?`
         );
-
         if (!confirmed) return;
 
         const { error } = await supabase
@@ -112,25 +208,238 @@ export default function AdsTrackingPage({
             console.error("delete ad record error:", error);
             return;
         }
-
-        await refresh();
     }
 
+    useEffect(() => {
+        const adChannel = supabase
+            .channel("ad-tracking-records-changes")
+            .on(
+                "postgres_changes",
+                {
+                    event: "INSERT",
+                    schema: "public",
+                    table: "ad_tracking_records",
+                },
+
+                async (payload) => {
+                    const next = payload.new as AdTrackingRow;
+
+                    let merged = next;
+
+                    if (next.source_record_id) {
+                        const { data: source } = await supabase
+                            .from("records")
+                            .select(
+                                "id, customer_name, point_type_id, event_date, bd_id, bd_level_id, customer_type_id, category, package_amount, points, money, note"
+                            )
+                            .eq("id", next.source_record_id)
+                            .maybeSingle();
+
+                        merged = mergePerformanceIntoAdRow(
+                            next,
+                            (source as SourceRecordLite | null) ?? null
+                        );
+                    }
+
+                    setRows((prev) => [merged, ...prev.filter((x) => x.id !== merged.id)]);
+                }
+            )
+            .on(
+                "postgres_changes",
+                {
+                    event: "UPDATE",
+                    schema: "public",
+                    table: "ad_tracking_records",
+                },
+                async (payload) => {
+                    const next = payload.new as AdTrackingRow;
+
+                    let merged = next;
+
+                    if (next.source_record_id) {
+                        const { data: source } = await supabase
+                            .from("records")
+                            .select(
+                                "id, customer_name, point_type_id, event_date, bd_id, bd_level_id, customer_type_id, category, package_amount, points, money, note"
+                            )
+                            .eq("id", next.source_record_id)
+                            .maybeSingle();
+
+                        merged = mergePerformanceIntoAdRow(
+                            next,
+                            (source as SourceRecordLite | null) ?? null
+                        );
+                    }
+
+                    setRows((prev) =>
+                        prev.map((item) => (item.id === merged.id ? merged : item))
+                    );
+
+                    setSelectedRow((prev) => {
+                        if (!prev || prev.id !== merged.id) return prev;
+                        return {
+                            ...prev,
+                            ...merged,
+                            point_type_label:
+                                pointTypeMap[merged.point_type_id] ?? merged.point_type_id,
+                        };
+                    });
+
+                    setViewRow((prev) => {
+                        if (!prev || prev.id !== merged.id) return prev;
+                        return { ...prev, ...merged };
+                    });
+                }
+            )
+            .on(
+                "postgres_changes",
+                {
+                    event: "DELETE",
+                    schema: "public",
+                    table: "ad_tracking_records",
+                },
+                (payload) => {
+                    const oldRow = payload.old as { id: string };
+
+                    setRows((prev) => prev.filter((item) => item.id !== oldRow.id));
+                    setSelectedRow((prev) => (prev?.id === oldRow.id ? null : prev));
+                    setViewRow((prev) => (prev?.id === oldRow.id ? null : prev));
+                }
+            )
+            .subscribe();
+
+        const performanceChannel = supabase
+            .channel("ads-tracking-source-records-changes")
+            .on(
+                "postgres_changes",
+                {
+                    event: "UPDATE",
+                    schema: "public",
+                    table: "records",
+                },
+                (payload) => {
+                    const next = payload.new as SourceRecordLite;
+
+                    setRows((prev) =>
+                        prev.map((item) =>
+                            item.source_record_id === next.id
+                                ? mergePerformanceIntoAdRow(item, next)
+                                : item
+                        )
+                    );
+
+                    setSelectedRow((prev) => {
+                        if (!prev || prev.source_record_id !== next.id) return prev;
+
+                        const merged = mergePerformanceIntoAdRow(prev, next);
+                        return {
+                            ...prev,
+                            ...merged,
+                            point_type_label:
+                                pointTypeMap[merged.point_type_id] ?? merged.point_type_id,
+                        };
+                    });
+
+                    setViewRow((prev) => {
+                        if (!prev || prev.source_record_id !== next.id) return prev;
+                        return mergePerformanceIntoAdRow(prev, next);
+                    });
+                }
+            )
+            .on(
+                "postgres_changes",
+                {
+                    event: "DELETE",
+                    schema: "public",
+                    table: "records",
+                },
+                (payload) => {
+                    const oldRow = payload.old as { id: string };
+
+                    setRows((prev) =>
+                        prev.map((item) =>
+                            item.source_record_id === oldRow.id
+                                ? {
+                                    ...item,
+                                    event_date: null,
+                                    bd_id: null,
+                                    bd_level_id: null,
+                                    customer_type_id: null,
+                                    category: null,
+                                    package_amount: null,
+                                    points: null,
+                                    money: null,
+                                    performance_note: null,
+                                }
+                                : item
+                        )
+                    );
+
+                    setSelectedRow((prev) => {
+                        if (!prev || prev.source_record_id !== oldRow.id) return prev;
+                        return {
+                            ...prev,
+                            event_date: null,
+                            bd_id: null,
+                            bd_level_id: null,
+                            customer_type_id: null,
+                            category: null,
+                            package_amount: null,
+                            points: null,
+                            money: null,
+                            performance_note: null,
+                        };
+                    });
+
+                    setViewRow((prev) => {
+                        if (!prev || prev.source_record_id !== oldRow.id) return prev;
+                        return {
+                            ...prev,
+                            event_date: null,
+                            bd_id: null,
+                            bd_level_id: null,
+                            customer_type_id: null,
+                            category: null,
+                            package_amount: null,
+                            points: null,
+                            money: null,
+                            performance_note: null,
+                        };
+                    });
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(adChannel);
+            supabase.removeChannel(performanceChannel);
+        };
+    }, [pointTypeMap]);
+
     const totalCampaigns = rows.length;
+
     const activeNow = rows.filter(
         (x) => x.end_date && getAdsTrackingStatus(x.start_date, x.end_date) === "active"
     ).length;
+
     const expiringSoon = rows.filter(
-        (x) => x.end_date && getAdsTrackingStatus(x.start_date, x.end_date) === "expiring_soon"
+        (x) =>
+            x.end_date &&
+            getAdsTrackingStatus(x.start_date, x.end_date) === "expiring_soon"
     ).length;
+
     const expiredCount = rows.filter(
         (x) => getAdsTrackingStatus(x.start_date, x.end_date) === "expired"
     ).length;
+
+    const baseStatStyle =
+        "transition-all duration-200 ease-out hover:-translate-y-1 hover:shadow-md cursor-pointer";
+
     const statStyles = {
-        total: "border-primary/30 bg-muted/40",
-        active: "border-emerald-200 bg-emerald-50",
-        expiring: "border-amber-200 bg-amber-50",
-        expired: "border-red-200 bg-red-50",
+        total: `${baseStatStyle} border-primary/10 bg-muted/40 hover:border-primary/30`,
+        active: `${baseStatStyle} border-emerald-200 bg-emerald-50 hover:border-emerald-400`,
+        expiring: `${baseStatStyle} border-amber-200 bg-amber-50 hover:border-amber-400`,
+        expired: `${baseStatStyle} border-red-200 bg-red-50 hover:border-red-400`,
     };
 
     return (
@@ -149,7 +458,7 @@ export default function AdsTrackingPage({
                         onClick={() => setOpenCreate(true)}
                     >
                         <Plus className="mr-2 h-4 w-4" />
-                        Create Ad Record
+                        Create Ad
                     </Button>
                 )}
             </div>
@@ -198,9 +507,13 @@ export default function AdsTrackingPage({
                 <AdsTrackingTable
                     rows={rows}
                     pointTypeMap={pointTypeMap}
+                    bdMap={bdMap}
+                    bdLevelMap={bdLevelMap}
+                    customerTypeMap={customerTypeMap}
                     isAdmin={isAdmin}
                     onEdit={handleOpenEdit}
                     onDelete={handleDelete}
+                    onView={handleOpenView}
                 />
             )}
 
@@ -216,6 +529,16 @@ export default function AdsTrackingPage({
                 onOpenChange={handleCloseEdit}
                 record={selectedRow}
                 onSaved={refresh}
+            />
+
+            <AdsTrackingDetailDialog
+                open={openView}
+                onOpenChange={handleCloseView}
+                record={viewRow}
+                pointTypeMap={pointTypeMap}
+                bdMap={bdMap}
+                bdLevelMap={bdLevelMap}
+                customerTypeMap={customerTypeMap}
             />
         </div>
     );
