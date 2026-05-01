@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, Pencil, Trash2, Sparkles, Store } from "lucide-react";
+import { FileText, Pencil, Trash2, Sparkles, Store, Loader2 } from "lucide-react";
 import { getAdsTrackingStatus } from "@/lib/adsTracking";
 import { formatDMY } from "@/lib/date";
 import {
@@ -14,9 +14,9 @@ import type { AdTrackingRow } from "./AdsTrackingPage";
 
 export default function AdsTrackingTable({
   rows,
+  loading,
   pointTypeMap,
   bdMap,
-  bdLevelMap,
   customerTypeMap,
   isAdmin,
   onEdit,
@@ -24,9 +24,9 @@ export default function AdsTrackingTable({
   onView,
 }: {
   rows: AdTrackingRow[];
+  loading: boolean;
   pointTypeMap: Record<string, string>;
   bdMap: Record<string, string>;
-  bdLevelMap: Record<string, string>;
   customerTypeMap: Record<string, string>;
   isAdmin: boolean;
   onEdit: (row: AdTrackingRow) => void;
@@ -68,7 +68,13 @@ export default function AdsTrackingTable({
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border">
+    <div className="relative overflow-hidden rounded-xl border">
+      {loading && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/55 backdrop-blur-[1px]">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      )}
+
       <div className="w-full overflow-x-auto">
         <table className="w-full table-fixed text-sm">
           <thead className="bg-muted/50">
@@ -194,8 +200,10 @@ export default function AdsTrackingTable({
                                 size="icon"
                                 variant="ghost"
                                 className="h-8 w-8 cursor-pointer"
+                                disabled={loading}
                                 onClick={(e) => {
                                   e.stopPropagation();
+                                  if (loading) return;
                                   onEdit(row);
                                 }}
                               >
@@ -213,8 +221,10 @@ export default function AdsTrackingTable({
                                 size="icon"
                                 variant="ghost"
                                 className="h-8 w-8 cursor-pointer"
+                                disabled={loading}
                                 onClick={(e) => {
                                   e.stopPropagation();
+                                  if (loading) return;
                                   onDelete(row);
                                 }}
                               >
@@ -233,7 +243,7 @@ export default function AdsTrackingTable({
           </tbody>
         </table>
 
-        {rows.length === 0 && (
+        {rows.length === 0 && !loading && (
           <div className="p-4 text-sm text-muted-foreground">
             No ad records found
           </div>

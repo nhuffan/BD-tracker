@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Loader2, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { getAdsTrackingStatus } from "@/lib/adsTracking";
 import { useMasters } from "@/lib/useMasters";
@@ -10,6 +10,8 @@ import CreateAdRecordDialog from "./CreateAdRecordDialog";
 import EditAdRecordDialog from "./EditAdRecordDialog";
 import AdsTrackingTable from "./AdsTrackingTable";
 import AdsTrackingDetailDialog from "./AdsTrackingDetailDialog";
+import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 export type AdTrackingRow = {
     id: string;
@@ -79,6 +81,7 @@ export default function AdsTrackingPage({
 }) {
     const [rows, setRows] = useState<AdTrackingRow[]>([]);
     const [loading, setLoading] = useState(true);
+    const [isMutating, setIsMutating] = useState(false);
     const [openCreate, setOpenCreate] = useState(false);
     const [openEdit, setOpenEdit] = useState(false);
     const [openView, setOpenView] = useState(false);
@@ -87,11 +90,12 @@ export default function AdsTrackingPage({
         (AdTrackingRow & { point_type_label: string }) | null
     >(null);
     const [viewRow, setViewRow] = useState<AdTrackingRow | null>(null);
+    const [deleteTarget, setDeleteTarget] = useState<AdTrackingRow | null>(null);
 
-    const { items: allPointTypes } = useMasters("point_type");
-    const { items: allBds } = useMasters("bd");
-    const { items: allBdLevels } = useMasters("bd_level");
-    const { items: allCustomerTypes } = useMasters("customer_type");
+    const { items: allPointTypes, loading: pointTypesLoading } = useMasters("point_type");
+    const { items: allBds, loading: bdsLoading } = useMasters("bd");
+    const { items: allBdLevels, loading: bdLevelsLoading } = useMasters("bd_level");
+    const { items: allCustomerTypes, loading: customerTypesLoading } = useMasters("customer_type");
 
     const pointTypeMap = useMemo(() => {
         const map: Record<string, string> = {};
@@ -116,6 +120,9 @@ export default function AdsTrackingPage({
         for (const item of allCustomerTypes) map[item.id] = item.label;
         return map;
     }, [allCustomerTypes]);
+
+    const mastersLoading =
+        pointTypesLoading || bdsLoading || bdLevelsLoading || customerTypesLoading;
 
     async function refresh() {
         setLoading(true);
@@ -194,19 +201,43 @@ export default function AdsTrackingPage({
     }
 
     async function handleDelete(row: AdTrackingRow) {
-        const confirmed = window.confirm(
-            `Are you sure you want to delete ad record for "${row.customer_name}"?`
-        );
-        if (!confirmed) return;
+        if (loading || isMutating) return;
 
-        const { error } = await supabase
-            .from("ad_tracking_records")
-            .delete()
-            .eq("id", row.id);
+        setDeleteTarget(row);
+    }
 
-        if (error) {
-            console.error("delete ad record error:", error);
-            return;
+    async function handleDeleteConfirmed() {
+        if (!deleteTarget || loading || isMutating) return;
+
+        setIsMutating(true);
+
+        try {
+            const { error } = await supabase
+                .from("ad_tracking_records")
+                .delete()
+                .eq("id", deleteTarget.id);
+
+            if (error) {
+                console.error("delete ad record error:", error);
+                toast.error(error.message || "Failed to delete ad record.");
+                return;
+            }
+
+            toast.success("Ad record deleted successfully.");
+            setDeleteTarget(null);
+            await refresh();
+        } finally {
+            setIsMutating(false);
+        }
+    }
+
+    async function handleSaved() {
+        setIsMutating(true);
+
+        try {
+            await refresh();
+        } finally {
+            setIsMutating(false);
         }
     }
 
@@ -499,28 +530,22 @@ export default function AdsTrackingPage({
                 </div>
             </div>
 
-            {loading ? (
-                <div className="flex items-center justify-center py-20">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-            ) : (
-                <AdsTrackingTable
-                    rows={rows}
-                    pointTypeMap={pointTypeMap}
-                    bdMap={bdMap}
-                    bdLevelMap={bdLevelMap}
-                    customerTypeMap={customerTypeMap}
-                    isAdmin={isAdmin}
-                    onEdit={handleOpenEdit}
-                    onDelete={handleDelete}
-                    onView={handleOpenView}
-                />
-            )}
+            <AdsTrackingTable
+                rows={rows}
+                loading={loading || mastersLoading || isMutating}
+                pointTypeMap={pointTypeMap}
+                bdMap={bdMap}
+                customerTypeMap={customerTypeMap}
+                isAdmin={isAdmin}
+                onEdit={handleOpenEdit}
+                onDelete={handleDelete}
+                onView={handleOpenView}
+            />
 
             <CreateAdRecordDialog
                 open={openCreate}
                 onOpenChange={setOpenCreate}
-                onSaved={refresh}
+                onSaved={handleSaved}
                 currentUserId={currentUserId}
             />
 
@@ -528,7 +553,7 @@ export default function AdsTrackingPage({
                 open={openEdit}
                 onOpenChange={handleCloseEdit}
                 record={selectedRow}
-                onSaved={refresh}
+                onSaved={handleSaved}
             />
 
             <AdsTrackingDetailDialog
@@ -539,6 +564,17 @@ export default function AdsTrackingPage({
                 bdMap={bdMap}
                 bdLevelMap={bdLevelMap}
                 customerTypeMap={customerTypeMap}
+            />
+
+            <ConfirmDialog
+                open={!!deleteTarget}
+                onOpenChange={(open) => {
+                    if (!open && !isMutating) setDeleteTarget(null);
+                }}
+                title="Confirm Delete"
+                description={`Are you sure you want to delete ad tracking record for "${deleteTarget?.customer_name}"? This action cannot be undone.`}
+                onConfirm={handleDeleteConfirmed}
+                loading={isMutating}
             />
         </div>
     );
