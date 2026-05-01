@@ -65,6 +65,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final activeTab = _tabs[_currentIndex];
+    final theme = Theme.of(context);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -72,11 +73,14 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Column(
             children: [
-              SafeArea(
-                bottom: false,
-                child: HomeHeader(
-                  title: activeTab.title,
-                  description: activeTab.description,
+              Container(
+                color: Colors.white,
+                child: SafeArea(
+                  bottom: false,
+                  child: HomeHeader(
+                    title: activeTab.title,
+                    description: activeTab.description,
+                  ),
                 ),
               ),
               const Divider(height: 1, color: Color(0xFFE5E7EB)),
@@ -122,8 +126,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       _isExpanded = !_isExpanded;
                     });
                   },
-                  backgroundColor: const Color(0xFF1565C0),
-                  foregroundColor: Colors.white,
+                  backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: theme.colorScheme.onPrimary,
                   elevation: 6,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(18),
@@ -210,7 +214,10 @@ class _PrimaryNavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final iconColor = selected ? const Color(0xFF2583EA) : const Color(0xFF111827);
+    final theme = Theme.of(context);
+    final iconColor = selected
+        ? theme.colorScheme.primary
+        : const Color(0xFF9CA3AF);
 
     return GestureDetector(
       onTap: onTap,
@@ -250,6 +257,8 @@ class _ExpandMenuItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -273,14 +282,14 @@ class _ExpandMenuItem extends StatelessWidget {
             Icon(
               icon,
               size: 20,
-              color: selected ? const Color(0xFF2563EB) : const Color(0xFF111827),
+              color: selected ? theme.colorScheme.primary : const Color(0xFF111827),
             ),
             const SizedBox(width: 10),
             Text(
               label,
               style: TextStyle(
                 fontWeight: FontWeight.w700,
-                color: selected ? const Color(0xFF2563EB) : const Color(0xFF111827),
+                color: selected ? theme.colorScheme.primary : const Color(0xFF111827),
               ),
             ),
           ],

@@ -12,6 +12,8 @@ class HomeHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Container(
       color: Colors.white,
       child: Padding(
@@ -21,19 +23,19 @@ class HomeHeader extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.hub_outlined,
-                  color: Color(0xFF2563EB),
+                  color: theme.colorScheme.primary,
                   size: 24,
                 ),
                 const SizedBox(width: 10),
                 const Expanded(
                   child: Text(
-                    'BD Tracker',
+                    'OPERATION HUB',
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w800,
-                      color: Color(0xFF2563EB),
+                      color: Color(0xFF171717),
                     ),
                   ),
                 ),

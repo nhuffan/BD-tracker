@@ -205,6 +205,8 @@ class _PerformanceTabState extends State<PerformanceTab> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -262,7 +264,7 @@ class _PerformanceTabState extends State<PerformanceTab> {
                     hintStyle: const TextStyle(fontSize: 14),
                     prefixIcon: const Icon(Icons.search_rounded, size: 20),
                     filled: true,
-                    fillColor: const Color(0xFFF3F4F6),
+                    fillColor: const Color(0xFFE5E7EB),
                     isDense: true,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
@@ -305,7 +307,8 @@ class _PerformanceTabState extends State<PerformanceTab> {
                       onPressed: () => _openRecordForm(),
                       style: FilledButton.styleFrom(
                         elevation: 0,
-                        backgroundColor: const Color(0xFF1565C0),
+                        backgroundColor: theme.colorScheme.primary,
+                        foregroundColor: theme.colorScheme.onPrimary,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
@@ -385,17 +388,14 @@ class _RecordCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Padding(
-                  padding: const EdgeInsets.only(top: 2),
-                  child: Icon(
-                    isRestaurant
-                        ? Icons.storefront_rounded
-                        : Icons.auto_awesome_rounded,
-                    size: 18,
-                    color: iconColor,
-                  ),
+                Icon(
+                  isRestaurant
+                      ? Icons.storefront_rounded
+                      : Icons.auto_awesome_rounded,
+                  size: 18,
+                  color: iconColor,
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -409,17 +409,29 @@ class _RecordCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                IconButton(
-                  onPressed: onEdit,
-                  visualDensity: VisualDensity.compact,
-                  tooltip: 'Edit',
-                  icon: const Icon(Icons.edit_outlined, size: 20),
+                SizedBox(
+                  width: 36,
+                  height: 36,
+                  child: IconButton(
+                    onPressed: onEdit,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    visualDensity: VisualDensity.compact,
+                    tooltip: 'Edit',
+                    icon: const Icon(Icons.edit_outlined, size: 18),
+                  ),
                 ),
-                IconButton(
-                  onPressed: onDelete,
-                  visualDensity: VisualDensity.compact,
-                  tooltip: 'Delete',
-                  icon: const Icon(Icons.delete_outline_rounded, size: 20),
+                SizedBox(
+                  width: 36,
+                  height: 36,
+                  child: IconButton(
+                    onPressed: onDelete,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    visualDensity: VisualDensity.compact,
+                    tooltip: 'Delete',
+                    icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                  ),
                 ),
               ],
             ),
@@ -565,6 +577,11 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
     _pointTypeId = record?.pointTypeId ??
         (widget.pointTypeItems.isNotEmpty ? widget.pointTypeItems.first.id : '');
     _category = record?.category ?? 'entertainment';
+
+    _bdId = _resolveInitialValue(_bdId, widget.bdItems);
+    _bdLevelId = _resolveInitialValue(_bdLevelId, widget.levelItems);
+    _customerTypeId = _resolveInitialValue(_customerTypeId, widget.customerTypeItems);
+    _pointTypeId = _resolveInitialValue(_pointTypeId, widget.pointTypeItems);
   }
 
   @override
@@ -626,24 +643,43 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final hasRequiredMasters = widget.bdItems.isNotEmpty &&
+        widget.levelItems.isNotEmpty &&
+        widget.customerTypeItems.isNotEmpty &&
+        widget.pointTypeItems.isNotEmpty;
+
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.initialRecord == null ? 'Create record' : 'Edit record',
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF171717),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                widget.initialRecord == null ? 'Create record' : 'Edit record',
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF171717),
+                ),
+              ),
+              const SizedBox(height: 16),
+              if (!hasRequiredMasters)
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 16),
+                  child: Text(
+                    'Master data is not ready yet. Please refresh and try again.',
+                    style: TextStyle(
+                      color: Color(0xFF737373),
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
-                const SizedBox(height: 16),
+              Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                 _LabeledField(
                   label: 'Date',
                   child: TextFormField(
@@ -672,13 +708,15 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                           child: Text(item.label),
                         ),
                     ],
-                    onChanged: (value) {
-                      if (value != null) {
-                        setState(() {
-                          _bdId = value;
-                        });
-                      }
-                    },
+                    onChanged: !hasRequiredMasters
+                        ? null
+                        : (value) {
+                            if (value != null) {
+                              setState(() {
+                                _bdId = value;
+                              });
+                            }
+                          },
                     validator: (value) => value == null || value.isEmpty ? 'Required' : null,
                   ),
                 ),
@@ -693,13 +731,15 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                           child: Text(item.label),
                         ),
                     ],
-                    onChanged: (value) {
-                      if (value != null) {
-                        setState(() {
-                          _bdLevelId = value;
-                        });
-                      }
-                    },
+                    onChanged: !hasRequiredMasters
+                        ? null
+                        : (value) {
+                            if (value != null) {
+                              setState(() {
+                                _bdLevelId = value;
+                              });
+                            }
+                          },
                     validator: (value) => value == null || value.isEmpty ? 'Required' : null,
                   ),
                 ),
@@ -714,13 +754,15 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                           child: Text(item.label),
                         ),
                     ],
-                    onChanged: (value) {
-                      if (value != null) {
-                        setState(() {
-                          _customerTypeId = value;
-                        });
-                      }
-                    },
+                    onChanged: !hasRequiredMasters
+                        ? null
+                        : (value) {
+                            if (value != null) {
+                              setState(() {
+                                _customerTypeId = value;
+                              });
+                            }
+                          },
                     validator: (value) => value == null || value.isEmpty ? 'Required' : null,
                   ),
                 ),
@@ -735,13 +777,15 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                           child: Text(item.label),
                         ),
                     ],
-                    onChanged: (value) {
-                      if (value != null) {
-                        setState(() {
-                          _pointTypeId = value;
-                        });
-                      }
-                    },
+                    onChanged: !hasRequiredMasters
+                        ? null
+                        : (value) {
+                            if (value != null) {
+                              setState(() {
+                                _pointTypeId = value;
+                              });
+                            }
+                          },
                     validator: (value) => value == null || value.isEmpty ? 'Required' : null,
                   ),
                 ),
@@ -812,7 +856,7 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton(
-                    onPressed: _saving ? null : _submit,
+                    onPressed: _saving || !hasRequiredMasters ? null : _submit,
                     child: _saving
                         ? const SizedBox(
                             width: 18,
@@ -825,8 +869,10 @@ class _RecordFormSheetState extends State<RecordFormSheet> {
                         : Text(widget.initialRecord == null ? 'Create' : 'Save'),
                   ),
                 ),
-              ],
-            ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -896,4 +942,16 @@ String _formatNumber(double value) {
   }
 
   return buffer.toString().split('').reversed.join();
+}
+
+String _resolveInitialValue(String value, List<MasterItem> items) {
+  if (value.isEmpty) {
+    return items.isNotEmpty ? items.first.id : '';
+  }
+
+  if (items.any((item) => item.id == value)) {
+    return value;
+  }
+
+  return items.isNotEmpty ? items.first.id : '';
 }
