@@ -23,6 +23,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { toast } from "sonner";
 import type { TrackingRecordVM } from "../types";
 import { Loader2 } from "lucide-react";
+import { DatePickerDMY } from "@/components/ui/date-picker-dmy";
 
 function formatNumberInput(value: string) {
     if (!value) return "";
@@ -51,6 +52,7 @@ export default function EditTrackingDialog({
     const bdList = useMastersActive("bd");
 
     const [form, setForm] = useState({
+        event_date: "",
         customer_name: "",
         branch: 0,
         in_hot_list: 0,
@@ -68,6 +70,7 @@ export default function EditTrackingDialog({
         if (!open || !record) return;
 
         setForm({
+            event_date: record.event_date ?? "",
             customer_name: record.customer_name ?? "",
             branch: record.branch ?? 0,
             in_hot_list: record.in_hot_list ?? 0,
@@ -105,9 +108,11 @@ export default function EditTrackingDialog({
     const originalComboVoucher = currentRecord.combo_voucher ?? false;
     const originalNote = (currentRecord.note ?? "").trim();
     const originalInfo = (currentRecord.info ?? "").trim();
+    const originalEventDate = currentRecord.event_date ?? "";
 
     const hasChanges =
         normalizedCustomerName !== originalCustomerName ||
+        form.event_date !== originalEventDate ||
         form.branch !== originalBranch ||
         form.in_hot_list !== originalHotList ||
         form.bd_id !== originalBdId ||
@@ -127,6 +132,7 @@ export default function EditTrackingDialog({
             const { error } = await supabase
                 .from("customer_tracking")
                 .update({
+                    event_date: form.event_date,
                     customer_name: normalizedCustomerName,
                     branch: form.branch,
                     in_hot_list: form.in_hot_list,
@@ -169,6 +175,17 @@ export default function EditTrackingDialog({
                 </DialogHeader>
 
                 <div className="grid grid-cols-2 gap-3">
+                    <div className="col-span-2">
+                        <p className="mb-1.5 text-sm font-medium text-foreground">Date</p>
+                        <DatePickerDMY
+                            value={form.event_date}
+                            onChange={(iso) =>
+                                setForm((f) => ({ ...f, event_date: iso ?? f.event_date }))
+                            }
+                            placeholder="Select date"
+                        />
+                    </div>
+
                     <div>
                         <p className="mb-1.5 text-sm font-medium text-foreground">
                             Customer Name
