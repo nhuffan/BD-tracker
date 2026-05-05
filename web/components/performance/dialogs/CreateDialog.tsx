@@ -68,12 +68,14 @@ export default function CreateDialog({
     points: 0,
     money: null,
     package_amount: null,
+    branch_number: null,
     note: null,
   });
 
   const [pointsInput, setPointsInput] = useState("");
   const [moneyInput, setMoneyInput] = useState("");
   const [packageAmountInput, setPackageAmountInput] = useState("");
+  const [branchNumberInput, setBranchNumberInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const isSaveDisabled =
@@ -92,7 +94,11 @@ export default function CreateDialog({
 
     try {
       const id = crypto.randomUUID();
-      const row: RecordRow = { ...form, id };
+      const row: RecordRow = {
+        ...form,
+        id,
+        customer_name: form.customer_name.trim(),
+      };
 
       await db.records.put({
         ...row,
@@ -116,11 +122,14 @@ export default function CreateDialog({
         points: 0,
         money: null,
         package_amount: null,
+        branch_number: null,
         note: null,
       });
+
       setPointsInput("");
       setMoneyInput("");
       setPackageAmountInput("");
+      setBranchNumberInput("");
 
       onOpenChange(false);
       await onCreated();
@@ -199,7 +208,7 @@ export default function CreateDialog({
             </Select>
           </div>
 
-          <div className="col-span-2">
+          <div className="w-full min-w-0">
             <p className="mb-1.5 text-sm font-medium text-foreground">
               Customer Name
             </p>
@@ -209,6 +218,27 @@ export default function CreateDialog({
                 setForm((f) => ({ ...f, customer_name: e.target.value }))
               }
               placeholder="Enter customer name"
+            />
+          </div>
+
+          <div className="w-full min-w-0">
+            <p className="mb-1.5 text-sm font-medium text-foreground">
+              Branch Number (optional)
+            </p>
+            <Input
+              inputMode="numeric"
+              value={branchNumberInput}
+              onChange={(e) => {
+                const formatted = formatNumberInput(e.target.value);
+                const parsed = parseNumberInput(e.target.value);
+
+                setBranchNumberInput(formatted);
+                setForm((f) => ({
+                  ...f,
+                  branch_number: parsed,
+                }));
+              }}
+              placeholder="Enter branch number"
             />
           </div>
 
@@ -313,7 +343,9 @@ export default function CreateDialog({
           </div>
 
           <div className="w-full min-w-0">
-            <p className="mb-1.5 text-sm font-medium text-foreground">Bonus (optional)</p>
+            <p className="mb-1.5 text-sm font-medium text-foreground">
+              Bonus (optional)
+            </p>
             <Input
               inputMode="numeric"
               value={moneyInput}
@@ -332,7 +364,9 @@ export default function CreateDialog({
           </div>
 
           <div className="col-span-2">
-            <p className="mb-1.5 text-sm font-medium text-foreground">Note (optional)</p>
+            <p className="mb-1.5 text-sm font-medium text-foreground">
+              Note (optional)
+            </p>
             <Textarea
               value={form.note ?? ""}
               onChange={(e) =>

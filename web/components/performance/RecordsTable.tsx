@@ -288,7 +288,20 @@ export default function RecordsTable({
                             </TooltipContent>
                           </Tooltip>
 
-                          <span className="truncate">{r.customer_name}</span>
+                          <span className="relative inline-block min-w-0 max-w-full pr-6 align-middle">
+                            <span className="block truncate">{r.customer_name}</span>
+
+                            {r.branch_number !== null &&
+                              r.branch_number !== undefined &&
+                              Number(r.branch_number) > 0 && (
+                                <span
+                                  className="absolute -right-[0px] top-[4px] inline-flex min-h-3 min-w-3 items-center justify-center rounded-md bg-primary/10 px-1 text-[9px] font-semibold leading-none text-primary ring-1 ring-primary/15"
+                                  title={`${r.branch_number} branch${Number(r.branch_number) > 1 ? "es" : ""}`}
+                                >
+                                  {Number(r.branch_number) > 99 ? "99+" : r.branch_number}
+                                </span>
+                              )}
+                          </span>
                         </div>
                       </td>
 

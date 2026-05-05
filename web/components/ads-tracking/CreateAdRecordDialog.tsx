@@ -22,6 +22,13 @@ import {
     PopoverContent,
 } from "@/components/ui/popover";
 import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import {
     ADS_TRACKING_POINT_TYPE_CODES,
     calculateAdsEndDate,
 } from "@/lib/adsTracking";
@@ -46,6 +53,12 @@ type EligibleRecord = {
     customer_name: string;
     point_type_id: string;
     event_date: string | null;
+    branch_number: number | null;
+};
+
+type CustomerOption = {
+    customer_name: string;
+    records: EligibleRecord[];
 };
 
 type PointTypeMaster = {
@@ -65,21 +78,19 @@ export default function CreateAdRecordDialog({
     onSaved: () => void | Promise<void>;
     currentUserId: string;
 }) {
-    const [eligibleRecords, setEligibleRecords] = useState<EligibleRecord[]>([]);
+    const [customerOptions, setCustomerOptions] = useState<CustomerOption[]>([]);
     const [pointTypes, setPointTypes] = useState<PointTypeMaster[]>([]);
-    const [selectedRecordId, setSelectedRecordId] = useState("");
+    const [selectedCustomerName, setSelectedCustomerName] = useState("");
+    const [selectedPointTypeId, setSelectedPointTypeId] = useState("");
     const [customerQuery, setCustomerQuery] = useState("");
+    const [branchName, setBranchName] = useState("");
     const [startDate, setStartDate] = useState("");
     const [note, setNote] = useState("");
     const [saving, setSaving] = useState(false);
     const [loadingCustomers, setLoadingCustomers] = useState(false);
     const [customerOpen, setCustomerOpen] = useState(false);
-    const [customerDropdownWidth, setCustomerDropdownWidth] = useState<number | null>(
-        null
-    );
 
     const customerInputRef = useRef<HTMLInputElement | null>(null);
-    const customerAnchorRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
         if (!open) return;
@@ -95,7 +106,7 @@ export default function CreateAdRecordDialog({
 
             if (masterError || !masterRows?.length) {
                 setPointTypes([]);
-                setEligibleRecords([]);
+                setCustomerOptions([]);
                 setLoadingCustomers(false);
                 return;
             }
@@ -110,71 +121,44 @@ export default function CreateAdRecordDialog({
 
             const { data: recordRows, error: recordError } = await supabase
                 .from("records")
-                .select("id, customer_name, point_type_id, event_date")
+                .select("id, customer_name, point_type_id, event_date, branch_number")
                 .in("point_type_id", pointTypeIds)
                 .order("event_date", { ascending: false });
 
             if (recordError) {
-                setEligibleRecords([]);
+                setCustomerOptions([]);
                 setLoadingCustomers(false);
                 return;
             }
 
-            const deduped = Array.from(
-                new Map(
-                    ((recordRows ?? []) as EligibleRecord[])
-                        .slice()
-                        .reverse()
-                        .map((item) => [item.customer_name, item])
-                ).values()
-            );
+            const grouped = new Map<string, EligibleRecord[]>();
 
-            setEligibleRecords(deduped);
+            for (const item of (recordRows ?? []) as EligibleRecord[]) {
+                const customerName = item.customer_name?.trim();
+                if (!customerName) continue;
+
+                const list = grouped.get(customerName) ?? [];
+
+                list.push({
+                    ...item,
+                    customer_name: customerName,
+                });
+
+                grouped.set(customerName, list);
+            }
+
+            const options = Array.from(grouped.entries())
+                .map(([customer_name, records]) => ({
+                    customer_name,
+                    records,
+                }))
+                .sort((a, b) => a.customer_name.localeCompare(b.customer_name));
+
+            setCustomerOptions(options);
             setLoadingCustomers(false);
         }
 
         loadData();
-    }, [open]);
-
-    useEffect(() => {
-        if (!open) {
-            setSelectedRecordId("");
-            setCustomerQuery("");
-            setStartDate("");
-            setNote("");
-            setSaving(false);
-            setCustomerOpen(false);
-            setLoadingCustomers(false);
-            setCustomerDropdownWidth(null);
-        }
-    }, [open]);
-
-    useEffect(() => {
-        if (!open) return;
-
-        const updateWidth = () => {
-            if (customerAnchorRef.current) {
-                setCustomerDropdownWidth(customerAnchorRef.current.offsetWidth);
-            }
-        };
-
-        updateWidth();
-
-        const resizeObserver =
-            typeof ResizeObserver !== "undefined"
-                ? new ResizeObserver(() => updateWidth())
-                : null;
-
-        if (customerAnchorRef.current && resizeObserver) {
-            resizeObserver.observe(customerAnchorRef.current);
-        }
-
-        window.addEventListener("resize", updateWidth);
-
-        return () => {
-            window.removeEventListener("resize", updateWidth);
-            resizeObserver?.disconnect();
-        };
     }, [open]);
 
     useEffect(() => {
@@ -189,23 +173,70 @@ export default function CreateAdRecordDialog({
         return () => cancelAnimationFrame(id);
     }, [customerOpen]);
 
+    const selectedCustomer = useMemo(() => {
+        return (
+            customerOptions.find(
+                (item) => item.customer_name === selectedCustomerName
+            ) ?? null
+        );
+    }, [customerOptions, selectedCustomerName]);
+
     const selectedRecord = useMemo(() => {
-        return eligibleRecords.find((item) => item.id === selectedRecordId) ?? null;
-    }, [eligibleRecords, selectedRecordId]);
+        if (!selectedCustomer || !selectedPointTypeId) return null;
+
+        return (
+            selectedCustomer.records.find(
+                (item) => item.point_type_id === selectedPointTypeId
+            ) ?? null
+        );
+    }, [selectedCustomer, selectedPointTypeId]);
 
     const selectedPointType = useMemo(() => {
-        if (!selectedRecord) return null;
-        return pointTypes.find((item) => item.id === selectedRecord.point_type_id) ?? null;
-    }, [pointTypes, selectedRecord]);
+        if (!selectedPointTypeId) return null;
+        return pointTypes.find((item) => item.id === selectedPointTypeId) ?? null;
+    }, [pointTypes, selectedPointTypeId]);
+
+    const pointTypeChoices = useMemo(() => {
+        if (!selectedCustomer) return [];
+
+        const uniquePointTypeIds = Array.from(
+            new Set(selectedCustomer.records.map((record) => record.point_type_id))
+        );
+
+        return uniquePointTypeIds
+            .map(
+                (pointTypeId) =>
+                    pointTypes.find((item) => item.id === pointTypeId) ?? null
+            )
+            .filter((item): item is PointTypeMaster => item !== null);
+    }, [pointTypes, selectedCustomer]);
+
+    const canSelectPointType = pointTypeChoices.length > 1;
+
+    const isDuplicateCustomerPointType = useMemo(() => {
+        if (!selectedCustomer || !selectedPointTypeId) return false;
+
+        return (
+            selectedCustomer.records.filter(
+                (item) => item.point_type_id === selectedPointTypeId
+            ).length >= 2
+        );
+    }, [selectedCustomer, selectedPointTypeId]);
+
+    const hasMultipleBranches = useMemo(() => {
+        return Number(selectedRecord?.branch_number ?? 0) > 1;
+    }, [selectedRecord]);
+
+    const isBranchNameRequired = isDuplicateCustomerPointType || hasMultipleBranches;
 
     const filteredRecords = useMemo(() => {
         const q = customerQuery.trim().toLowerCase();
-        if (!q) return eligibleRecords;
+        if (!q) return customerOptions;
 
-        return eligibleRecords.filter((item) =>
+        return customerOptions.filter((item) =>
             item.customer_name.toLowerCase().includes(q)
         );
-    }, [eligibleRecords, customerQuery]);
+    }, [customerOptions, customerQuery]);
 
     const endDate = useMemo(() => {
         if (!startDate || !selectedPointType?.code) return "";
@@ -219,13 +250,36 @@ export default function CreateAdRecordDialog({
         return "—";
     }, [startDate, selectedPointType]);
 
-    const isDisabled = saving || !selectedRecord;
+    const isDisabled =
+        saving ||
+        !selectedRecord ||
+        (isBranchNameRequired && !branchName.trim());
+
+    function resetFormState() {
+        setSelectedCustomerName("");
+        setSelectedPointTypeId("");
+        setCustomerQuery("");
+        setBranchName("");
+        setStartDate("");
+        setNote("");
+        setSaving(false);
+        setLoadingCustomers(false);
+        setCustomerOpen(false);
+    }
+
+    function handleDialogOpenChange(nextOpen: boolean) {
+        if (!nextOpen) {
+            resetFormState();
+        }
+
+        onOpenChange(nextOpen);
+    }
 
     function handleCustomerOpenChange(nextOpen: boolean) {
         setCustomerOpen(nextOpen);
 
         if (!nextOpen) {
-            setCustomerQuery(selectedRecord?.customer_name ?? "");
+            setCustomerQuery(selectedCustomerName);
         }
     }
 
@@ -240,21 +294,36 @@ export default function CreateAdRecordDialog({
             setCustomerOpen(true);
         }
 
-        if (selectedRecord && value !== selectedRecord.customer_name) {
-            setSelectedRecordId("");
+        if (selectedCustomerName && value !== selectedCustomerName) {
+            setSelectedCustomerName("");
+            setSelectedPointTypeId("");
+            setBranchName("");
             setStartDate("");
         }
     }
 
-    function handleSelectCustomer(item: EligibleRecord) {
-        setSelectedRecordId(item.id);
+    function handleSelectCustomer(item: CustomerOption) {
+        setSelectedCustomerName(item.customer_name);
         setCustomerQuery(item.customer_name);
+        setSelectedPointTypeId(item.records[0]?.point_type_id ?? "");
+        setBranchName("");
         setStartDate("");
         setCustomerOpen(false);
     }
 
+    function handlePointTypeChange(nextPointTypeId: string) {
+        setSelectedPointTypeId(nextPointTypeId);
+        setBranchName("");
+        setStartDate("");
+    }
+
     async function handleSave() {
-        if (isDisabled || !selectedRecord) return;
+        if (!selectedRecord) return;
+
+        if (isBranchNameRequired && !branchName.trim()) {
+            toast.error("Branch name is required for this customer.");
+            return;
+        }
 
         setSaving(true);
 
@@ -262,6 +331,7 @@ export default function CreateAdRecordDialog({
             source_record_id: selectedRecord.id,
             customer_name: selectedRecord.customer_name,
             point_type_id: selectedRecord.point_type_id,
+            branch_name: isBranchNameRequired ? branchName.trim() : null,
             start_date: startDate || null,
             end_date: endDate || null,
             note: note.trim() || null,
@@ -278,12 +348,12 @@ export default function CreateAdRecordDialog({
         }
 
         toast.success("Ad record created successfully.");
-        onOpenChange(false);
+        handleDialogOpenChange(false);
         await onSaved();
     }
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
+        <Dialog open={open} onOpenChange={handleDialogOpenChange}>
             <DialogContent
                 className="max-w-2xl overflow-hidden rounded-2xl border border-border bg-background p-0 shadow-xl"
                 onOpenAutoFocus={(e) => e.preventDefault()}
@@ -303,14 +373,16 @@ export default function CreateAdRecordDialog({
 
                         <Popover open={customerOpen} onOpenChange={handleCustomerOpenChange}>
                             <PopoverAnchor asChild>
-                                <div ref={customerAnchorRef} className="w-full">
+                                <div className="w-full">
                                     <div className="relative w-full">
                                         <Search className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 
                                         <input
                                             ref={customerInputRef}
                                             value={customerQuery}
-                                            onChange={(e) => handleCustomerInputChange(e.target.value)}
+                                            onChange={(e) =>
+                                                handleCustomerInputChange(e.target.value)
+                                            }
                                             onFocus={handleCustomerInputFocus}
                                             onClick={handleCustomerInputFocus}
                                             placeholder="Search customer..."
@@ -343,7 +415,7 @@ export default function CreateAdRecordDialog({
                                     ) : (
                                         filteredRecords.map((item) => (
                                             <button
-                                                key={item.id}
+                                                key={item.customer_name}
                                                 type="button"
                                                 onMouseDown={(e) => e.preventDefault()}
                                                 onClick={() => handleSelectCustomer(item)}
@@ -352,12 +424,14 @@ export default function CreateAdRecordDialog({
                                                 <Check
                                                     className={cn(
                                                         "h-4 w-4 shrink-0",
-                                                        selectedRecordId === item.id
+                                                        selectedCustomerName === item.customer_name
                                                             ? "opacity-100 text-primary"
                                                             : "opacity-0"
                                                     )}
                                                 />
-                                                <span className="flex-1 truncate">{item.customer_name}</span>
+                                                <span className="flex-1 truncate">
+                                                    {item.customer_name}
+                                                </span>
                                             </button>
                                         ))
                                     )}
@@ -373,9 +447,27 @@ export default function CreateAdRecordDialog({
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <div>
                             <label className={labelClass}>Point Type</label>
-                            <div className={infoFieldClass}>
-                                {selectedPointType?.label ?? "—"}
-                            </div>
+                            {canSelectPointType ? (
+                                <Select
+                                    value={selectedPointTypeId || undefined}
+                                    onValueChange={handlePointTypeChange}
+                                >
+                                    <SelectTrigger className="h-10 w-full rounded-lg">
+                                        <SelectValue placeholder="Select point type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {pointTypeChoices.map((item) => (
+                                            <SelectItem key={item.id} value={item.id}>
+                                                {item.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            ) : (
+                                <div className={infoFieldClass}>
+                                    {selectedPointType?.label ?? "—"}
+                                </div>
+                            )}
                         </div>
 
                         <div>
@@ -388,6 +480,25 @@ export default function CreateAdRecordDialog({
                             />
                         </div>
                     </div>
+
+                    {isBranchNameRequired && (
+                        <div>
+                            <label className={labelClass}>
+                                Branch Name <span className="text-destructive">*</span>
+                            </label>
+
+                            <input
+                                value={branchName}
+                                onChange={(e) => setBranchName(e.target.value)}
+                                placeholder="Enter branch name..."
+                                className={fieldClass}
+                            />
+
+                            <p className={helperTextClass}>
+                                Required because this customer has multiple performance records or more than one branch.
+                            </p>
+                        </div>
+                    )}
 
                     <div className="grid grid-cols-1 gap-4 rounded-xl border border-border bg-muted/30 p-4 md:grid-cols-2">
                         <div>
@@ -426,7 +537,7 @@ export default function CreateAdRecordDialog({
                         type="button"
                         variant="ghost"
                         className="cursor-pointer"
-                        onClick={() => onOpenChange(false)}
+                        onClick={() => handleDialogOpenChange(false)}
                         disabled={saving}
                     >
                         Cancel

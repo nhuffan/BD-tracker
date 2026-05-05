@@ -18,6 +18,8 @@ export type AdTrackingRow = {
     source_record_id: string | null;
     customer_name: string;
     point_type_id: string;
+    branch_name: string | null;
+    branch_number?: number | null;
     start_date: string | null;
     end_date: string | null;
     note: string | null;
@@ -48,6 +50,7 @@ type SourceRecordLite = {
     points: number | null;
     money: number | null;
     note: string | null;
+    branch_number: number | null;
 };
 
 function mergePerformanceIntoAdRow(
@@ -69,6 +72,7 @@ function mergePerformanceIntoAdRow(
         points: source.points ?? null,
         money: source.money ?? null,
         performance_note: source.note ?? null,
+        branch_number: source.branch_number ?? null,
     };
 }
 

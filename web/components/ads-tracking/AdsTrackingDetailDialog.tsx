@@ -42,14 +42,20 @@ function InfoItem({
     label: string;
     value: React.ReactNode;
 }) {
-    const hasValue = value !== "—" && value !== null && value !== undefined;
+    const hasValue =
+        value !== "—" &&
+        value !== "-" &&
+        value !== null &&
+        value !== undefined;
 
     return (
         <div className="space-y-1">
             <div className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
                 {label}
             </div>
-            <div className={labelValueClass(Boolean(hasValue))}>{value ?? "—"}</div>
+            <div className={labelValueClass(Boolean(hasValue))}>
+                {value ?? "—"}
+            </div>
         </div>
     );
 }
@@ -109,7 +115,7 @@ export default function AdsTrackingDetailDialog({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-h-[90vh] w-[88vw] max-w-[88vw] xl:w-[72vw] xl:max-w-[72vw] overflow-y-auto rounded-2xl p-0">
+            <DialogContent className="max-h-[90vh] w-[88vw] max-w-[88vw] overflow-y-auto rounded-2xl p-0 xl:w-[72vw] xl:max-w-[72vw]">
                 <DialogHeader className="border-b px-6 py-4">
                     <DialogTitle className="text-2xl font-bold tracking-tight">
                         Ad Details
@@ -138,10 +144,16 @@ export default function AdsTrackingDetailDialog({
                                         </div>
                                     }
                                 />
+
                                 <InfoItem
                                     label="BD Name"
-                                    value={record.bd_id ? bdMap[record.bd_id] ?? record.bd_id : "—"}
+                                    value={
+                                        record.bd_id
+                                            ? bdMap[record.bd_id] ?? record.bd_id
+                                            : "—"
+                                    }
                                 />
+
                                 <InfoItem
                                     label="Customer Type"
                                     value={
@@ -151,15 +163,10 @@ export default function AdsTrackingDetailDialog({
                                             : "—"
                                     }
                                 />
+
                                 <InfoItem
-                                    label="Category"
-                                    value={
-                                        record.category
-                                            ? record.category === "restaurant"
-                                                ? "Restaurant"
-                                                : "Entertainment"
-                                            : "—"
-                                    }
+                                    label="Branch Name"
+                                    value={record.branch_name?.trim() || "-"}
                                 />
                             </div>
                         </Section>
@@ -168,16 +175,24 @@ export default function AdsTrackingDetailDialog({
                             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
                                 <InfoItem
                                     label="Point Type"
-                                    value={pointTypeMap[record.point_type_id] ?? record.point_type_id}
+                                    value={
+                                        pointTypeMap[record.point_type_id] ??
+                                        record.point_type_id
+                                    }
                                 />
+
                                 <InfoItem
                                     label="Start Date"
-                                    value={record.start_date ? formatDMY(record.start_date) : "—"}
+                                    value={
+                                        record.start_date ? formatDMY(record.start_date) : "—"
+                                    }
                                 />
+
                                 <InfoItem
                                     label="End Date"
                                     value={record.end_date ? formatDMY(record.end_date) : "—"}
                                 />
+
                                 <InfoItem
                                     label="Status"
                                     value={renderStatus(record.start_date, record.end_date)}
@@ -188,7 +203,7 @@ export default function AdsTrackingDetailDialog({
                                 <div className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
                                     Ads Note
                                 </div>
-                                <div className="mt-1 rounded-lg border bg-muted/30 px-3 py-2 text-sm text-foreground whitespace-pre-wrap break-words">
+                                <div className="mt-1 whitespace-pre-wrap break-words rounded-lg border bg-muted/30 px-3 py-2 text-sm text-foreground">
                                     {record.note || "—"}
                                 </div>
                             </div>
@@ -198,20 +213,31 @@ export default function AdsTrackingDetailDialog({
                             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
                                 <InfoItem
                                     label="Date"
-                                    value={record.event_date ? formatDMY(record.event_date) : "—"}
+                                    value={
+                                        record.event_date ? formatDMY(record.event_date) : "—"
+                                    }
                                 />
+
                                 <InfoItem
-                                    label="BD Name"
-                                    value={record.bd_id ? bdMap[record.bd_id] ?? record.bd_id : "—"}
+                                    label="Branch Number"
+                                    value={
+                                        record.branch_number !== null &&
+                                            record.branch_number !== undefined
+                                            ? Number(record.branch_number).toLocaleString("en-US")
+                                            : "—"
+                                    }
                                 />
+
                                 <InfoItem
                                     label="BD Level"
                                     value={
                                         record.bd_level_id
-                                            ? bdLevelMap[record.bd_level_id] ?? record.bd_level_id
+                                            ? bdLevelMap[record.bd_level_id] ??
+                                            record.bd_level_id
                                             : "—"
                                     }
                                 />
+
                                 <InfoItem
                                     label="Customer Type"
                                     value={
@@ -221,10 +247,15 @@ export default function AdsTrackingDetailDialog({
                                             : "—"
                                     }
                                 />
+
                                 <InfoItem
                                     label="Point Type"
-                                    value={pointTypeMap[record.point_type_id] ?? record.point_type_id}
+                                    value={
+                                        pointTypeMap[record.point_type_id] ??
+                                        record.point_type_id
+                                    }
                                 />
+
                                 <InfoItem
                                     label="Package Amount"
                                     value={
@@ -234,14 +265,17 @@ export default function AdsTrackingDetailDialog({
                                             : "—"
                                     }
                                 />
+
                                 <InfoItem
                                     label="Points"
                                     value={
-                                        record.points !== null && record.points !== undefined
+                                        record.points !== null &&
+                                            record.points !== undefined
                                             ? record.points.toLocaleString("en-US")
                                             : "—"
                                     }
                                 />
+
                                 <InfoItem
                                     label="Bonus"
                                     value={
@@ -256,7 +290,7 @@ export default function AdsTrackingDetailDialog({
                                 <div className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
                                     Performance Note
                                 </div>
-                                <div className="mt-1 rounded-lg border bg-muted/30 px-3 py-2 text-sm text-foreground whitespace-pre-wrap break-words">
+                                <div className="mt-1 whitespace-pre-wrap break-words rounded-lg border bg-muted/30 px-3 py-2 text-sm text-foreground">
                                     {record.performance_note || "—"}
                                 </div>
                             </div>

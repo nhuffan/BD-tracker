@@ -9,6 +9,7 @@ export type LocalRecord = RecordRow & {
   last_error?: string;
   deleted?: boolean; // soft delete locally
   _failed_retries?: number; // retry count for failed records
+  branch_number: number | null;
 };
 
 class AppDB extends Dexie {
@@ -17,7 +18,7 @@ class AppDB extends Dexie {
   constructor() {
     super("bd_points_db");
     this.version(1).stores({
-      records: "id, event_date, bd_id, customer_name, customer_type_id, point_type_id, sync_status, updated_at_local",
+      records: "id, event_date, bd_id, customer_name, customer_type_id, point_type_id, sync_status, updated_at_local, branch_number",
     });
   }
 }

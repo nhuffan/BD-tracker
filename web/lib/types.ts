@@ -13,4 +13,5 @@ export type RecordRow = {
   note: string | null;
   created_at?: string;
   updated_at?: string;
+  branch_number: number | null;
 };

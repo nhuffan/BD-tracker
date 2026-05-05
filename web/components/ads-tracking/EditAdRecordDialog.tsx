@@ -19,8 +19,22 @@ import { getAdsTrackingStatus } from "@/lib/adsTracking";
 const infoFieldClass =
     "flex h-10 w-full min-w-0 items-center rounded-lg border border-input bg-muted/60 px-3 text-sm text-foreground";
 
+const fieldClass =
+    "!h-10 h-10 w-full min-w-0 rounded-lg border border-input bg-background px-3 text-sm shadow-none transition-colors hover:border-border focus-visible:ring-1 focus-visible:ring-ring";
+
 const labelClass =
     "mb-2 block text-[11px] font-bold uppercase tracking-wide text-muted-foreground";
+
+type EditAdRecord = {
+    id: string;
+    customer_name: string;
+    point_type_id: string;
+    point_type_label: string;
+    branch_name: string | null;
+    start_date: string | null;
+    end_date: string | null;
+    note: string | null;
+};
 
 export default function EditAdRecordDialog({
     open,
@@ -30,19 +44,12 @@ export default function EditAdRecordDialog({
 }: {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    record: {
-        id: string;
-        customer_name: string;
-        point_type_id: string;
-        point_type_label: string;
-        start_date: string | null;
-        end_date: string | null;
-        note: string | null;
-    } | null;
+    record: EditAdRecord | null;
     onSaved: () => void | Promise<void>;
 }) {
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
+    const [branchName, setBranchName] = useState("");
     const [note, setNote] = useState("");
     const [saving, setSaving] = useState(false);
 
@@ -50,6 +57,7 @@ export default function EditAdRecordDialog({
         if (!open || !record) {
             setStartDate("");
             setEndDate("");
+            setBranchName("");
             setNote("");
             setSaving(false);
             return;
@@ -57,14 +65,15 @@ export default function EditAdRecordDialog({
 
         setStartDate(record.start_date ?? "");
         setEndDate(record.end_date ?? "");
+        setBranchName(record.branch_name ?? "");
         setNote(record.note ?? "");
     }, [open, record]);
 
     if (!record) return null;
 
     const currentRecord = record;
+    const shouldShowBranchName = !!currentRecord.branch_name?.trim();
 
-    // 🔹 STATUS BADGE (no hook)
     function renderStatusBadge() {
         if (!currentRecord?.end_date) {
             return (
@@ -74,7 +83,10 @@ export default function EditAdRecordDialog({
             );
         }
 
-        const status = getAdsTrackingStatus(currentRecord.start_date, currentRecord.end_date);
+        const status = getAdsTrackingStatus(
+            currentRecord.start_date,
+            currentRecord.end_date
+        );
 
         if (status === "not_started") {
             return (
@@ -110,10 +122,15 @@ export default function EditAdRecordDialog({
     const normalizedInitialNote = (currentRecord.note ?? "").trim();
     const normalizedCurrentNote = note.trim();
 
+    const normalizedInitialBranchName = (currentRecord.branch_name ?? "").trim();
+    const normalizedCurrentBranchName = branchName.trim();
+
     const hasChanges =
         startDate !== (currentRecord.start_date ?? "") ||
         endDate !== (currentRecord.end_date ?? "") ||
-        normalizedCurrentNote !== normalizedInitialNote;
+        normalizedCurrentNote !== normalizedInitialNote ||
+        (shouldShowBranchName &&
+            normalizedCurrentBranchName !== normalizedInitialBranchName);
 
     const isDisabled = saving || !hasChanges;
 
@@ -122,14 +139,26 @@ export default function EditAdRecordDialog({
 
         setSaving(true);
 
+        const updatePayload: {
+            start_date: string | null;
+            end_date: string | null;
+            note: string | null;
+            updated_at: string;
+            branch_name?: string | null;
+        } = {
+            start_date: startDate || null,
+            end_date: endDate || null,
+            note: normalizedCurrentNote || null,
+            updated_at: new Date().toISOString(),
+        };
+
+        if (shouldShowBranchName) {
+            updatePayload.branch_name = normalizedCurrentBranchName || null;
+        }
+
         const { error } = await supabase
             .from("ad_tracking_records")
-            .update({
-                start_date: startDate || null,
-                end_date: endDate || null,
-                note: normalizedCurrentNote || null,
-                updated_at: new Date().toISOString(),
-            })
+            .update(updatePayload)
             .eq("id", currentRecord.id);
 
         setSaving(false);
@@ -164,7 +193,7 @@ export default function EditAdRecordDialog({
                     </div>
                 </DialogHeader>
 
-                <div className="space-y-5 px-6 ">
+                <div className="space-y-5 px-6">
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <div>
                             <label className={labelClass}>Customer</label>
@@ -202,6 +231,18 @@ export default function EditAdRecordDialog({
                             />
                         </div>
                     </div>
+
+                    {shouldShowBranchName && (
+                        <div>
+                            <label className={labelClass}>Branch Name</label>
+                            <input
+                                value={branchName}
+                                onChange={(e) => setBranchName(e.target.value)}
+                                placeholder="Enter branch name..."
+                                className={fieldClass}
+                            />
+                        </div>
+                    )}
 
                     <div>
                         <label className={labelClass}>Note (optional)</label>

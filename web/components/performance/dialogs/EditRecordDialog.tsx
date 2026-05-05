@@ -59,8 +59,9 @@ export default function EditRecordDialog({
   );
   const [pointsInput, setPointsInput] = useState("");
   const [moneyInput, setMoneyInput] = useState("");
-  const [note, setNote] = useState("");
   const [packageAmountInput, setPackageAmountInput] = useState("");
+  const [branchNumberInput, setBranchNumberInput] = useState("");
+  const [note, setNote] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   function resetFormFromRecord(target: RecordVM | null) {
@@ -70,11 +71,13 @@ export default function EditRecordDialog({
       setPointsInput("");
       setMoneyInput("");
       setPackageAmountInput("");
+      setBranchNumberInput("");
       setNote("");
       return;
     }
 
     setBdLevelId(target.bd_level_id ?? "");
+
     setCategory(
       (target.category as "entertainment" | "restaurant" | undefined) ??
         "entertainment"
@@ -98,6 +101,12 @@ export default function EditRecordDialog({
         : ""
     );
 
+    setBranchNumberInput(
+      target.branch_number !== null && target.branch_number !== undefined
+        ? Number(target.branch_number).toLocaleString("en-US")
+        : ""
+    );
+
     setNote(target.note ?? "");
   }
 
@@ -110,6 +119,7 @@ export default function EditRecordDialog({
   const parsedPoints = parseNumberInput(pointsInput) ?? 0;
   const parsedMoney = parseNumberInput(moneyInput);
   const parsedPackageAmount = parseNumberInput(packageAmountInput);
+  const parsedBranchNumber = parseNumberInput(branchNumberInput);
 
   const originalBdLevelId = record?.bd_level_id ?? "";
   const originalCategory =
@@ -118,18 +128,18 @@ export default function EditRecordDialog({
   const originalPoints = record?.points ?? 0;
   const originalMoney = record?.money ?? null;
   const originalPackageAmount = record?.package_amount ?? null;
+  const originalBranchNumber = record?.branch_number ?? null;
   const originalNote = record?.note ?? "";
 
   const hasChanges =
     !!record &&
-    (
-      bdLevelId !== originalBdLevelId ||
+    (bdLevelId !== originalBdLevelId ||
       category !== originalCategory ||
       parsedPoints !== originalPoints ||
       parsedMoney !== originalMoney ||
       parsedPackageAmount !== originalPackageAmount ||
-      note !== originalNote
-    );
+      parsedBranchNumber !== originalBranchNumber ||
+      note !== originalNote);
 
   const isSaveDisabled =
     !record || !bdLevelId || !category || !hasChanges || isLoading;
@@ -156,6 +166,7 @@ export default function EditRecordDialog({
             points: record.points,
             money: record.money,
             package_amount: record.package_amount,
+            branch_number: record.branch_number ?? null,
             note: record.note,
             created_at: record.created_at,
             updated_at: record.updated_at,
@@ -170,6 +181,7 @@ export default function EditRecordDialog({
         points: parsedPoints,
         money: parsedMoney,
         package_amount: parsedPackageAmount,
+        branch_number: parsedBranchNumber,
         note: note || null,
         sync_status: "pending",
         updated_at_local: Date.now(),
@@ -200,6 +212,7 @@ export default function EditRecordDialog({
     if (!nextOpen) {
       resetFormFromRecord(record);
     }
+
     onOpenChange(nextOpen);
   }
 
@@ -256,18 +269,34 @@ export default function EditRecordDialog({
             </div>
           </div>
 
-          <div>
-            <p className="mb-1.5 text-sm font-medium text-foreground">
-              Package Amount
-            </p>
-            <Input
-              inputMode="numeric"
-              value={packageAmountInput}
-              onChange={(e) =>
-                setPackageAmountInput(formatNumberInput(e.target.value))
-              }
-              placeholder="Enter package amount"
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="w-full min-w-0">
+              <p className="mb-1.5 text-sm font-medium text-foreground">
+                Package Amount
+              </p>
+              <Input
+                inputMode="numeric"
+                value={packageAmountInput}
+                onChange={(e) =>
+                  setPackageAmountInput(formatNumberInput(e.target.value))
+                }
+                placeholder="Enter package amount"
+              />
+            </div>
+
+            <div className="w-full min-w-0">
+              <p className="mb-1.5 text-sm font-medium text-foreground">
+                Branch Number (Optional)
+              </p>
+              <Input
+                inputMode="numeric"
+                value={branchNumberInput}
+                onChange={(e) =>
+                  setBranchNumberInput(formatNumberInput(e.target.value))
+                }
+                placeholder="Enter branch number"
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -301,9 +330,7 @@ export default function EditRecordDialog({
           </div>
 
           <div>
-            <p className="mb-1.5 text-sm font-medium text-foreground">
-              Note
-            </p>
+            <p className="mb-1.5 text-sm font-medium text-foreground">Note</p>
             <Textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}

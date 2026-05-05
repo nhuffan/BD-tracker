@@ -79,13 +79,14 @@ export default function AdsTrackingTable({
         <table className="w-full table-fixed text-sm">
           <thead className="bg-muted/50">
             <tr>
-              <th className="w-[200px] p-3 text-left">Customer Name</th>
+              <th className="w-[180px] p-3 text-left">Customer Name</th>
+              <th className="w-[140px] p-3 text-left">Branch Name</th>
               <th className="w-[120px] p-3 text-left">BD Name</th>
-              <th className="w-[240px] p-3 text-left">Customer Type</th>
-              <th className="w-[240px] p-3 text-left">Point Type</th>
-              <th className="w-[140px] p-3 text-left">Start Date</th>
-              <th className="w-[140px] p-3 text-left">End Date</th>
-              <th className="w-[160px] p-3 text-center">Status</th>
+              <th className="w-[200px] p-3 text-left">Customer Type</th>
+              <th className="w-[180px] p-3 text-left">Point Type</th>
+              <th className="w-[100px] p-3 text-left">Start Date</th>
+              <th className="w-[100px] p-3 text-left">End Date</th>
+              <th className="w-[120px] p-3 text-center">Status</th>
               <th className="w-[60px] p-3 text-center">Note</th>
               {isAdmin && (
                 <th className="w-[100px] p-3 pr-5 text-right">Action</th>
@@ -127,6 +128,13 @@ export default function AdsTrackingTable({
 
                       <span className="truncate">{row.customer_name}</span>
                     </div>
+                  </td>
+
+                  <td
+                    className="overflow-hidden whitespace-nowrap p-3 text-ellipsis"
+                    title={row.branch_name || "—"}
+                  >
+                    {row.branch_name?.trim() ? row.branch_name : "—"}
                   </td>
 
                   <td
