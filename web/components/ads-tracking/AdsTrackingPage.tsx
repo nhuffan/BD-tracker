@@ -2,7 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import {
+    FileSpreadsheet,
+    Loader2,
+    Plus,
+    Search,
+} from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { getAdsTrackingStatus } from "@/lib/adsTracking";
 import { useMasters } from "@/lib/useMasters";
@@ -12,6 +17,16 @@ import AdsTrackingTable from "./AdsTrackingTable";
 import AdsTrackingDetailDialog from "./AdsTrackingDetailDialog";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Input } from "@/components/ui/input";
+import { exportAdsTrackingToExcel } from "./helpers/exportAdsTrackingExcel";
+import { formatDMY } from "@/lib/date";
+
+type AdsStatusFilter =
+    | "all"
+    | "not_started"
+    | "active"
+    | "expiring_soon"
+    | "expired";
 
 export type AdTrackingRow = {
     id: string;
@@ -89,6 +104,8 @@ export default function AdsTrackingPage({
     const [openCreate, setOpenCreate] = useState(false);
     const [openEdit, setOpenEdit] = useState(false);
     const [openView, setOpenView] = useState(false);
+    const [search, setSearch] = useState("");
+    const [statusFilter, setStatusFilter] = useState<AdsStatusFilter>("all");
 
     const [selectedRow, setSelectedRow] = useState<
         (AdTrackingRow & { point_type_label: string }) | null
@@ -128,6 +145,13 @@ export default function AdsTrackingPage({
     const mastersLoading =
         pointTypesLoading || bdsLoading || bdLevelsLoading || customerTypesLoading;
 
+    function getStatusTabClass(active: boolean) {
+        return [
+            "rounded-md px-3 py-1.5 text-xs font-semibold transition cursor-pointer",
+            active ? "bg-primary/10 text-primary" : "text-slate-500 hover:bg-slate-100",
+        ].join(" ");
+    }
+
     async function refresh() {
         setLoading(true);
 
@@ -152,7 +176,7 @@ export default function AdsTrackingPage({
             const { data: sourceRecords, error: sourceError } = await supabase
                 .from("records")
                 .select(
-                    "id, customer_name, point_type_id, event_date, bd_id, bd_level_id, customer_type_id, category, package_amount, points, money, note"
+                    "id, customer_name, point_type_id, event_date, bd_id, bd_level_id, customer_type_id, category, package_amount, points, money, note, branch_number"
                 )
                 .in("id", sourceRecordIds);
 
@@ -265,7 +289,7 @@ export default function AdsTrackingPage({
                         const { data: source } = await supabase
                             .from("records")
                             .select(
-                                "id, customer_name, point_type_id, event_date, bd_id, bd_level_id, customer_type_id, category, package_amount, points, money, note"
+                                "id, customer_name, point_type_id, event_date, bd_id, bd_level_id, customer_type_id, category, package_amount, points, money, note, branch_number"
                             )
                             .eq("id", next.source_record_id)
                             .maybeSingle();
@@ -295,7 +319,7 @@ export default function AdsTrackingPage({
                         const { data: source } = await supabase
                             .from("records")
                             .select(
-                                "id, customer_name, point_type_id, event_date, bd_id, bd_level_id, customer_type_id, category, package_amount, points, money, note"
+                                "id, customer_name, point_type_id, event_date, bd_id, bd_level_id, customer_type_id, category, package_amount, points, money, note, branch_number"
                             )
                             .eq("id", next.source_record_id)
                             .maybeSingle();
@@ -467,6 +491,37 @@ export default function AdsTrackingPage({
         (x) => getAdsTrackingStatus(x.start_date, x.end_date) === "expired"
     ).length;
 
+    const filteredRows = useMemo(() => {
+        const keyword = search.trim().toLowerCase();
+
+        return rows.filter((row) => {
+            const status = getAdsTrackingStatus(row.start_date, row.end_date);
+
+            if (statusFilter !== "all" && status !== statusFilter) {
+                return false;
+            }
+
+            if (!keyword) return true;
+
+            const values = [
+                row.customer_name,
+                row.branch_name ?? "",
+                row.bd_id ? bdMap[row.bd_id] ?? row.bd_id : "",
+                row.customer_type_id
+                    ? customerTypeMap[row.customer_type_id] ?? row.customer_type_id
+                    : "",
+                pointTypeMap[row.point_type_id] ?? row.point_type_id,
+                row.start_date ?? "",
+                row.start_date ? formatDMY(row.start_date) : "",
+                row.end_date ?? "",
+                row.end_date ? formatDMY(row.end_date) : "",
+                row.note ?? "",
+            ];
+
+            return values.some((value) => value.toLowerCase().includes(keyword));
+        });
+    }, [rows, statusFilter, search, bdMap, customerTypeMap, pointTypeMap]);
+
     const baseStatStyle =
         "transition-all duration-200 ease-out hover:-translate-y-1 hover:shadow-md cursor-pointer";
 
@@ -534,17 +589,96 @@ export default function AdsTrackingPage({
                 </div>
             </div>
 
-            <AdsTrackingTable
-                rows={rows}
-                loading={loading || mastersLoading || isMutating}
-                pointTypeMap={pointTypeMap}
-                bdMap={bdMap}
-                customerTypeMap={customerTypeMap}
-                isAdmin={isAdmin}
-                onEdit={handleOpenEdit}
-                onDelete={handleDelete}
-                onView={handleOpenView}
-            />
+            <div className="relative overflow-hidden rounded-xl border">
+                {(loading || mastersLoading || isMutating) && (
+                    <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/55 backdrop-blur-[1px]">
+                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                )}
+
+                <div className="flex flex-col gap-3 border-b p-3 md:flex-row md:items-center">
+                    <div className="relative w-full md:w-[280px]">
+                        <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Search anything in ads records..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            className="h-9 pl-8"
+                            disabled={loading || isMutating}
+                        />
+                    </div>
+
+                    <div className="flex items-center gap-2 sm:ml-2">
+                        <button
+                            type="button"
+                            onClick={() => setStatusFilter("all")}
+                            className={getStatusTabClass(statusFilter === "all")}
+                        >
+                            All
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setStatusFilter("not_started")}
+                            className={getStatusTabClass(statusFilter === "not_started")}
+                        >
+                            Not Started
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setStatusFilter("active")}
+                            className={getStatusTabClass(statusFilter === "active")}
+                        >
+                            Active
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setStatusFilter("expiring_soon")}
+                            className={getStatusTabClass(statusFilter === "expiring_soon")}
+                        >
+                            Expiring Soon
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setStatusFilter("expired")}
+                            className={getStatusTabClass(statusFilter === "expired")}
+                        >
+                            Expired
+                        </button>
+                    </div>
+
+                    <div className="flex-1" />
+
+                    <div className="flex items-center gap-2">
+                        <Button
+                            className="cursor-pointer"
+                            variant="outline"
+                            onClick={() =>
+                                exportAdsTrackingToExcel(filteredRows, {
+                                    bd: bdMap,
+                                    customerType: customerTypeMap,
+                                    pointType: pointTypeMap,
+                                })
+                            }
+                            disabled={loading || isMutating || filteredRows.length === 0}
+                        >
+                            <FileSpreadsheet className="h-4 w-4" />
+                            Export Data
+                        </Button>
+                    </div>
+                </div>
+
+                <AdsTrackingTable
+                    rows={filteredRows}
+                    loading={loading || mastersLoading || isMutating}
+                    pointTypeMap={pointTypeMap}
+                    bdMap={bdMap}
+                    customerTypeMap={customerTypeMap}
+                    isAdmin={isAdmin}
+                    onEdit={handleOpenEdit}
+                    onDelete={handleDelete}
+                    onView={handleOpenView}
+                />
+            </div>
 
             <CreateAdRecordDialog
                 open={openCreate}

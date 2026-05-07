@@ -47,35 +47,95 @@ export default function EditAdRecordDialog({
     record: EditAdRecord | null;
     onSaved: () => void | Promise<void>;
 }) {
-    const [startDate, setStartDate] = useState("");
-    const [endDate, setEndDate] = useState("");
-    const [branchName, setBranchName] = useState("");
-    const [note, setNote] = useState("");
-    const [saving, setSaving] = useState(false);
-
-    useEffect(() => {
-        if (!open || !record) {
-            setStartDate("");
-            setEndDate("");
-            setBranchName("");
-            setNote("");
-            setSaving(false);
-            return;
-        }
-
-        setStartDate(record.start_date ?? "");
-        setEndDate(record.end_date ?? "");
-        setBranchName(record.branch_name ?? "");
-        setNote(record.note ?? "");
-    }, [open, record]);
-
     if (!record) return null;
 
-    const currentRecord = record;
-    const shouldShowBranchName = !!currentRecord.branch_name?.trim();
+    const formKey = [
+        record.id,
+        open ? "open" : "closed",
+        record.start_date ?? "",
+        record.end_date ?? "",
+        record.branch_name ?? "",
+        record.note ?? "",
+    ].join(":");
+
+    return (
+        <EditAdRecordDialogBody
+            key={formKey}
+            open={open}
+            onOpenChange={onOpenChange}
+            record={record}
+            onSaved={onSaved}
+        />
+    );
+}
+
+function EditAdRecordDialogBody({
+    open,
+    onOpenChange,
+    record,
+    onSaved,
+}: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    record: EditAdRecord;
+    onSaved: () => void | Promise<void>;
+}) {
+    const [startDate, setStartDate] = useState(record.start_date ?? "");
+    const [endDate, setEndDate] = useState(record.end_date ?? "");
+    const [branchName, setBranchName] = useState(record.branch_name ?? "");
+    const [note, setNote] = useState(record.note ?? "");
+    const [saving, setSaving] = useState(false);
+    const [shouldShowBranchName, setShouldShowBranchName] = useState(
+        !!record.branch_name?.trim()
+    );
+
+    useEffect(() => {
+        if (!open) return;
+
+        let isCancelled = false;
+
+        async function resolveBranchNameVisibility() {
+            const hasExistingBranchName = !!record.branch_name?.trim();
+
+            const { data, error } = await supabase
+                .from("records")
+                .select("id, branch_number")
+                .eq("customer_name", record.customer_name)
+                .eq("point_type_id", record.point_type_id);
+
+            if (isCancelled) return;
+
+            if (error) {
+                setShouldShowBranchName(hasExistingBranchName);
+                return;
+            }
+
+            const linkedRecords = (data ?? []) as Array<{
+                id: string;
+                branch_number: number | null;
+            }>;
+
+            const hasDuplicatePerformanceRecords = linkedRecords.length >= 2;
+            const hasMultipleBranches = linkedRecords.some(
+                (item) => Number(item.branch_number ?? 0) > 1
+            );
+
+            setShouldShowBranchName(
+                hasExistingBranchName ||
+                    hasDuplicatePerformanceRecords ||
+                    hasMultipleBranches
+            );
+        }
+
+        resolveBranchNameVisibility();
+
+        return () => {
+            isCancelled = true;
+        };
+    }, [open, record]);
 
     function renderStatusBadge() {
-        if (!currentRecord?.end_date) {
+        if (!record.end_date) {
             return (
                 <span className="inline-flex rounded-md bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
                     Not Started
@@ -83,10 +143,7 @@ export default function EditAdRecordDialog({
             );
         }
 
-        const status = getAdsTrackingStatus(
-            currentRecord.start_date,
-            currentRecord.end_date
-        );
+        const status = getAdsTrackingStatus(record.start_date, record.end_date);
 
         if (status === "not_started") {
             return (
@@ -119,15 +176,15 @@ export default function EditAdRecordDialog({
         );
     }
 
-    const normalizedInitialNote = (currentRecord.note ?? "").trim();
+    const normalizedInitialNote = (record.note ?? "").trim();
     const normalizedCurrentNote = note.trim();
 
-    const normalizedInitialBranchName = (currentRecord.branch_name ?? "").trim();
+    const normalizedInitialBranchName = (record.branch_name ?? "").trim();
     const normalizedCurrentBranchName = branchName.trim();
 
     const hasChanges =
-        startDate !== (currentRecord.start_date ?? "") ||
-        endDate !== (currentRecord.end_date ?? "") ||
+        startDate !== (record.start_date ?? "") ||
+        endDate !== (record.end_date ?? "") ||
         normalizedCurrentNote !== normalizedInitialNote ||
         (shouldShowBranchName &&
             normalizedCurrentBranchName !== normalizedInitialBranchName);
@@ -159,7 +216,7 @@ export default function EditAdRecordDialog({
         const { error } = await supabase
             .from("ad_tracking_records")
             .update(updatePayload)
-            .eq("id", currentRecord.id);
+            .eq("id", record.id);
 
         setSaving(false);
 
@@ -186,7 +243,7 @@ export default function EditAdRecordDialog({
 
                     <div className="mt-1 flex items-center justify-between gap-3">
                         <DialogDescription className="m-0 text-sm text-muted-foreground">
-                            Update ad record for {currentRecord.customer_name}.
+                            Update ad record for {record.customer_name}.
                         </DialogDescription>
 
                         <div className="shrink-0">{renderStatusBadge()}</div>
@@ -198,14 +255,14 @@ export default function EditAdRecordDialog({
                         <div>
                             <label className={labelClass}>Customer</label>
                             <div className={infoFieldClass}>
-                                {currentRecord.customer_name}
+                                {record.customer_name}
                             </div>
                         </div>
 
                         <div>
                             <label className={labelClass}>Point Type</label>
                             <div className={infoFieldClass}>
-                                {currentRecord.point_type_label}
+                                {record.point_type_label}
                             </div>
                         </div>
                     </div>

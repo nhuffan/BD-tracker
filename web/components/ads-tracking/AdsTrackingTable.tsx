@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, Pencil, Trash2, Sparkles, Store, Loader2 } from "lucide-react";
+import { FileText, Pencil, Trash2, Sparkles, Store } from "lucide-react";
 import { getAdsTrackingStatus } from "@/lib/adsTracking";
 import { formatDMY } from "@/lib/date";
 import {
@@ -68,67 +68,60 @@ export default function AdsTrackingTable({
   }
 
   return (
-    <div className="relative overflow-hidden rounded-xl border">
-      {loading && (
-        <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/55 backdrop-blur-[1px]">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </div>
-      )}
+    <div className="w-full overflow-x-auto">
+      <table className="w-full table-fixed text-sm">
+        <thead className="bg-muted/50">
+          <tr>
+            <th className="w-[180px] p-3 text-left">Customer Name</th>
+            <th className="w-[140px] p-3 text-left">Branch Name</th>
+            <th className="w-[120px] p-3 text-left">BD Name</th>
+            <th className="w-[200px] p-3 text-left">Customer Type</th>
+            <th className="w-[180px] p-3 text-left">Point Type</th>
+            <th className="w-[100px] p-3 text-left">Start Date</th>
+            <th className="w-[100px] p-3 text-left">End Date</th>
+            <th className="w-[120px] p-3 text-center">Status</th>
+            <th className="w-[60px] p-3 text-center">Note</th>
+            {isAdmin && (
+              <th className="w-[100px] p-3 pr-5 text-right">Action</th>
+            )}
+          </tr>
+        </thead>
 
-      <div className="w-full overflow-x-auto">
-        <table className="w-full table-fixed text-sm">
-          <thead className="bg-muted/50">
-            <tr>
-              <th className="w-[180px] p-3 text-left">Customer Name</th>
-              <th className="w-[140px] p-3 text-left">Branch Name</th>
-              <th className="w-[120px] p-3 text-left">BD Name</th>
-              <th className="w-[200px] p-3 text-left">Customer Type</th>
-              <th className="w-[180px] p-3 text-left">Point Type</th>
-              <th className="w-[100px] p-3 text-left">Start Date</th>
-              <th className="w-[100px] p-3 text-left">End Date</th>
-              <th className="w-[120px] p-3 text-center">Status</th>
-              <th className="w-[60px] p-3 text-center">Note</th>
-              {isAdmin && (
-                <th className="w-[100px] p-3 pr-5 text-right">Action</th>
-              )}
-            </tr>
-          </thead>
+        <tbody>
+          {rows.map((row) => {
+            const isRestaurant = row.category === "restaurant";
 
-          <tbody>
-            {rows.map((row) => {
-              const isRestaurant = row.category === "restaurant";
-
-              return (
-                <tr
-                  key={row.id}
-                  className="border-t odd:bg-muted/30 even:bg-background cursor-default"
-                  onDoubleClick={() => onView(row)}
+            return (
+              <tr
+                key={row.id}
+                className="border-t odd:bg-muted/30 even:bg-background cursor-default"
+                onDoubleClick={() => onView(row)}
+              >
+                <td
+                  className="overflow-hidden whitespace-nowrap p-3 text-ellipsis"
+                  title={row.customer_name}
                 >
-                  <td
-                    className="overflow-hidden whitespace-nowrap p-3 text-ellipsis"
-                    title={row.customer_name}
-                  >
-                    <div className="flex items-center gap-2 overflow-hidden">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className="shrink-0 text-muted-foreground">
-                              {isRestaurant ? (
-                                <Store className="h-4 w-4" />
-                              ) : (
-                                <Sparkles className="h-4 w-4" />
-                              )}
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {isRestaurant ? "Restaurant" : "Entertainment"}
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                  <div className="flex items-center gap-2 overflow-hidden">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="shrink-0 text-muted-foreground">
+                            {isRestaurant ? (
+                              <Store className="h-4 w-4" />
+                            ) : (
+                              <Sparkles className="h-4 w-4" />
+                            )}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {isRestaurant ? "Restaurant" : "Entertainment"}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
 
-                      <span className="truncate">{row.customer_name}</span>
-                    </div>
-                  </td>
+                    <span className="truncate">{row.customer_name}</span>
+                  </div>
+                </td>
 
                   <td
                     className="overflow-hidden whitespace-nowrap p-3 text-ellipsis"
@@ -245,18 +238,17 @@ export default function AdsTrackingTable({
                       </div>
                     </td>
                   )}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
 
-        {rows.length === 0 && !loading && (
-          <div className="p-4 text-sm text-muted-foreground">
-            No ad records found
-          </div>
-        )}
-      </div>
+      {rows.length === 0 && !loading && (
+        <div className="p-4 text-sm text-muted-foreground">
+          No ad records found
+        </div>
+      )}
     </div>
   );
 }
