@@ -15,13 +15,23 @@ function getErrorMessage(error: unknown) {
 }
 
 function toRecordRow(item: LocalRecord) {
-  const row = { ...item };
-  delete row.sync_status;
-  delete row.updated_at_local;
-  delete row.last_error;
-  delete row.deleted;
-  delete row._failed_retries;
-  return row;
+  return {
+    id: item.id,
+    event_date: item.event_date,
+    bd_id: item.bd_id,
+    bd_level_id: item.bd_level_id,
+    customer_name: item.customer_name,
+    customer_type_id: item.customer_type_id,
+    point_type_id: item.point_type_id,
+    category: item.category,
+    points: item.points,
+    money: item.money,
+    package_amount: item.package_amount,
+    note: item.note,
+    created_at: item.created_at,
+    updated_at: item.updated_at,
+    branch_number: item.branch_number,
+  };
 }
 
 export async function syncPending() {
