@@ -53,6 +53,8 @@ export default function CreateDialog({
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
   const bdList = useMastersActive("bd");
+  const bdIds = bdList.map((item) => item.id);
+  const bdIdsKey = bdIds.join(",");
   const { items: levelList } = useMasters("bd_level");
   const { items: customerTypes } = useMasters("customer_type");
   const { items: pointTypes } = useMasters("point_type");
@@ -98,9 +100,10 @@ export default function CreateDialog({
     let cancelled = false;
 
     async function loadMonthlyBdLevels() {
-      if (!selectedMonthKey) {
+      if (!selectedMonthKey || !form.bd_id) {
         if (!cancelled) {
           setMonthlyBdLevels({});
+          setLoadingBdLevels(false);
         }
         return;
       }
@@ -109,12 +112,13 @@ export default function CreateDialog({
 
       try {
         const monthlyLevelMap = await fetchBdMonthlyLevels([selectedMonthKey]);
+        const currentBdIds = bdIdsKey ? bdIdsKey.split(",").filter(Boolean) : [];
 
         if (!cancelled) {
           setMonthlyBdLevels(
             getBdLevelsForMonth(
               selectedMonthKey,
-              bdList.map((item) => item.id),
+              currentBdIds,
               monthlyLevelMap
             )
           );
@@ -136,7 +140,7 @@ export default function CreateDialog({
     return () => {
       cancelled = true;
     };
-  }, [selectedMonthKey, bdList]);
+  }, [selectedMonthKey, form.bd_id, bdIdsKey]);
 
   useEffect(() => {
     if (!form.bd_id) {
