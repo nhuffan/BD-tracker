@@ -8,6 +8,12 @@ import { RecordRow } from "@/lib/types";
 import RecordsToolbar from "./RecordsToolbar";
 import RecordsTable from "./RecordsTable";
 import { useMasters } from "@/lib/useMasters";
+import {
+  fetchBdMonthlyLevels,
+  normalizeRecordBdLevel,
+  type BdMonthlyLevelMap,
+} from "@/lib/bdMonthlyLevels";
+import type { LocalRecord } from "@/lib/db";
 
 export type Filters = {
   month?: string;
@@ -76,13 +82,29 @@ export default function RecordsPage({ isAdmin }: { isAdmin: boolean }) {
 
     const local = await db.records.toArray();
     const { data, error } = await supabase.from("records").select("*");
+    const monthKeys = Array.from(
+      new Set(
+        [
+          ...(data ?? []).map((r: RecordRow) => r.event_date?.slice(0, 7)),
+          ...local.map((r) => r.event_date?.slice(0, 7)),
+        ].filter(Boolean) as string[]
+      )
+    );
+
+    let monthlyLevelMap: BdMonthlyLevelMap = {};
+
+    try {
+      monthlyLevelMap = await fetchBdMonthlyLevels(monthKeys);
+    } catch (levelError) {
+      console.error("Failed to fetch BD monthly levels:", levelError);
+    }
 
     if (error) {
       const localOnly: RecordVM[] = local
         .filter((x) => !x.deleted)
         .map(
-          ({ sync_status, updated_at_local, last_error, deleted, ...r }) => ({
-            ...(r as RecordRow),
+          ({ sync_status, ...r }: LocalRecord) => ({
+            ...(normalizeRecordBdLevel(r as RecordRow, monthlyLevelMap) as RecordRow),
             _sync_status: sync_status,
           })
         );
@@ -93,9 +115,12 @@ export default function RecordsPage({ isAdmin }: { isAdmin: boolean }) {
     }
 
     const serverMap = new Map<string, RecordVM>(
-      (data ?? []).map((r: any) => [
+      ((data ?? []) as RecordRow[]).map((r) => [
         r.id,
-        { ...(r as RecordRow), _sync_status: "synced" },
+        {
+          ...(normalizeRecordBdLevel(r, monthlyLevelMap) as RecordRow),
+          _sync_status: "synced",
+        },
       ])
     );
 
@@ -103,11 +128,10 @@ export default function RecordsPage({ isAdmin }: { isAdmin: boolean }) {
       if (l.sync_status === "synced") continue;
       if (l.deleted) continue;
 
-      const { sync_status, updated_at_local, last_error, deleted, ...pure } =
-        l as any;
+      const { sync_status, ...pure } = l;
 
       serverMap.set(l.id, {
-        ...(pure as RecordRow),
+        ...(normalizeRecordBdLevel(pure as RecordRow, monthlyLevelMap) as RecordRow),
         _sync_status: sync_status,
       });
     }
@@ -117,7 +141,9 @@ export default function RecordsPage({ isAdmin }: { isAdmin: boolean }) {
   }
 
   useEffect(() => {
-    refresh();
+    const initialRefreshId = window.setTimeout(() => {
+      void refresh();
+    }, 0);
 
     const onOnline = async () => {
       await syncPending();
@@ -128,12 +154,25 @@ export default function RecordsPage({ isAdmin }: { isAdmin: boolean }) {
       refresh();
     };
 
+    const onRecordsUpdated = () => {
+      refresh();
+    };
+
+    const onPerformanceRecordsUpdated = () => {
+      refresh();
+    };
+
     window.addEventListener("online", onOnline);
     window.addEventListener("masters-updated", onMastersUpdated);
+    window.addEventListener("records-updated", onRecordsUpdated);
+    window.addEventListener("performance-records-updated", onPerformanceRecordsUpdated);
 
     return () => {
+      window.clearTimeout(initialRefreshId);
       window.removeEventListener("online", onOnline);
       window.removeEventListener("masters-updated", onMastersUpdated);
+      window.removeEventListener("records-updated", onRecordsUpdated);
+      window.removeEventListener("performance-records-updated", onPerformanceRecordsUpdated);
     };
   }, []);
 

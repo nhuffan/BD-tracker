@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -30,7 +30,11 @@ import {
 import { MASTER_CATEGORY_UI } from "@/lib/masterUi";
 import { supabase } from "@/lib/supabaseClient";
 import { invalidateMastersCache } from "@/lib/useMasters";
+import { db } from "@/lib/db";
+import { syncPending } from "@/lib/sync";
+import { fetchBdMonthlyLevels, getBdLevelsForMonth } from "@/lib/bdMonthlyLevels";
 import { Pencil, Trash2, ArrowUpDown, CalendarDays, Plus, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 function normalizeName(value: string) {
   return value
@@ -54,6 +58,14 @@ function formatMonthLabel(month: string) {
   return `${monthNumber}/${year}`;
 }
 
+function getMonthRange(month: string) {
+  const [year, monthNumber] = month.split("-").map(Number);
+  const start = `${month}-01`;
+  const nextMonth = new Date(year, monthNumber, 1);
+  const end = nextMonth.toISOString().slice(0, 10);
+  return { start, end };
+}
+
 function getMedalByIndex(index: number) {
   if (index === 0) return "🥇";
   if (index === 1) return "🥈";
@@ -63,6 +75,12 @@ function getMedalByIndex(index: number) {
 
 type SortDirection = "asc" | "desc";
 type BdSortField = "points" | "money" | "newCustomers" | "newHotList";
+type BdLevelMonthlyKpiRow = {
+  id: string;
+  bd_level_id: string;
+  month_key: string;
+  kpi: number;
+};
 
 export default function MasterManager({
   category,
@@ -98,10 +116,17 @@ export default function MasterManager({
 
   const [monthOptions, setMonthOptions] = useState<string[]>([]);
   const [selectedMonth, setSelectedMonth] = useState<string>(ALL_TIME);
+  const [monthlyKpis, setMonthlyKpis] = useState<Record<string, number>>({});
+  const [kpiInputs, setKpiInputs] = useState<Record<string, string>>({});
+  const [savingKpiId, setSavingKpiId] = useState<string | null>(null);
+  const [bdLevels, setBdLevels] = useState<MasterItem[]>([]);
+  const [bdLevelByBdId, setBdLevelByBdId] = useState<Record<string, string>>({});
+  const [savingBdLevelId, setSavingBdLevelId] = useState<string | null>(null);
 
   const [bdSortField, setBdSortField] = useState<BdSortField>("points");
   const [bdSortDirection, setBdSortDirection] =
     useState<SortDirection>("desc");
+  const suppressRecordsRefreshUntilRef = useRef(0);
 
   async function refresh() {
     setLoading(true);
@@ -111,14 +136,21 @@ export default function MasterManager({
       data.sort((a, b) => a.label.localeCompare(b.label));
       setItems(data);
 
-      if (category === "bd") {
+      if (category === "bd" || category === "bd_level") {
+        const bdLevelItems = await fetchMasters("bd_level");
+        bdLevelItems.sort((a, b) => a.label.localeCompare(b.label));
+        setBdLevels(bdLevelItems);
+
         const { data: records, error: recordsError } = await supabase
           .from("records")
           .select("bd_id, points, money, package_amount, event_date");
 
-        const { data: trackingRows, error: trackingError } = await supabase
-          .from("customer_tracking")
-          .select("bd_id, event_date, branch, in_hot_list, combo_voucher");
+        const isBdCategory = category === "bd";
+        const { data: trackingRows, error: trackingError } = isBdCategory
+          ? await supabase
+            .from("customer_tracking")
+            .select("bd_id, event_date, branch, in_hot_list, combo_voucher")
+          : { data: [], error: null };
 
         if (recordsError) {
           console.error("Failed to fetch records:", recordsError);
@@ -133,10 +165,14 @@ export default function MasterManager({
 
         const months = Array.from(
           new Set(
-            [
-              ...allRecords.map((r) => r.event_date?.slice(0, 7)),
-              ...allTrackingRows.map((r) => r.event_date?.slice(0, 7)),
-            ].filter(Boolean) as string[]
+            isBdCategory
+              ? [
+                ...allRecords.map((r) => r.event_date?.slice(0, 7)),
+                ...allTrackingRows.map((r) => r.event_date?.slice(0, 7)),
+              ].filter(Boolean) as string[]
+              : allRecords
+                .map((r) => r.event_date?.slice(0, 7))
+                .filter(Boolean) as string[]
           )
         ).sort((a, b) => b.localeCompare(a));
 
@@ -168,38 +204,103 @@ export default function MasterManager({
             map[r.bd_id].packageAmount =
               (map[r.bd_id].packageAmount ?? 0) + r.package_amount;
           }
+
         });
 
-        setTotals(map);
+        setTotals(category === "bd" ? map : {});
 
-        const filteredTrackingRows =
-          selectedMonth === ALL_TIME
-            ? allTrackingRows
-            : allTrackingRows.filter(
-              (r) => r.event_date?.slice(0, 7) === selectedMonth
+        if (isBdCategory) {
+          const filteredTrackingRows =
+            selectedMonth === ALL_TIME
+              ? allTrackingRows
+              : allTrackingRows.filter(
+                (r) => r.event_date?.slice(0, 7) === selectedMonth
+              );
+
+          const trackingMap: Record<
+            string,
+            { newCustomers: number; newHotList: number }
+          > = {};
+
+          filteredTrackingRows.forEach((r) => {
+            if (!r.bd_id) return;
+            if (r.combo_voucher !== true) return;
+
+            if (!trackingMap[r.bd_id]) {
+              trackingMap[r.bd_id] = {
+                newCustomers: 0,
+                newHotList: 0,
+              };
+            }
+
+            trackingMap[r.bd_id].newCustomers += r.branch ?? 0;
+            trackingMap[r.bd_id].newHotList += r.in_hot_list ?? 0;
+          });
+
+          setTrackingTotals(trackingMap);
+        } else {
+          setTrackingTotals({});
+        }
+
+        if (selectedMonth !== ALL_TIME) {
+          try {
+            const monthlyLevelMap = await fetchBdMonthlyLevels([selectedMonth]);
+            const bdIds =
+              category === "bd"
+                ? data.map((item) => item.id)
+                : bdLevelItems.map((item) => item.id);
+
+            setBdLevelByBdId(
+              getBdLevelsForMonth(selectedMonth, bdIds, monthlyLevelMap)
+            );
+          } catch (monthlyLevelError) {
+            console.error("Failed to fetch bd monthly levels:", monthlyLevelError);
+            setBdLevelByBdId({});
+          }
+        } else {
+          setBdLevelByBdId({});
+        }
+
+        if (selectedMonth !== ALL_TIME) {
+          const { data: kpiRows, error: kpiError } = await supabase
+            .from("bd_level_monthly_kpis")
+            .select("id, bd_level_id, month_key, kpi")
+            .eq("month_key", selectedMonth);
+
+          if (kpiError) {
+            console.error("Failed to fetch bd level monthly kpis:", kpiError);
+            setMonthlyKpis({});
+            setKpiInputs({});
+          } else {
+            const nextMap = Object.fromEntries(
+              ((kpiRows ?? []) as BdLevelMonthlyKpiRow[]).map((row) => [
+                row.bd_level_id,
+                row.kpi ?? 0,
+              ])
             );
 
-        const trackingMap: Record<
-          string,
-          { newCustomers: number; newHotList: number }
-        > = {};
-
-        filteredTrackingRows.forEach((r) => {
-          if (!r.bd_id) return;
-          if (r.combo_voucher !== true) return;
-
-          if (!trackingMap[r.bd_id]) {
-            trackingMap[r.bd_id] = {
-              newCustomers: 0,
-              newHotList: 0,
-            };
+            setMonthlyKpis(nextMap);
+            setKpiInputs(
+              Object.fromEntries(
+                Object.entries(nextMap).map(([bdId, value]) => [
+                  bdId,
+                  value > 0 ? value.toLocaleString("en-US") : "",
+                ])
+              )
+            );
           }
-
-          trackingMap[r.bd_id].newCustomers += r.branch ?? 0;
-          trackingMap[r.bd_id].newHotList += r.in_hot_list ?? 0;
-        });
-
-        setTrackingTotals(trackingMap);
+        } else {
+          setMonthlyKpis({});
+          setKpiInputs({});
+        }
+      } else {
+        setTotals({});
+        setTrackingTotals({});
+        setMonthOptions([]);
+        setMonthlyKpis({});
+        setKpiInputs({});
+        setBdLevels([]);
+        setBdLevelByBdId({});
       }
     } finally {
       setLoading(false);
@@ -211,16 +312,64 @@ export default function MasterManager({
   }, [category, selectedMonth]);
 
   useEffect(() => {
-    if (category !== "bd") return;
+    if (category !== "bd_level") return;
+    if (selectedMonth !== ALL_TIME && monthOptions.includes(selectedMonth)) return;
+
+    if (monthOptions.length > 0) {
+      setSelectedMonth(monthOptions[0]);
+    }
+  }, [category, monthOptions, selectedMonth]);
+
+  useEffect(() => {
+    if (category !== "bd" && category !== "bd_level") return;
 
     const channel = supabase
-      .channel("bd-manager-realtime")
+      .channel(`${category}-manager-realtime`)
       .on(
         "postgres_changes",
         {
           event: "*",
           schema: "public",
           table: "records",
+        },
+        () => {
+          if (
+            category === "bd" &&
+            Date.now() < suppressRecordsRefreshUntilRef.current
+          ) {
+            return;
+          }
+          refresh();
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "masters",
+        },
+        () => {
+          refresh();
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "bd_level_monthly_kpis",
+        },
+        () => {
+          refresh();
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "bd_monthly_levels",
         },
         () => {
           refresh();
@@ -234,18 +383,9 @@ export default function MasterManager({
           table: "customer_tracking",
         },
         () => {
-          refresh();
-        }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "masters",
-        },
-        () => {
-          refresh();
+          if (category === "bd") {
+            refresh();
+          }
         }
       )
       .subscribe();
@@ -494,6 +634,140 @@ export default function MasterManager({
     window.dispatchEvent(new Event("masters-updated"));
   }
 
+  async function saveMonthlyKpi(bdLevelId: string) {
+    if (category !== "bd_level" || selectedMonth === ALL_TIME) return;
+
+    const rawValue = kpiInputs[bdLevelId] ?? "";
+    const digits = rawValue.replace(/[^\d]/g, "");
+    const kpiValue = digits ? Number(digits) : 0;
+
+    setSavingKpiId(bdLevelId);
+
+    try {
+      const { error } = await supabase.from("bd_level_monthly_kpis").upsert(
+        {
+          bd_level_id: bdLevelId,
+          month_key: selectedMonth,
+          kpi: kpiValue,
+          updated_at: new Date().toISOString(),
+        },
+        {
+          onConflict: "bd_level_id,month_key",
+        }
+      );
+
+      if (error) {
+        toast.error("Failed to save KPI.");
+        return;
+      }
+
+      setMonthlyKpis((prev) => ({
+        ...prev,
+        [bdLevelId]: kpiValue,
+      }));
+
+      setKpiInputs((prev) => ({
+        ...prev,
+        [bdLevelId]: kpiValue > 0 ? kpiValue.toLocaleString("en-US") : "",
+      }));
+
+      toast.success("KPI updated successfully.");
+    } finally {
+      setSavingKpiId(null);
+    }
+  }
+
+  async function saveBdMonthlyLevel(bdId: string, bdLevelId: string) {
+    if (category !== "bd" || selectedMonth === ALL_TIME) return;
+
+    setSavingBdLevelId(bdId);
+
+    try {
+      const { start, end } = getMonthRange(selectedMonth);
+
+      if (!bdLevelId) {
+        const { error } = await supabase
+          .from("bd_monthly_levels")
+          .delete()
+          .eq("bd_id", bdId)
+          .eq("month_key", selectedMonth);
+
+        if (error) {
+          toast.error("Failed to update BD level.");
+          return false;
+        }
+
+        setBdLevelByBdId((prev) => {
+          const next = { ...prev };
+          delete next[bdId];
+          return next;
+        });
+        window.dispatchEvent(new Event("records-updated"));
+        return true;
+      }
+
+      const { error } = await supabase.from("bd_monthly_levels").upsert(
+        {
+          bd_id: bdId,
+          bd_level_id: bdLevelId,
+          month_key: selectedMonth,
+        },
+        {
+          onConflict: "bd_id,month_key",
+        }
+      );
+
+      if (error) {
+        toast.error("Failed to update BD level.");
+        return false;
+      }
+
+      setBdLevelByBdId((prev) => ({
+        ...prev,
+        [bdId]: bdLevelId,
+      }));
+
+      const { error: recordsError } = await supabase
+        .from("records")
+        .update({ bd_level_id: bdLevelId })
+        .eq("bd_id", bdId)
+        .gte("event_date", start)
+        .lt("event_date", end);
+
+      if (recordsError) {
+        toast.error("BD level was saved, but performance records failed to update.");
+        return false;
+      }
+
+      const localRows = await db.records
+        .where("bd_id")
+        .equals(bdId)
+        .toArray();
+
+      await Promise.all(
+        localRows
+          .filter((row) => !row.deleted && row.event_date >= start && row.event_date < end)
+          .map((row) =>
+            db.records.update(row.id, {
+              bd_level_id: bdLevelId,
+              sync_status: "pending",
+              updated_at_local: Date.now(),
+            })
+          )
+      );
+
+      if (navigator.onLine) {
+        await syncPending();
+      }
+
+      suppressRecordsRefreshUntilRef.current = Date.now() + 1500;
+      window.dispatchEvent(new Event("performance-records-updated"));
+      return true;
+    } finally {
+      setSavingBdLevelId(null);
+    }
+  }
+
   function renderTable(list: MasterItem[], startIndex: number) {
     return (
       <div className="overflow-hidden rounded-xl border">
@@ -501,17 +775,27 @@ export default function MasterManager({
           <table className="w-full min-w-[900px] table-fixed text-sm">
             <thead className="bg-muted/50">
               <tr>
-                <th className="w-[100px] p-2 pl-5 text-left">#</th>
+                <th className="w-[40px] p-2 pl-5 text-left">#</th>
                 <th className="w-[140px] p-2 text-center">Name</th>
 
                 {category === "bd" && (
                   <>
-                    <th className="w-[140px] p-2 text-center">New Customers</th>
-                    <th className="w-[140px] p-2 text-center">New In Hot List</th>
-                    <th className="w-[140px] p-2 text-center">Points</th>
-                    <th className="w-[140px] p-2 text-center">Bonus</th>
+                    {selectedMonth !== ALL_TIME && (
+                      <th className="w-[140px] p-2 text-center">BD Level</th>
+                    )}
+                    <th className="w-[130px] p-2 text-center">New Customers</th>
+                    <th className="w-[130px] p-2 text-center">New In Hot List</th>
+                    <th className="w-[130px] p-2 text-center">Points</th>
+                    {selectedMonth !== ALL_TIME && (
+                      <th className="w-[130px] p-2 text-center">Performance</th>
+                    )}
+                    <th className="w-[130px] p-2 text-center">Bonus</th>
                     <th className="w-[140px] p-2 text-center">Package Amount</th>
                   </>
+                )}
+
+                {category === "bd_level" && selectedMonth !== ALL_TIME && (
+                  <th className="w-[160px] p-2 text-center">KPI</th>
                 )}
 
                 {isAdmin && (
@@ -573,6 +857,42 @@ export default function MasterManager({
 
                     {category === "bd" && (
                       <>
+                        {selectedMonth !== ALL_TIME && (
+                          <td className="p-2 text-center">
+                            {(() => {
+                              const currentLevelId = bdLevelByBdId[it.id] ?? "";
+                              if (!isAdmin) {
+                                const levelLabel =
+                                  bdLevels.find((level) => level.id === currentLevelId)?.label;
+                                return levelLabel ?? "—";
+                              }
+
+                              return (
+                                <Select
+                                  value={currentLevelId || "__none__"}
+                                  onValueChange={(value) => {
+                                    const nextLevelId = value === "__none__" ? "" : value;
+                                    void saveBdMonthlyLevel(it.id, nextLevelId);
+                                  }}
+                                  disabled={savingBdLevelId === it.id}
+                                >
+                                  <SelectTrigger className="mx-auto h-8 w-[120px]">
+                                    <SelectValue placeholder="Select level" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="__none__">No Level</SelectItem>
+                                    {bdLevels.map((level) => (
+                                      <SelectItem key={level.id} value={level.id}>
+                                        {level.label}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              );
+                            })()}
+                          </td>
+                        )}
+
                         <td className="p-2 text-center tabular-nums">
                           {(trackingTotals[it.id]?.newCustomers ?? 0).toLocaleString("en-US")}
                         </td>
@@ -584,6 +904,21 @@ export default function MasterManager({
                         <td className="p-2 text-center tabular-nums">
                           {(totals[it.id]?.points ?? 0).toLocaleString("en-US")}
                         </td>
+
+                        {selectedMonth !== ALL_TIME && (
+                          <td className="p-2 text-center tabular-nums">
+                            {(() => {
+                              const points = totals[it.id]?.points ?? 0;
+                              const bdLevelId = bdLevelByBdId[it.id];
+                              const kpi = bdLevelId ? monthlyKpis[bdLevelId] ?? 0 : 0;
+
+                              if (!kpi) return "—";
+
+                              const performance = (points / kpi) * 100;
+                              return `${performance.toFixed(1)}%`;
+                            })()}
+                          </td>
+                        )}
 
                         <td className="p-2 text-center tabular-nums">
                           {(totals[it.id]?.money ?? 0).toLocaleString("en-US")}
@@ -598,6 +933,37 @@ export default function MasterManager({
                           })()}
                         </td>
                       </>
+                    )}
+
+                    {category === "bd_level" && selectedMonth !== ALL_TIME && (
+                      <td className="p-2 text-center tabular-nums">
+                        {isAdmin ? (
+                          <Input
+                            value={kpiInputs[it.id] ?? ""}
+                            inputMode="numeric"
+                            placeholder="Enter KPI"
+                            className="mx-auto h-8 max-w-[140px] text-center"
+                            disabled={savingKpiId === it.id}
+                            onChange={(e) => {
+                              const digits = e.target.value.replace(/[^\d]/g, "");
+                              setKpiInputs((prev) => ({
+                                ...prev,
+                                [it.id]: digits
+                                  ? Number(digits).toLocaleString("en-US")
+                                  : "",
+                              }));
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                void saveMonthlyKpi(it.id);
+                              }
+                            }}
+                          />
+                        ) : (
+                          monthlyKpis[it.id]?.toLocaleString("en-US") || "—"
+                        )}
+                      </td>
                     )}
 
                     {/* Action */}
@@ -644,45 +1010,47 @@ export default function MasterManager({
         </div>
 
         <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-          {category === "bd" && (
+          {(category === "bd" || category === "bd_level") && (
             <>
-              <div className="flex h-9 shrink-0 items-center gap-2 rounded-md border px-2">
-                <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+              {category === "bd" && (
+                <div className="flex h-9 shrink-0 items-center gap-2 rounded-md border bg-transparent px-2">
+                  <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
 
-                <div className="w-[140px]">
-                  <Select
-                    value={bdSortField}
-                    onValueChange={(value) => setBdSortField(value as BdSortField)}
-                  >
-                    <SelectTrigger className="h-8 border-0 px-2 shadow-none">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="newCustomers">New Customers</SelectItem>
-                      <SelectItem value="newHotList">New In Hot List</SelectItem>
-                      <SelectItem value="points">Points</SelectItem>
-                      <SelectItem value="money">Bonus</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                  <div className="w-[140px]">
+                    <Select
+                      value={bdSortField}
+                      onValueChange={(value) => setBdSortField(value as BdSortField)}
+                    >
+                      <SelectTrigger className="h-8 border-0 bg-transparent px-2 shadow-none dark:bg-transparent">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="newCustomers">New Customers</SelectItem>
+                        <SelectItem value="newHotList">New In Hot List</SelectItem>
+                        <SelectItem value="points">Points</SelectItem>
+                        <SelectItem value="money">Bonus</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                <div className="w-[110px]">
-                  <Select
-                    value={bdSortDirection}
-                    onValueChange={(value) =>
-                      setBdSortDirection(value as SortDirection)
-                    }
-                  >
-                    <SelectTrigger className="h-8 border-0 px-2 shadow-none">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="desc">High → Low</SelectItem>
-                      <SelectItem value="asc">Low → High</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="w-[110px]">
+                    <Select
+                      value={bdSortDirection}
+                      onValueChange={(value) =>
+                        setBdSortDirection(value as SortDirection)
+                      }
+                    >
+                      <SelectTrigger className="h-8 border-0 bg-transparent px-2 shadow-none dark:bg-transparent">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="desc">High → Low</SelectItem>
+                        <SelectItem value="asc">Low → High</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="shrink-0">
                 <Select value={selectedMonth} onValueChange={setSelectedMonth}>
@@ -692,7 +1060,9 @@ export default function MasterManager({
                   </SelectTrigger>
 
                   <SelectContent>
-                    <SelectItem value={ALL_TIME}>All Time</SelectItem>
+                    {category === "bd" && (
+                      <SelectItem value={ALL_TIME}>All Time</SelectItem>
+                    )}
 
                     {monthOptions.map((month) => (
                       <SelectItem key={month} value={month}>
@@ -755,7 +1125,7 @@ export default function MasterManager({
                 )}
               </div>
 
-              {editing && (
+              {editing && category === "bd" && (
                 <div className="flex items-center justify-between rounded-md border px-3 py-2">
                   <div className="flex flex-col">
                     <span className="text-sm font-medium text-foreground">Active</span>

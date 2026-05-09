@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -26,6 +26,7 @@ import { syncPending } from "@/lib/sync";
 import { toast } from "sonner";
 import type { RecordRow } from "@/lib/types";
 import { Loader2 } from "lucide-react";
+import { fetchBdMonthlyLevels, getBdLevelsForMonth } from "@/lib/bdMonthlyLevels";
 
 function formatNumberInput(value: string) {
   if (!value) return "";
@@ -55,6 +56,8 @@ export default function CreateDialog({
   const { items: levelList } = useMasters("bd_level");
   const { items: customerTypes } = useMasters("customer_type");
   const { items: pointTypes } = useMasters("point_type");
+  const [monthlyBdLevels, setMonthlyBdLevels] = useState<Record<string, string>>({});
+  const [loadingBdLevels, setLoadingBdLevels] = useState(false);
 
   const [form, setForm] = useState<RecordRow>({
     id: "",
@@ -77,6 +80,9 @@ export default function CreateDialog({
   const [packageAmountInput, setPackageAmountInput] = useState("");
   const [branchNumberInput, setBranchNumberInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const selectedMonthKey = form.event_date.slice(0, 7);
+  const selectedBdLevelLabel =
+    levelList.find((item) => item.id === form.bd_level_id)?.label ?? "";
 
   const isSaveDisabled =
     !form.event_date ||
@@ -85,7 +91,65 @@ export default function CreateDialog({
     !form.customer_name.trim() ||
     !form.customer_type_id ||
     !form.point_type_id ||
-    !form.category;
+    !form.category ||
+    loadingBdLevels;
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadMonthlyBdLevels() {
+      if (!selectedMonthKey) {
+        if (!cancelled) {
+          setMonthlyBdLevels({});
+        }
+        return;
+      }
+
+      setLoadingBdLevels(true);
+
+      try {
+        const monthlyLevelMap = await fetchBdMonthlyLevels([selectedMonthKey]);
+
+        if (!cancelled) {
+          setMonthlyBdLevels(
+            getBdLevelsForMonth(
+              selectedMonthKey,
+              bdList.map((item) => item.id),
+              monthlyLevelMap
+            )
+          );
+        }
+      } catch (error) {
+        console.error("Failed to fetch BD monthly levels:", error);
+        if (!cancelled) {
+          setMonthlyBdLevels({});
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingBdLevels(false);
+        }
+      }
+    }
+
+    void loadMonthlyBdLevels();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedMonthKey, bdList]);
+
+  useEffect(() => {
+    if (!form.bd_id) {
+      setForm((prev) => (prev.bd_level_id ? { ...prev, bd_level_id: "" } : prev));
+      return;
+    }
+
+    const mappedLevelId = monthlyBdLevels[form.bd_id] ?? "";
+
+    setForm((prev) =>
+      prev.bd_level_id === mappedLevelId ? prev : { ...prev, bd_level_id: mappedLevelId }
+    );
+  }, [form.bd_id, monthlyBdLevels]);
 
   async function submit() {
     if (isSaveDisabled || isLoading) return;
@@ -136,7 +200,7 @@ export default function CreateDialog({
 
       window.dispatchEvent(new Event("records-updated"));
       toast.success("Record created successfully.");
-    } catch (e) {
+    } catch {
       toast.error("Failed to create record.");
     } finally {
       setIsLoading(false);
@@ -191,21 +255,24 @@ export default function CreateDialog({
 
           <div className="w-full">
             <p className="mb-1.5 text-sm font-medium text-foreground">BD Level</p>
-            <Select
-              value={form.bd_level_id || undefined}
-              onValueChange={(v) => setForm((f) => ({ ...f, bd_level_id: v }))}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select BD level" />
-              </SelectTrigger>
-              <SelectContent>
-                {levelList.map((x) => (
-                  <SelectItem key={x.id} value={x.id}>
-                    {x.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Input
+              value={
+                loadingBdLevels
+                  ? "Loading..."
+                  : selectedBdLevelLabel || ""
+              }
+              placeholder={
+                form.bd_id
+                  ? `No BD level found up to ${selectedMonthKey}`
+                  : "Select BD name first"
+              }
+              readOnly
+            />
+            {!loadingBdLevels && form.bd_id && !form.bd_level_id && (
+              <p className="mt-1 text-sm text-destructive">
+                No BD level has been set for this BD up to {selectedMonthKey}.
+              </p>
+            )}
           </div>
 
           <div className="w-full min-w-0">

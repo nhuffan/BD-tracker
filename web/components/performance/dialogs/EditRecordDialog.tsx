@@ -45,15 +45,12 @@ export default function EditRecordDialog({
   onOpenChange,
   record,
   onSaved,
-  bdLevelOptions,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   record: RecordVM | null;
   onSaved: () => Promise<void> | void;
-  bdLevelOptions: Array<{ id: string; label: string }>;
 }) {
-  const [bdLevelId, setBdLevelId] = useState("");
   const [category, setCategory] = useState<"entertainment" | "restaurant">(
     "restaurant"
   );
@@ -66,7 +63,6 @@ export default function EditRecordDialog({
 
   function resetFormFromRecord(target: RecordVM | null) {
     if (!target) {
-      setBdLevelId("");
       setCategory("entertainment");
       setPointsInput("");
       setMoneyInput("");
@@ -75,8 +71,6 @@ export default function EditRecordDialog({
       setNote("");
       return;
     }
-
-    setBdLevelId(target.bd_level_id ?? "");
 
     setCategory(
       (target.category as "entertainment" | "restaurant" | undefined) ??
@@ -121,7 +115,6 @@ export default function EditRecordDialog({
   const parsedPackageAmount = parseNumberInput(packageAmountInput);
   const parsedBranchNumber = parseNumberInput(branchNumberInput);
 
-  const originalBdLevelId = record?.bd_level_id ?? "";
   const originalCategory =
     (record?.category as "entertainment" | "restaurant" | undefined) ??
     "entertainment";
@@ -133,8 +126,7 @@ export default function EditRecordDialog({
 
   const hasChanges =
     !!record &&
-    (bdLevelId !== originalBdLevelId ||
-      category !== originalCategory ||
+    (category !== originalCategory ||
       parsedPoints !== originalPoints ||
       parsedMoney !== originalMoney ||
       parsedPackageAmount !== originalPackageAmount ||
@@ -142,7 +134,7 @@ export default function EditRecordDialog({
       note !== originalNote);
 
   const isSaveDisabled =
-    !record || !bdLevelId || !category || !hasChanges || isLoading;
+    !record || !category || !hasChanges || isLoading;
 
   async function handleSave() {
     if (!record || isSaveDisabled) return;
@@ -176,7 +168,6 @@ export default function EditRecordDialog({
 
       const updatedRecord: LocalRecord = {
         ...baseRecord,
-        bd_level_id: bdLevelId,
         category,
         points: parsedPoints,
         money: parsedMoney,
@@ -199,7 +190,7 @@ export default function EditRecordDialog({
 
       window.dispatchEvent(new Event("records-updated"));
       toast.success("Record updated successfully.");
-    } catch (e) {
+    } catch {
       toast.error("Failed to update record.");
     } finally {
       setIsLoading(false);
@@ -229,44 +220,24 @@ export default function EditRecordDialog({
         </DialogHeader>
 
         <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="w-full min-w-0">
-              <p className="mb-1.5 text-sm font-medium text-foreground">
-                BD Level
-              </p>
-              <Select value={bdLevelId} onValueChange={setBdLevelId}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select BD level" />
-                </SelectTrigger>
-                <SelectContent>
-                  {bdLevelOptions.map((item) => (
-                    <SelectItem key={item.id} value={item.id}>
-                      {item.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="w-full min-w-0">
-              <p className="mb-1.5 text-sm font-medium text-foreground">
-                Category
-              </p>
-              <Select
-                value={category}
-                onValueChange={(v: "entertainment" | "restaurant") =>
-                  setCategory(v)
-                }
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="entertainment">Entertainment</SelectItem>
-                  <SelectItem value="restaurant">Restaurant</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <div>
+            <p className="mb-1.5 text-sm font-medium text-foreground">
+              Category
+            </p>
+            <Select
+              value={category}
+              onValueChange={(v: "entertainment" | "restaurant") =>
+                setCategory(v)
+              }
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="entertainment">Entertainment</SelectItem>
+                <SelectItem value="restaurant">Restaurant</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="grid grid-cols-2 gap-3">

@@ -99,14 +99,14 @@ export default function AppHeader({
                 Q&A
               </TabsTrigger>
 
-              <TabsTrigger value="approvals" className={tabClass}>
-                <ClipboardCheck className="mr-2 h-5 w-5" />
-                Approvals
-              </TabsTrigger>
-
               <TabsTrigger value="ads-tracking" className={tabClass}>
                 <Megaphone className="mr-2 h-5 w-5" />
                 Ads Tracking
+              </TabsTrigger>
+
+              <TabsTrigger value="approvals" className={tabClass}>
+                <ClipboardCheck className="mr-2 h-5 w-5" />
+                Approvals
               </TabsTrigger>
             </div>
           </TabsList>

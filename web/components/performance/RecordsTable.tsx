@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { db } from "@/lib/db";
+import type { LocalRecord } from "@/lib/db";
 import { syncPending } from "@/lib/sync";
 import { formatDMY } from "@/lib/date";
 import {
@@ -106,7 +107,7 @@ export default function RecordsTable({
           if (!found) continue;
 
           await db.records.put({
-            ...(found as any),
+            ...(found as LocalRecord),
             deleted: true,
             sync_status: "pending",
             updated_at_local: Date.now(),
@@ -128,7 +129,7 @@ export default function RecordsTable({
           ? "Record deleted successfully."
           : `${selectedIds.length} records deleted successfully.`
       );
-    } catch (e) {
+    } catch {
       toast.error("Failed to delete record.");
     } finally {
       setIsDeleting(false);
@@ -396,10 +397,6 @@ export default function RecordsTable({
             onOpenChange={setEditOpen}
             record={editing}
             onSaved={onChanged}
-            bdLevelOptions={Object.entries(levelMap).map(([id, label]) => ({
-              id,
-              label,
-            }))}
           />
         )}
       </>
