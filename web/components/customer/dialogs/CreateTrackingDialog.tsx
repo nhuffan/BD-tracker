@@ -212,9 +212,9 @@ export default function CreateTrackingDialog({
               <SelectContent>
                 <SelectItem
                   value="true"
-                  className="font-semibold text-green-700 focus:bg-green-50 focus:text-green-700"
+                  className="font-semibold text-green-700 focus:bg-green-50 focus:text-green-700 dark:text-emerald-300 dark:focus:bg-emerald-950/40 dark:focus:text-emerald-300"
                 >
-                  <span className="inline-flex items-center rounded-md bg-green-100 px-2 py-0.5 text-xs font-bold text-green-700">
+                  <span className="inline-flex items-center rounded-md bg-green-100 px-2 py-0.5 text-xs font-bold text-green-700 dark:bg-emerald-950/40 dark:text-emerald-300">
                     YES
                   </span>
                 </SelectItem>

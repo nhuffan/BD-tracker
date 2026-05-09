@@ -136,6 +136,43 @@
   width: auto !important;
 }
 
+.dark .toaster [data-sonner-toast] {
+  background: color-mix(in oklab, var(--card) 92%, black 8%) !important;
+  color: var(--card-foreground) !important;
+  border: 1px solid color-mix(in oklab, var(--border) 80%, white 20%) !important;
+  box-shadow:
+    0 20px 45px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset !important;
+}
+
+.dark .toaster [data-sonner-toast] [data-title] {
+  color: var(--foreground) !important;
+}
+
+.dark .toaster [data-sonner-toast] [data-description] {
+  color: var(--muted-foreground) !important;
+}
+
+.dark .toaster [data-sonner-toast][data-type="success"] {
+  background: color-mix(in oklab, #052e16 74%, var(--card) 26%) !important;
+  border-color: rgba(52, 211, 153, 0.28) !important;
+}
+
+.dark .toaster [data-sonner-toast][data-type="error"] {
+  background: color-mix(in oklab, #450a0a 72%, var(--card) 28%) !important;
+  border-color: rgba(248, 113, 113, 0.3) !important;
+}
+
+.dark .toaster [data-sonner-toast][data-type="warning"] {
+  background: color-mix(in oklab, #451a03 72%, var(--card) 28%) !important;
+  border-color: rgba(251, 191, 36, 0.28) !important;
+}
+
+.dark .toaster [data-sonner-toast][data-type="info"] {
+  background: color-mix(in oklab, #172554 72%, var(--card) 28%) !important;
+  border-color: rgba(96, 165, 250, 0.28) !important;
+}
+
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }

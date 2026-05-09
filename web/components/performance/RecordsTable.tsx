@@ -214,12 +214,12 @@ export default function RecordsTable({
               <thead className="sticky top-0 z-10 border-b bg-muted/90 shadow-sm backdrop-blur">
                 <tr>
                   <th className="w-[80px] p-2 text-left">Date</th>
-                  <th className="w-[100px] p-2 text-left">BD Name</th>
-                  <th className="w-[100px] p-2 text-left">BD Level</th>
-                  <th className="w-[220px] p-2 text-left">Customer Name</th>
-                  <th className="w-[160px] p-2 text-left">Customer Type</th>
-                  <th className="w-[200px] p-2 text-left">Point Type</th>
-                  <th className="w-[100px] p-2 text-left">Package Amount</th>
+                  <th className="w-[80px] p-2 text-left">BD Name</th>
+                  <th className="w-[80px] p-2 text-left">BD Level</th>
+                  <th className="w-[210px] p-2 text-left">Customer Name</th>
+                  <th className="w-[170px] p-2 text-left">Customer Type</th>
+                  <th className="w-[220px] p-2 text-left">Point Type</th>
+                  <th className="w-[120px] p-2 text-left">Package Amount</th>
                   <th className="w-[100px] p-2 text-left">Points</th>
                   <th className="w-[100px] p-2 text-left">Bonus</th>
                   <th className="w-[60px] p-2 text-center">Note</th>

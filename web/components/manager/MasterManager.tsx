@@ -555,14 +555,16 @@ export default function MasterManager({
       inline-flex items-center gap-1.5
       rounded-lg
       bg-red-50
+      dark:bg-red-950/40
       px-2.5 py-1
       text-xs font-semibold
       text-red-600
+      dark:text-red-300
       border-0
       shadow-none
     "
                           >
-                            <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                            <span className="h-1.5 w-1.5 rounded-full bg-red-500 dark:bg-red-400" />
                             Inactive
                           </Badge>
                         )}

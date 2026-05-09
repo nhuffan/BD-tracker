@@ -148,7 +148,7 @@ export default function AdsTrackingPage({
     function getStatusTabClass(active: boolean) {
         return [
             "rounded-md px-3 py-1.5 text-xs font-semibold transition cursor-pointer",
-            active ? "bg-primary/10 text-primary" : "text-slate-500 hover:bg-slate-100",
+            active ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted",
         ].join(" ");
     }
 
@@ -526,10 +526,10 @@ export default function AdsTrackingPage({
         "transition-all duration-200 ease-out hover:-translate-y-1 hover:shadow-md cursor-pointer";
 
     const statStyles = {
-        total: `${baseStatStyle} border-primary/10 bg-muted/40 hover:border-primary/30`,
-        active: `${baseStatStyle} border-emerald-200 bg-emerald-50 hover:border-emerald-400`,
-        expiring: `${baseStatStyle} border-amber-200 bg-amber-50 hover:border-amber-400`,
-        expired: `${baseStatStyle} border-red-200 bg-red-50 hover:border-red-400`,
+        total: `${baseStatStyle} border-primary/10 bg-muted/40 hover:border-primary/30 dark:border-white/10 dark:bg-muted/70 dark:hover:border-primary/40`,
+        active: `${baseStatStyle} border-emerald-200 bg-emerald-50 hover:border-emerald-400 dark:border-emerald-900/70 dark:bg-emerald-950/35 dark:hover:border-emerald-700`,
+        expiring: `${baseStatStyle} border-amber-200 bg-amber-50 hover:border-amber-400 dark:border-amber-900/70 dark:bg-amber-950/35 dark:hover:border-amber-700`,
+        expired: `${baseStatStyle} border-red-200 bg-red-50 hover:border-red-400 dark:border-red-900/70 dark:bg-red-950/35 dark:hover:border-red-700`,
     };
 
     return (
@@ -562,28 +562,28 @@ export default function AdsTrackingPage({
                 </div>
 
                 <div className={`rounded-xl border ${statStyles.active} p-5`}>
-                    <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
                         Active Now
                     </div>
-                    <div className="mt-2 text-3xl font-bold text-emerald-700">
+                    <div className="mt-2 text-3xl font-bold text-emerald-700 dark:text-emerald-300">
                         {activeNow}
                     </div>
                 </div>
 
                 <div className={`rounded-xl border ${statStyles.expiring} p-5`}>
-                    <div className="text-xs font-semibold uppercase tracking-wide text-amber-700">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">
                         Expiring Soon
                     </div>
-                    <div className="mt-2 text-3xl font-bold text-amber-700">
+                    <div className="mt-2 text-3xl font-bold text-amber-700 dark:text-amber-300">
                         {expiringSoon}
                     </div>
                 </div>
 
                 <div className={`rounded-xl border ${statStyles.expired} p-5`}>
-                    <div className="text-xs font-semibold uppercase tracking-wide text-red-700">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-red-700 dark:text-red-300">
                         Expired
                     </div>
-                    <div className="mt-2 text-3xl font-bold text-red-700">
+                    <div className="mt-2 text-3xl font-bold text-red-700 dark:text-red-300">
                         {expiredCount}
                     </div>
                 </div>

@@ -29,14 +29,14 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[420px] rounded-xl border bg-background p-0 shadow-xl">
+      <DialogContent className="max-w-[420px] rounded-xl border border-border/80 bg-card p-0 text-card-foreground shadow-2xl dark:border-white/10">
         <DialogHeader className="p-6 pb-4">
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription className="pt-2 text-sm">
             {description}
           </DialogDescription>
         </DialogHeader>
-        <DialogFooter className="gap-2 border-t bg-muted/30 p-4">
+        <DialogFooter className="gap-2 border-t border-border bg-muted/40 p-4 dark:bg-muted/70">
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}

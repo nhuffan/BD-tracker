@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
+import ThemeToggle from "@/components/ThemeToggle";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -44,16 +45,22 @@ export default function LoginPage() {
 
       setMsg("Login successful. Redirecting...");
       router.replace("/");
-    } catch (e: any) {
-      setMsg(`Login exception: ${e?.message ?? e}`);
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : String(error);
+      setMsg(`Login exception: ${message}`);
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="w-full max-w-sm space-y-4 border rounded-xl p-4">
+    <div className="relative flex min-h-screen items-center justify-center bg-muted/30 p-4">
+      <div className="absolute right-4 top-4">
+        <ThemeToggle className="h-10 w-10" />
+      </div>
+
+      <div className="w-full max-w-sm space-y-4 rounded-xl border bg-card p-4 text-card-foreground shadow-sm">
         <div className="space-y-1">
           <h1 className="text-xl font-semibold">Login</h1>
           <p className="text-sm text-muted-foreground">
@@ -87,6 +94,8 @@ export default function LoginPage() {
 
         {msg && <p className="text-sm text-muted-foreground">{msg}</p>}
       </div>
+
+      
     </div>
   );
 }

@@ -91,15 +91,15 @@ function upsertRequest(list: ApprovalRequest[], next: ApprovalRequest) {
 
 function getResultBadgeClass(status: ApprovalRequest["status"]) {
   if (status === "approved") {
-    return "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200";
+    return "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900/70";
   }
 
   if (status === "rejected") {
-    return "bg-red-50 text-red-700 ring-1 ring-inset ring-red-200";
+    return "bg-red-50 text-red-700 ring-1 ring-inset ring-red-200 dark:bg-red-950/40 dark:text-red-300 dark:ring-red-900/70";
   }
 
   if (status === "pending") {
-    return "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200";
+    return "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-900/70";
   }
 
   return "bg-muted text-muted-foreground";
@@ -110,7 +110,7 @@ function getArchiveTabClass(active: boolean) {
     "rounded-md px-3 py-1.5 text-xs font-semibold transition cursor-pointer",
     active
       ? "bg-primary/10 text-primary"
-      : "text-slate-500 hover:bg-slate-100",
+      : "text-muted-foreground hover:bg-muted",
   ].join(" ");
 }
 
@@ -182,7 +182,7 @@ function AttachmentPreviewCell({
               onClick={() =>
                 window.open(openUrl, "_blank", "noopener,noreferrer")
               }
-              className="flex h-[54px] w-full items-center gap-2 overflow-hidden rounded-lg border bg-background px-2.5 py-2 text-left transition hover:border-primary/40 hover:bg-muted/40"
+              className="flex h-[54px] w-full items-center gap-2 overflow-hidden rounded-lg border border-border bg-background px-2.5 py-2 text-left shadow-sm transition hover:border-primary/40 hover:bg-muted/40 dark:border-white/10 dark:bg-card dark:hover:bg-muted/70"
               title={item.name}
             >
               {image ? (
@@ -462,7 +462,7 @@ export default function ApprovalsPage({
               </div>
             ) : (
               <div>
-                <h1 className="text-[30px] font-extrabold tracking-tight text-slate-950">
+                <h1 className="text-[30px] font-extrabold tracking-tight text-foreground">
                   Recent History
                 </h1>
               </div>

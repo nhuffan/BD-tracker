@@ -19,6 +19,7 @@ import {
   ClipboardCheck,
   Megaphone,
 } from "lucide-react";
+import ThemeToggle from "@/components/ThemeToggle";
 
 function getInitialsFromEmail(email?: string | null) {
   if (!email) return "??";
@@ -61,7 +62,7 @@ export default function AppHeader({
   `;
 
   return (
-    <header className="sticky top-0 z-20 border-b border-border bg-white/95 backdrop-blur">
+    <header className="sticky top-0 z-20 border-b border-border bg-background/95 backdrop-blur">
       <div className="mx-auto grid h-16 w-full grid-cols-[1fr_auto_1fr] items-center px-6">
         <div className="flex items-center">
           <div className="hidden xl:flex items-center gap-3">
@@ -111,7 +112,7 @@ export default function AppHeader({
           </TabsList>
         </div>
 
-        <div className="flex justify-end pl-4">
+        <div className="flex justify-end gap-2 pl-4">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="rounded-full outline-none ring-offset-background transition focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
@@ -136,6 +137,8 @@ export default function AppHeader({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+
+          <ThemeToggle className="h-10 w-10" />
         </div>
       </div>
     </header>

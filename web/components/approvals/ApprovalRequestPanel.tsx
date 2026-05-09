@@ -29,7 +29,7 @@ const sectionCardClass =
     "overflow-hidden rounded-xl border border-border bg-background";
 
 const sectionHeaderClass =
-    "bg-slate-100 px-5 py-3 text-[11px] font-extrabold uppercase tracking-wide text-slate-600";
+    "bg-muted/50 px-5 py-3 text-[11px] font-extrabold uppercase tracking-wide text-muted-foreground";
 
 const infoTileClass =
     "rounded-lg border border-border bg-background px-4 py-4";
@@ -53,12 +53,12 @@ function formatSubmittedDate(value?: string | null) {
 function getStatusChipClass(status?: string) {
     switch (status) {
         case "approved":
-            return "bg-emerald-50 text-emerald-700 border-emerald-200";
+            return "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/70 dark:bg-emerald-950/40 dark:text-emerald-300";
         case "rejected":
-            return "bg-red-50 text-red-700 border-red-200";
+            return "border-red-200 bg-red-50 text-red-700 dark:border-red-900/70 dark:bg-red-950/40 dark:text-red-300";
         case "pending":
         default:
-            return "bg-amber-50 text-amber-700 border-amber-200";
+            return "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/70 dark:bg-amber-950/40 dark:text-amber-300";
     }
 }
 
@@ -68,13 +68,13 @@ function getDecisionButtonClass(
 ) {
     const activeClass =
         type === "approved"
-            ? "border-emerald-300 bg-emerald-50"
-            : "border-red-300 bg-red-50";
+            ? "border-emerald-300 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/35"
+            : "border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-950/35";
 
     const hoverClass =
         type === "approved"
-            ? "border-border bg-background hover:border-emerald-300 hover:bg-emerald-50"
-            : "border-border bg-background hover:border-red-300 hover:bg-red-50";
+            ? "border-border bg-background hover:border-emerald-300 hover:bg-emerald-50 dark:hover:border-emerald-800 dark:hover:bg-emerald-950/25"
+            : "border-border bg-background hover:border-red-300 hover:bg-red-50 dark:hover:border-red-800 dark:hover:bg-red-950/25";
 
     return [
         "group flex min-h-[86px] flex-col items-center justify-center rounded-xl border px-4 text-center transition disabled:opacity-60 cursor-pointer",
@@ -348,7 +348,7 @@ export default function ApprovalRequestDetailPanel({
                         <div className="grid gap-4 p-5 md:grid-cols-2">
                             <div className={infoTileClass}>
                                 <div className="flex items-start gap-3">
-                                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
+                                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
                                         <User className="h-5 w-5" />
                                     </div>
 
@@ -365,7 +365,7 @@ export default function ApprovalRequestDetailPanel({
 
                             <div className={infoTileClass}>
                                 <div className="flex items-start gap-3">
-                                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
+                                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
                                         <Store className="h-5 w-5" />
                                     </div>
 
@@ -463,7 +463,7 @@ export default function ApprovalRequestDetailPanel({
                 </div>
 
                 <aside className="xl:sticky xl:top-6 xl:self-start">
-                    <section className="overflow-hidden rounded-xl border border-border bg-white">
+                    <section className="overflow-hidden rounded-xl border border-border bg-card text-card-foreground shadow-sm">
                         <div className="border-b px-5 py-4 bg-muted/30">
                             <h3 className="text-2xl font-bold tracking-tight text-foreground">
                                 Review Action
@@ -475,7 +475,7 @@ export default function ApprovalRequestDetailPanel({
 
                         <div className="space-y-5 p-5">
                             {conflictMessage && (
-                                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900/70 dark:bg-amber-950/40 dark:text-amber-200">
                                     {conflictMessage}
                                 </div>
                             )}
@@ -495,13 +495,13 @@ export default function ApprovalRequestDetailPanel({
                                             <CheckCircle2
                                                 className={`mb-2 h-5 w-5 transition ${decision === "approved"
                                                     ? "text-emerald-600"
-                                                    : "text-slate-400 group-hover:text-emerald-600"
+                                                    : "text-muted-foreground group-hover:text-emerald-600 dark:group-hover:text-emerald-400"
                                                     }`}
                                             />
                                             <span
                                                 className={`text-sm font-bold uppercase tracking-wide transition ${decision === "approved"
                                                     ? "text-emerald-700"
-                                                    : "text-slate-600 group-hover:text-emerald-700"
+                                                    : "text-foreground/80 group-hover:text-emerald-700 dark:group-hover:text-emerald-300"
                                                     }`}
                                             >
                                                 Approve
@@ -520,13 +520,13 @@ export default function ApprovalRequestDetailPanel({
                                             <CircleX
                                                 className={`mb-2 h-5 w-5 transition ${decision === "rejected"
                                                     ? "text-red-600"
-                                                    : "text-slate-400 group-hover:text-red-600"
+                                                    : "text-muted-foreground group-hover:text-red-600 dark:group-hover:text-red-400"
                                                     }`}
                                             />
                                             <span
                                                 className={`text-sm font-bold uppercase tracking-wide transition ${decision === "rejected"
                                                     ? "text-red-700"
-                                                    : "text-slate-600 group-hover:text-red-700"
+                                                    : "text-foreground/80 group-hover:text-red-700 dark:group-hover:text-red-300"
                                                     }`}
                                             >
                                                 Reject
@@ -543,7 +543,7 @@ export default function ApprovalRequestDetailPanel({
                                                     value={kpiPointAward}
                                                     onChange={(e) => setKpiPointAward(formatNumberInput(e.target.value))}
                                                     placeholder="0"
-                                                    className="h-12 rounded-lg bg-white"
+                                                    className="h-12 rounded-lg bg-background"
                                                 />
                                             </div>
 
@@ -555,7 +555,7 @@ export default function ApprovalRequestDetailPanel({
                                                         value={bonusAmount}
                                                         onChange={(e) => setBonusAmount(formatNumberInput(e.target.value))}
                                                         placeholder="0"
-                                                        className="h-12 rounded-lg bg-white pr-14"
+                                                        className="h-12 rounded-lg bg-background pr-14"
                                                     />
                                                     <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm font-medium text-muted-foreground">
                                                         VND

@@ -137,7 +137,7 @@ function EditAdRecordDialogBody({
     function renderStatusBadge() {
         if (!record.end_date) {
             return (
-                <span className="inline-flex rounded-md bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
+                <span className="inline-flex rounded-md bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
                     Not Started
                 </span>
             );
@@ -147,7 +147,7 @@ function EditAdRecordDialogBody({
 
         if (status === "not_started") {
             return (
-                <span className="inline-flex rounded-md bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
+                <span className="inline-flex rounded-md bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
                     Not Started
                 </span>
             );
@@ -155,7 +155,7 @@ function EditAdRecordDialogBody({
 
         if (status === "active") {
             return (
-                <span className="inline-flex rounded-md bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                <span className="inline-flex rounded-md bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
                     Active
                 </span>
             );
@@ -163,14 +163,14 @@ function EditAdRecordDialogBody({
 
         if (status === "expiring_soon") {
             return (
-                <span className="inline-flex rounded-md bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">
+                <span className="inline-flex rounded-md bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
                     Expiring Soon
                 </span>
             );
         }
 
         return (
-            <span className="inline-flex rounded-md bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700">
+            <span className="inline-flex rounded-md bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700 dark:bg-red-950/40 dark:text-red-300">
                 Expired
             </span>
         );

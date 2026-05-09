@@ -79,9 +79,9 @@ function getPriorityBadgeClass(priority?: QAPriority) {
     case "urgent":
       return "bg-destructive/10 text-destructive";
     case "high":
-      return "bg-orange-100 text-orange-700";
+      return "bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300";
     case "medium":
-      return "bg-blue-50 text-blue-600";
+      return "bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-300";
     case "low":
     default:
       return "bg-muted text-muted-foreground";
@@ -694,16 +694,16 @@ export default function QATicketDetailDialog({
             </div>
 
             {lockedByOtherAdmin && (
-              <div className="mb-4 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-                <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700">
+              <div className="mb-4 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900/70 dark:bg-amber-950/40">
+                <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/70 dark:text-amber-300">
                   <CircleDashed className="h-4 w-4" />
                 </div>
 
                 <div className="min-w-0">
-                  <div className="text-sm font-semibold text-amber-900">
+                  <div className="text-sm font-semibold text-amber-900 dark:text-amber-200">
                     Admin {lockOwnerLabel} is currently editing this ticket.
                   </div>
-                  <div className="mt-0.5 text-sm text-amber-800">
+                  <div className="mt-0.5 text-sm text-amber-800 dark:text-amber-300">
                     Some fields are temporarily locked.
                   </div>
                 </div>
@@ -981,7 +981,7 @@ export default function QATicketDetailDialog({
                   wrap="soft"
                   disabled={lockedByOtherAdmin}
                   className={`min-h-[112px] resize-none break-all whitespace-pre-wrap leading-7 ${lockedByOtherAdmin
-                    ? "cursor-not-allowed border-amber-200 bg-amber-50 text-muted-foreground opacity-100"
+                    ? "cursor-not-allowed border-amber-200 bg-amber-50 text-muted-foreground opacity-100 dark:border-amber-900/70 dark:bg-amber-950/40"
                     : ""
                     }`}
                 />
@@ -1020,7 +1020,7 @@ export default function QATicketDetailDialog({
                 wrap="soft"
                 disabled={lockedByOtherAdmin}
                 className={`min-h-[112px] resize-none break-all whitespace-pre-wrap leading-7 ${lockedByOtherAdmin
-                  ? "cursor-not-allowed border-amber-200 bg-amber-50 text-muted-foreground opacity-100"
+                  ? "cursor-not-allowed border-amber-200 bg-amber-50 text-muted-foreground opacity-100 dark:border-amber-900/70 dark:bg-amber-950/40"
                   : ""
                   }`}
               />
@@ -1106,7 +1106,7 @@ export default function QATicketDetailDialog({
           )}
         </div>
 
-        <div className="border-t bg-muted/30 px-6 py-4">
+        <div className="border-t bg-muted/50 dark:bg-muted/70 px-6 py-4">
           <div className="flex h-11 items-center gap-4">
             <div className="flex min-w-0 flex-1 items-center">
               {saving && !isAdmin && (

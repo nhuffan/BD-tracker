@@ -27,30 +27,41 @@ type QAViewTab = "active" | "in_progress" | "done" | "archive";
 function getPriorityBadgeClass(priority: QAPriority) {
   switch (priority) {
     case "urgent":
-      return "bg-red-50 text-red-600";
+      return "bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-300";
     case "high":
-      return "bg-orange-50 text-orange-600";
+      return "bg-orange-50 text-orange-600 dark:bg-orange-950/40 dark:text-orange-300";
     case "medium":
-      return "bg-blue-50 text-blue-600";
+      return "bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-300";
     case "low":
     default:
-      return "bg-slate-100 text-slate-500";
+      return "bg-muted text-muted-foreground";
   }
 }
 
 function getPriorityFooterClass(priority: QAPriority) {
   switch (priority) {
     case "urgent":
-      return "bg-red-50/70 border-red-100";
+      return "bg-red-50/70 border-red-100 dark:bg-red-950/55 dark:border-red-700/80";
     case "high":
-      return "bg-orange-50/70 border-orange-100";
+      return "bg-orange-50/70 border-orange-100 dark:bg-amber-950/45 dark:border-amber-700/80";
     case "medium":
-      return "bg-blue-50/70 border-blue-100";
+      return "bg-blue-50/70 border-blue-100 dark:bg-blue-950/35 dark:border-blue-900/70";
     case "low":
     default:
-      return "bg-slate-50 border-slate-100";
+      return "bg-muted/60 border-border dark:bg-muted/80";
   }
 }
+
+const ticketCardClass =
+  "relative flex min-h-[248px] h-full flex-col overflow-hidden rounded-2xl border border-border bg-card text-left text-card-foreground shadow-sm transition hover:-translate-y-0.5 hover:shadow-md";
+
+const ticketBodyClass = "flex-1 px-4 pt-4";
+
+const ticketTitleClass =
+  "mb-2 line-clamp-2 break-words text-[20px] font-bold leading-tight text-foreground";
+
+const ticketDescriptionClass =
+  "mb-4 line-clamp-3 min-h-[72px] text-sm leading-6 text-muted-foreground";
 
 function priorityOrder(priority: QAPriority) {
   switch (priority) {
@@ -514,8 +525,8 @@ export default function QAPage({
     <div className="space-y-4">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
         <div>
-          <h1 className="text-[30px] font-extrabold tracking-tight text-slate-950">
-            Ticket Dashboard <span className="text-slate-950">({stats.active})</span>
+          <h1 className="text-[30px] font-extrabold tracking-tight text-foreground">
+            Ticket Dashboard <span className="text-foreground">({stats.active})</span>
           </h1>
         </div>
 
@@ -544,15 +555,15 @@ export default function QAPage({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex flex-col gap-3 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center">
+      <div className="rounded-2xl border border-border bg-card text-card-foreground shadow-sm">
+        <div className="flex flex-col gap-3 border-b border-border px-5 py-4 sm:flex-row sm:items-center">
           <div className="relative w-full sm:w-[320px]">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search question, priority, BD..."
-              className="h-10 rounded-lg border-slate-200 pl-9 shadow-none"
+              className="h-10 rounded-lg pl-9 shadow-none"
             />
           </div>
 
@@ -566,7 +577,7 @@ export default function QAPage({
               }}
               className={`rounded-md px-3 py-1.5 text-xs font-semibold transition cursor-pointer ${viewTab === "active"
                 ? "bg-primary/10 text-primary"
-                : "text-slate-500 hover:bg-slate-100"
+                : "text-muted-foreground hover:bg-muted"
                 }`}
             >
               Active ({stats.active})
@@ -581,7 +592,7 @@ export default function QAPage({
               }}
               className={`rounded-md px-3 py-1.5 text-xs font-semibold transition cursor-pointer ${viewTab === "in_progress"
                 ? "bg-primary/10 text-primary"
-                : "text-slate-500 hover:bg-slate-100"
+                : "text-muted-foreground hover:bg-muted"
                 }`}
             >
               In Progress ({stats.inProgress})
@@ -596,7 +607,7 @@ export default function QAPage({
               }}
               className={`rounded-md px-3 py-1.5 text-xs font-semibold transition cursor-pointer ${viewTab === "done"
                 ? "bg-primary/10 text-primary"
-                : "text-slate-500 hover:bg-slate-100"
+                : "text-muted-foreground hover:bg-muted"
                 }`}
             >
               Done ({stats.done})
@@ -611,7 +622,7 @@ export default function QAPage({
               }}
               className={`rounded-md px-3 py-1.5 text-xs font-semibold transition cursor-pointer ${viewTab === "archive"
                 ? "bg-primary/10 text-primary"
-                : "text-slate-500 hover:bg-slate-100"
+                : "text-muted-foreground hover:bg-muted"
                 }`}
             >
               Archive ({stats.archive})
@@ -649,7 +660,7 @@ export default function QAPage({
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         ) : displayTickets.length === 0 ? (
-          <div className="p-5 text-sm text-slate-500">No tickets found</div>
+          <div className="p-5 text-sm text-muted-foreground">No tickets found</div>
         ) : (
           <div className="grid grid-cols-1 gap-4 p-5 md:grid-cols-2 xl:grid-cols-3">
             {displayTickets.map((ticket) => {
@@ -678,11 +689,11 @@ export default function QAPage({
                       openDetail(ticket);
                     }
                   }}
-                  className={`relative flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${isSelected ? "border-primary bg-primary/5" : ""
+                  className={`${ticketCardClass} ${isSelected ? "border-primary bg-primary/5" : ""
                     }`}
                 >
 
-                  <div className="flex-1 px-4 pt-4">
+                  <div className={ticketBodyClass}>
                     <div className="mb-3 flex items-start justify-between gap-3">
                       <div className="min-w-0 flex items-center gap-2">
                         <div className="inline-flex items-center rounded-md bg-muted px-2 py-1 text-[12px] font-bold tracking-wide text-muted-foreground">
@@ -727,11 +738,11 @@ export default function QAPage({
                       </div>
                     </div>
 
-                    <div className="mb-2 line-clamp-2 text-[20px] font-bold leading-tight text-slate-950">
+                    <div className={ticketTitleClass}>
                       {ticket.title}
                     </div>
 
-                    <div className="mb-4 line-clamp-3 min-h-[72px] text-sm leading-6 text-slate-500">
+                    <div className={ticketDescriptionClass}>
                       {ticket.admin_answer || ticket.issue_detail || "—"}
                     </div>
                   </div>
@@ -742,52 +753,52 @@ export default function QAPage({
                     )}`}
                   >
                     <div className="flex min-w-0 items-center gap-2">
-                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-200 text-[10px] font-bold text-slate-700">
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-bold text-foreground">
                         {getInitials(bdName)}
                       </div>
-                      <span className="truncate text-sm font-medium text-slate-800">
+                      <span className="truncate text-sm font-medium text-foreground">
                         {bdName}
                       </span>
                     </div>
 
-                    <div className="flex items-end gap-1.5 text-[11px] font-medium text-slate-500">
+                    <div className="flex items-end gap-1.5 text-[11px] font-medium text-muted-foreground">
                       {ticket.is_archived ? (
                         <>
-                          <Archive className="h-[10px] w-[10px] shrink-0 text-slate-500" />
+                          <Archive className="h-[10px] w-[10px] shrink-0 text-muted-foreground" />
                           <span className="uppercase tracking-[0.04em] leading-none">
                             Archived:
                           </span>
-                          <span className="font-semibold text-slate-700 leading-none">
+                          <span className="font-semibold text-foreground leading-none">
                             {formatFooterTime(ticket.updated_at ?? ticket.archived_at)}
                           </span>
                         </>
                       ) : ticket.is_done ? (
                         <>
-                          <CheckCircle2 className="h-[10px] w-[10px] shrink-0 text-slate-500" />
+                          <CheckCircle2 className="h-[10px] w-[10px] shrink-0 text-muted-foreground" />
                           <span className="uppercase tracking-[0.04em] leading-none">
                             Done:
                           </span>
-                          <span className="font-semibold text-slate-700 leading-none">
+                          <span className="font-semibold text-foreground leading-none">
                             {formatFooterTime(ticket.updated_at ?? ticket.done_at)}
                           </span>
                         </>
                       ) : ticket.is_in_progress ? (
                         <>
-                          <CircleDashed className="h-[10px] w-[10px] shrink-0 text-slate-500" />
+                          <CircleDashed className="h-[10px] w-[10px] shrink-0 text-muted-foreground" />
                           <span className="uppercase tracking-[0.04em] leading-none">
                             Updated:
                           </span>
-                          <span className="font-semibold text-slate-700 leading-none">
+                          <span className="font-semibold text-foreground leading-none">
                             {formatFooterTime(ticket.updated_at ?? ticket.in_progress_at)}
                           </span>
                         </>
                       ) : (
                         <>
-                          <Clock3 className="h-[10px] w-[10px] shrink-0 text-slate-500" />
+                          <Clock3 className="h-[10px] w-[10px] shrink-0 text-muted-foreground" />
                           <span className="uppercase tracking-[0.04em] leading-none">
                             Created:
                           </span>
-                          <span className="font-semibold text-slate-700 leading-none">
+                          <span className="font-semibold text-foreground leading-none">
                             {formatFooterTime(ticket.created_at)}
                           </span>
                         </>
