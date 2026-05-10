@@ -18,6 +18,7 @@ import {
   MessageSquareText,
   ClipboardCheck,
   Megaphone,
+  Joystick,
 } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 
@@ -40,9 +41,11 @@ function getInitialsFromEmail(email?: string | null) {
 export default function AppHeader({
   email,
   onLogout,
+  isSuperAdmin,
 }: {
   email?: string | null;
   onLogout: () => void;
+  isSuperAdmin: boolean;
 }) {
   const initials = useMemo(() => getInitialsFromEmail(email), [email]);
 
@@ -108,6 +111,13 @@ export default function AppHeader({
                 <ClipboardCheck className="mr-2 h-5 w-5" />
                 Approvals
               </TabsTrigger>
+
+              {isSuperAdmin && (
+                <TabsTrigger value="stress-relief" className={tabClass}>
+                  <Joystick className="mr-2 h-5 w-5" />
+                  Pink Life
+                </TabsTrigger>
+              )}
             </div>
           </TabsList>
         </div>

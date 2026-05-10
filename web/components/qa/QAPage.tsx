@@ -555,7 +555,13 @@ export default function QAPage({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-border bg-card text-card-foreground shadow-sm">
+      <div className="relative rounded-2xl border border-border bg-card text-card-foreground shadow-sm">
+        {(loading || bdLoading) && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center rounded-2xl bg-background/55 backdrop-blur-[1px]">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        )}
+
         <div className="flex flex-col gap-3 border-b border-border px-5 py-4 sm:flex-row sm:items-center">
           <div className="relative w-full sm:w-[320px]">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -655,14 +661,10 @@ export default function QAPage({
           )}
         </div>
 
-        {(loading || bdLoading) ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
-        ) : displayTickets.length === 0 ? (
+        {displayTickets.length === 0 && !(loading || bdLoading) ? (
           <div className="p-5 text-sm text-muted-foreground">No tickets found</div>
         ) : (
-          <div className="grid grid-cols-1 gap-4 p-5 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid min-h-[240px] grid-cols-1 gap-4 p-5 md:grid-cols-2 xl:grid-cols-3">
             {displayTickets.map((ticket) => {
               const bdName = ticket.asked_by_name ?? "—";
               const isSelected = !!selected[ticket.id];

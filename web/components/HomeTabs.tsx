@@ -14,30 +14,27 @@ import WomensDayBackground from "@/components/WomensDayBackground";
 import QAPage from "./qa/QAPage";
 import ApprovalsPage from "./approvals/ApprovalsPage";
 import AdsTrackingPage from "./ads-tracking/AdsTrackingPage";
+import StressReliefPage from "./stress/StressReliefPage";
 
 export default function HomeTabs() {
   const router = useRouter();
   const { isAdmin, isSuperAdmin, loading } = useCurrentUserRole();
-  const [activeTab, setActiveTab] = useState("home");
+  const [activeTab, setActiveTab] = useState(() => {
+    if (typeof window === "undefined") return "home";
+    return window.localStorage.getItem("home-active-tab") || "home";
+  });
   const [email, setEmail] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string>("");
-
-  useEffect(() => {
-    const savedTab = window.localStorage.getItem("home-active-tab");
-
-    if (
-      savedTab === "home" ||
-      savedTab === "tracking" ||
-      savedTab === "data" ||
-      savedTab === "qa" ||
-      savedTab === "approvals" ||
-      savedTab === "ads-tracking"
-    ) {
-      setActiveTab(savedTab);
-    }
-  }, []);
+  const effectiveActiveTab =
+    activeTab === "stress-relief" && !isSuperAdmin ? "home" : activeTab;
 
   function handleTabChange(value: string) {
+    if (value === "stress-relief" && !isSuperAdmin) {
+      setActiveTab("home");
+      window.localStorage.setItem("home-active-tab", "home");
+      return;
+    }
+
     setActiveTab(value);
     window.localStorage.setItem("home-active-tab", value);
   }
@@ -69,14 +66,18 @@ export default function HomeTabs() {
     <div className="relative h-screen overflow-hidden bg-muted/30">
       <WomensDayBackground />
 
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-        <AppHeader email={email} onLogout={handleLogout} />
+      <Tabs value={effectiveActiveTab} onValueChange={handleTabChange} className="w-full">
+        <AppHeader
+          email={email}
+          onLogout={handleLogout}
+          isSuperAdmin={isSuperAdmin}
+        />
 
         <main className="relative z-10 h-[calc(100vh-64px)] overflow-y-auto px-6 py-8">
           <TabsContent
             value="home"
             forceMount
-            className={activeTab === "home" ? "mt-0 w-full" : "mt-0 hidden"}
+            className={effectiveActiveTab === "home" ? "mt-0 w-full" : "mt-0 hidden"}
           >
             <RecordsPage isAdmin={isAdmin} />
           </TabsContent>
@@ -84,7 +85,7 @@ export default function HomeTabs() {
           <TabsContent
             value="tracking"
             forceMount
-            className={activeTab === "tracking" ? "mt-0 w-full" : "mt-0 hidden"}
+            className={effectiveActiveTab === "tracking" ? "mt-0 w-full" : "mt-0 hidden"}
           >
             <CustomerTrackingPage isAdmin={isAdmin} />
           </TabsContent>
@@ -92,7 +93,7 @@ export default function HomeTabs() {
           <TabsContent
             value="data"
             forceMount
-            className={activeTab === "data" ? "mt-0 w-full" : "mt-0 hidden"}
+            className={effectiveActiveTab === "data" ? "mt-0 w-full" : "mt-0 hidden"}
           >
             <ManagementPage isAdmin={isAdmin} />
           </TabsContent>
@@ -100,7 +101,7 @@ export default function HomeTabs() {
           <TabsContent
             value="qa"
             forceMount
-            className={activeTab === "qa" ? "mt-0 w-full" : "mt-0 hidden"}
+            className={effectiveActiveTab === "qa" ? "mt-0 w-full" : "mt-0 hidden"}
           >
             <QAPage
               isAdmin={isAdmin}
@@ -111,7 +112,7 @@ export default function HomeTabs() {
           <TabsContent
             value="approvals"
             forceMount
-            className={activeTab === "approvals" ? "mt-0 w-full" : "mt-0 hidden"}
+            className={effectiveActiveTab === "approvals" ? "mt-0 w-full" : "mt-0 hidden"}
           >
             <ApprovalsPage
               isAdmin={isSuperAdmin}
@@ -122,13 +123,23 @@ export default function HomeTabs() {
           <TabsContent
             value="ads-tracking"
             forceMount
-            className={activeTab === "ads-tracking" ? "mt-0 w-full" : "mt-0 hidden"}
+            className={effectiveActiveTab === "ads-tracking" ? "mt-0 w-full" : "mt-0 hidden"}
           >
             <AdsTrackingPage
               isAdmin={isAdmin}
               currentUserId={currentUserId}
             />
           </TabsContent>
+
+          {isSuperAdmin && (
+            <TabsContent
+              value="stress-relief"
+              forceMount
+              className={effectiveActiveTab === "stress-relief" ? "mt-0 w-full" : "mt-0 hidden"}
+            >
+              <StressReliefPage />
+            </TabsContent>
+          )}
 
         </main>
       </Tabs>

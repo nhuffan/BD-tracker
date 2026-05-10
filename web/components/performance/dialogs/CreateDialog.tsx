@@ -82,6 +82,7 @@ export default function CreateDialog({
   const [packageAmountInput, setPackageAmountInput] = useState("");
   const [branchNumberInput, setBranchNumberInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [bdLevelsRefreshTick, setBdLevelsRefreshTick] = useState(0);
   const selectedMonthKey = form.event_date.slice(0, 7);
   const selectedBdLevelLabel =
     levelList.find((item) => item.id === form.bd_level_id)?.label ?? "";
@@ -95,6 +96,18 @@ export default function CreateDialog({
     !form.point_type_id ||
     !form.category ||
     loadingBdLevels;
+
+  useEffect(() => {
+    const handler = () => {
+      setBdLevelsRefreshTick((prev) => prev + 1);
+    };
+
+    window.addEventListener("bd-monthly-levels-updated", handler);
+
+    return () => {
+      window.removeEventListener("bd-monthly-levels-updated", handler);
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -140,7 +153,7 @@ export default function CreateDialog({
     return () => {
       cancelled = true;
     };
-  }, [selectedMonthKey, form.bd_id, bdIdsKey]);
+  }, [selectedMonthKey, form.bd_id, bdIdsKey, bdLevelsRefreshTick]);
 
   useEffect(() => {
     if (!form.bd_id) {

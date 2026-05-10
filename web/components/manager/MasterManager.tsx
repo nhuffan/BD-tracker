@@ -702,6 +702,7 @@ export default function MasterManager({
           delete next[bdId];
           return next;
         });
+        window.dispatchEvent(new Event("bd-monthly-levels-updated"));
         window.dispatchEvent(new Event("records-updated"));
         return true;
       }
@@ -726,6 +727,7 @@ export default function MasterManager({
         ...prev,
         [bdId]: bdLevelId,
       }));
+      window.dispatchEvent(new Event("bd-monthly-levels-updated"));
 
       const { error: recordsError } = await supabase
         .from("records")
@@ -1087,15 +1089,21 @@ export default function MasterManager({
         </div>
       </div>
 
-      {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </div>
-      ) : items.length === 0 ? (
-        <div className="p-4 text-sm text-muted-foreground">No data</div>
-      ) : (
-        renderTable(sortedItems, 0)
-      )}
+      <div className="relative">
+        {loading && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center rounded-xl bg-background/55 backdrop-blur-[1px]">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        )}
+
+        {items.length === 0 ? (
+          <div className="min-h-[240px] rounded-xl border p-4 text-sm text-muted-foreground">
+            {!loading && "No data"}
+          </div>
+        ) : (
+          renderTable(sortedItems, 0)
+        )}
+      </div>
 
       {isAdmin && (
         <Dialog open={open} onOpenChange={setOpen}>
