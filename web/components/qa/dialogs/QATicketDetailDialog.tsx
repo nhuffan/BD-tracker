@@ -88,6 +88,30 @@ function getPriorityBadgeClass(priority?: QAPriority) {
   }
 }
 
+function getStatusActionButtonClass(
+  type: "done" | "in_progress" | "archive",
+  selected: boolean,
+  disabled: boolean
+) {
+  const activeClass =
+    type === "done"
+      ? "cursor-pointer border-emerald-300 bg-emerald-50 text-emerald-700 hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700 dark:border-emerald-900/70 dark:bg-emerald-950/35 dark:text-emerald-300 dark:hover:border-emerald-900/70 dark:hover:bg-emerald-950/35 dark:hover:text-emerald-300"
+      : type === "in_progress"
+        ? "cursor-pointer border-blue-300 bg-blue-50 text-blue-700 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 dark:border-blue-900/70 dark:bg-blue-950/35 dark:text-blue-300 dark:hover:border-blue-900/70 dark:hover:bg-blue-950/35 dark:hover:text-blue-300"
+        : "cursor-pointer border-amber-300 bg-amber-50 text-amber-700 hover:border-amber-300 hover:bg-amber-50 hover:text-amber-700 dark:border-amber-700/80 dark:bg-amber-950/45 dark:text-amber-300 dark:hover:border-amber-700/80 dark:hover:bg-amber-950/45 dark:hover:text-amber-300";
+
+  const hoverClass =
+    type === "done"
+      ? "cursor-pointer text-foreground hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:border-emerald-800 dark:hover:bg-emerald-950/25 dark:hover:text-emerald-300"
+      : type === "in_progress"
+        ? "cursor-pointer text-foreground hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 dark:hover:border-blue-800 dark:hover:bg-blue-950/25 dark:hover:text-blue-300"
+        : "cursor-pointer text-foreground hover:border-amber-300 hover:bg-amber-50 hover:text-amber-700 dark:hover:border-amber-800 dark:hover:bg-amber-950/25 dark:hover:text-amber-300";
+
+  if (selected) return activeClass;
+  if (disabled) return "cursor-not-allowed text-muted-foreground opacity-60";
+  return hoverClass;
+}
+
 function getAttachmentOpenUrl(item: QATicketAttachment) {
   const baseUrl = item.secure_url || item.url || null;
   if (!baseUrl) return null;
@@ -1050,12 +1074,11 @@ export default function QATicketDetailDialog({
                   type="button"
                   variant="outline"
                   disabled={lockedByOtherAdmin}
-                  className={`h-10 rounded-md border border-input bg-background text-sm font-medium shadow-none ${statusAction === "done"
-                    ? "border-primary bg-primary/10 text-primary opacity-100"
-                    : lockedByOtherAdmin
-                      ? "cursor-not-allowed text-muted-foreground opacity-60"
-                      : "cursor-pointer text-foreground hover:bg-muted/50"
-                    }`}
+                  className={`h-10 rounded-md border border-input bg-background text-sm font-medium shadow-none ${getStatusActionButtonClass(
+                    "done",
+                    statusAction === "done",
+                    lockedByOtherAdmin
+                  )}`}
                   onClick={() =>
                     setStatusAction((prev) => (prev === "done" ? "active" : "done"))
                   }
@@ -1068,12 +1091,11 @@ export default function QATicketDetailDialog({
                   type="button"
                   variant="outline"
                   disabled={lockedByOtherAdmin}
-                  className={`h-10 rounded-md border border-input bg-background text-sm font-medium shadow-none ${statusAction === "in_progress"
-                    ? "border-primary bg-primary/10 text-primary opacity-100"
-                    : lockedByOtherAdmin
-                      ? "cursor-not-allowed text-muted-foreground opacity-60"
-                      : "cursor-pointer text-foreground hover:bg-muted/50"
-                    }`}
+                  className={`h-10 rounded-md border border-input bg-background text-sm font-medium shadow-none ${getStatusActionButtonClass(
+                    "in_progress",
+                    statusAction === "in_progress",
+                    lockedByOtherAdmin
+                  )}`}
                   onClick={() =>
                     setStatusAction((prev) =>
                       prev === "in_progress" ? "active" : "in_progress"
@@ -1088,12 +1110,11 @@ export default function QATicketDetailDialog({
                   type="button"
                   variant="outline"
                   disabled={lockedByOtherAdmin}
-                  className={`h-10 rounded-md border border-input bg-background text-sm font-medium shadow-none ${statusAction === "archive"
-                    ? "border-primary bg-primary/10 text-primary opacity-100"
-                    : lockedByOtherAdmin
-                      ? "cursor-not-allowed text-muted-foreground opacity-60"
-                      : "cursor-pointer text-foreground hover:bg-muted/50"
-                    }`}
+                  className={`h-10 rounded-md border border-input bg-background text-sm font-medium shadow-none ${getStatusActionButtonClass(
+                    "archive",
+                    statusAction === "archive",
+                    lockedByOtherAdmin
+                  )}`}
                   onClick={() =>
                     setStatusAction((prev) => (prev === "archive" ? "active" : "archive"))
                   }

@@ -78,7 +78,7 @@ function priorityOrder(priority: QAPriority) {
 }
 
 function formatTicketCode(index: number) {
-  return `#QA-${String(index + 1).padStart(4, "0")}`;
+  return `QA-${String(index + 1).padStart(3, "0")}`;
 }
 
 function getInitials(name?: string) {
@@ -156,6 +156,20 @@ export default function QAPage({
   const bdNameMap = useMemo(() => {
     return Object.fromEntries(bdList.map((item) => [item.id, item.label]));
   }, [bdList]);
+
+  const ticketCodeMap = useMemo(() => {
+    const orderedTickets = [...tickets].sort((a, b) => {
+      const createdAtDiff =
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+
+      if (createdAtDiff !== 0) return createdAtDiff;
+      return a.id.localeCompare(b.id);
+    });
+
+    return Object.fromEntries(
+      orderedTickets.map((ticket, index) => [ticket.id, formatTicketCode(index)])
+    );
+  }, [tickets]);
 
 
   async function refresh() {
@@ -266,10 +280,10 @@ export default function QAPage({
   const filteredTickets = useMemo(() => {
     const keyword = search.trim().toLowerCase();
 
-    const list: QATicketVM[] = tickets.map((t, index) => ({
+    const list: QATicketVM[] = tickets.map((t) => ({
       ...t,
       asked_by_name: bdNameMap[t.asked_by_bd_id] ?? "—",
-      ticket_code: formatTicketCode(index),
+      ticket_code: ticketCodeMap[t.id] ?? "QA-000",
     }));
 
     const result = !keyword
@@ -291,7 +305,7 @@ export default function QAPage({
 
       return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
     });
-  }, [tickets, search, bdNameMap]);
+  }, [tickets, search, bdNameMap, ticketCodeMap]);
 
   const activeTickets = filteredTickets.filter(
     (t) => !t.is_in_progress && !t.is_done && !t.is_archived
