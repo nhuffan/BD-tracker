@@ -2,11 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Hammer, TimerReset, Trophy, Zap } from "lucide-react";
+import { Hammer, Sparkles, TimerReset, Trophy, Zap } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 
 const ROUND_SECONDS = 30;
 const HOLE_COUNT = 9;
+const SNAKE_BOARD_SIZE = 12;
+const SNAKE_SPEED_MS = 170;
 const REMINDER_ROTATE_MS = 10000;
 const POP_MESSAGES = [
   "Client complaint",
@@ -48,7 +50,24 @@ type HitEffect = {
   id: string;
 };
 
+type SnakeCell = { x: number; y: number };
+type SnakeDirection = "up" | "down" | "left" | "right";
+
+function randomFoodPosition(snake: SnakeCell[]) {
+  while (true) {
+    const candidate = {
+      x: Math.floor(Math.random() * SNAKE_BOARD_SIZE),
+      y: Math.floor(Math.random() * SNAKE_BOARD_SIZE),
+    };
+
+    if (!snake.some((segment) => segment.x === candidate.x && segment.y === candidate.y)) {
+      return candidate;
+    }
+  }
+}
+
 export default function StressReliefPage() {
+  const [activeGame, setActiveGame] = useState<"whack" | "snake">("whack");
   const [running, setRunning] = useState(false);
   const [customerNames, setCustomerNames] = useState<string[]>([]);
   const [score, setScore] = useState(0);
@@ -67,10 +86,25 @@ export default function StressReliefPage() {
   const [cursorVisible, setCursorVisible] = useState(false);
   const [cursorSwinging, setCursorSwinging] = useState(false);
   const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
+  const [snakeRunning, setSnakeRunning] = useState(false);
+  const [snake, setSnake] = useState<SnakeCell[]>([
+    { x: 5, y: 6 },
+    { x: 4, y: 6 },
+    { x: 3, y: 6 },
+  ]);
+  const [snakeDirection, setSnakeDirection] = useState<SnakeDirection>("right");
+  const [snakeFood, setSnakeFood] = useState<SnakeCell>({ x: 8, y: 6 });
+  const [snakeScore, setSnakeScore] = useState(0);
+  const [snakeBestScore, setSnakeBestScore] = useState(() => {
+    if (typeof window === "undefined") return 0;
+    return Number(window.localStorage.getItem("stress-relief-snake-best-score") ?? 0);
+  });
+  const [snakeOver, setSnakeOver] = useState(false);
 
   const comboTimeoutRef = useRef<number | null>(null);
   const cursorTimeoutRef = useRef<number | null>(null);
   const boardRef = useRef<HTMLDivElement | null>(null);
+  const snakeDirectionRef = useRef<SnakeDirection>("right");
 
   useEffect(() => {
     let mounted = true;
@@ -109,7 +143,7 @@ export default function StressReliefPage() {
   }, []);
 
   useEffect(() => {
-    if (!running) return;
+    if (!running || activeGame !== "whack") return;
 
     const timerInterval = window.setInterval(() => {
       setTimeLeft((prev) => {
@@ -136,7 +170,100 @@ export default function StressReliefPage() {
       window.clearInterval(timerInterval);
       window.clearInterval(moleInterval);
     };
-  }, [running, customerNames]);
+  }, [running, customerNames, activeGame]);
+
+  useEffect(() => {
+    if (!snakeRunning || activeGame !== "snake") return;
+
+    const interval = window.setInterval(() => {
+      setSnake((prev) => {
+        const head = prev[0];
+        const direction = snakeDirectionRef.current;
+        const nextHead =
+          direction === "up"
+            ? { x: head.x, y: head.y - 1 }
+            : direction === "down"
+              ? { x: head.x, y: head.y + 1 }
+              : direction === "left"
+                ? { x: head.x - 1, y: head.y }
+                : { x: head.x + 1, y: head.y };
+
+        const hitWall =
+          nextHead.x < 0 ||
+          nextHead.x >= SNAKE_BOARD_SIZE ||
+          nextHead.y < 0 ||
+          nextHead.y >= SNAKE_BOARD_SIZE;
+        const hitSelf = prev.some(
+          (segment) => segment.x === nextHead.x && segment.y === nextHead.y
+        );
+
+        if (hitWall || hitSelf) {
+          setSnakeRunning(false);
+          setSnakeOver(true);
+          return prev;
+        }
+
+        const ateFood = nextHead.x === snakeFood.x && nextHead.y === snakeFood.y;
+        const nextSnake = ateFood ? [nextHead, ...prev] : [nextHead, ...prev.slice(0, -1)];
+
+        if (ateFood) {
+          setSnakeScore((current) => {
+            const nextScore = current + 1;
+            setSnakeBestScore((currentBest) => {
+              if (nextScore > currentBest) {
+                window.localStorage.setItem("stress-relief-snake-best-score", String(nextScore));
+                return nextScore;
+              }
+              return currentBest;
+            });
+            return nextScore;
+          });
+          setSnakeFood(randomFoodPosition(nextSnake));
+        }
+
+        return nextSnake;
+      });
+    }, SNAKE_SPEED_MS);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [snakeRunning, activeGame, snakeFood]);
+
+  useEffect(() => {
+    if (activeGame !== "snake") return;
+
+    function handleKeyDown(event: KeyboardEvent) {
+      const nextDirection =
+        event.key === "ArrowUp" || event.key.toLowerCase() === "w"
+          ? "up"
+          : event.key === "ArrowDown" || event.key.toLowerCase() === "s"
+            ? "down"
+            : event.key === "ArrowLeft" || event.key.toLowerCase() === "a"
+              ? "left"
+              : event.key === "ArrowRight" || event.key.toLowerCase() === "d"
+                ? "right"
+                : null;
+
+      if (!nextDirection) return;
+
+      const opposite =
+        (snakeDirectionRef.current === "up" && nextDirection === "down") ||
+        (snakeDirectionRef.current === "down" && nextDirection === "up") ||
+        (snakeDirectionRef.current === "left" && nextDirection === "right") ||
+        (snakeDirectionRef.current === "right" && nextDirection === "left");
+
+      if (opposite) return;
+
+      snakeDirectionRef.current = nextDirection;
+      setSnakeDirection(nextDirection);
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [activeGame]);
 
   useEffect(() => {
     const reminderInterval = window.setInterval(() => {
@@ -179,6 +306,21 @@ export default function StressReliefPage() {
     });
     setSplatHole(null);
     setHitEffect(null);
+  }
+
+  function startSnakeGame() {
+    const initialSnake = [
+      { x: 5, y: 6 },
+      { x: 4, y: 6 },
+      { x: 3, y: 6 },
+    ];
+    setSnake(initialSnake);
+    setSnakeDirection("right");
+    snakeDirectionRef.current = "right";
+    setSnakeFood(randomFoodPosition(initialSnake));
+    setSnakeScore(0);
+    setSnakeOver(false);
+    setSnakeRunning(true);
   }
 
   function whack(hole: number) {
@@ -254,6 +396,54 @@ export default function StressReliefPage() {
 
   return (
     <div className="space-y-6">
+      <div className="flex flex-col gap-4 rounded-[28px] border border-border bg-card/80 p-4 shadow-sm backdrop-blur sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="text-sm font-semibold text-foreground">Pink Life Arcade</div>
+          <div className="mt-1 text-sm text-muted-foreground">
+            Pick a quick mood reset and play for a minute.
+          </div>
+        </div>
+
+        <div className="flex w-full rounded-2xl border border-border bg-muted/60 p-1 sm:w-auto">
+          <button
+            type="button"
+            onClick={() => {
+              setActiveGame("whack");
+              setSnakeRunning(false);
+              setSnakeOver(false);
+            }}
+            className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition sm:flex-none ${
+              activeGame === "whack"
+                ? "bg-rose-100 text-rose-800 shadow-sm ring-1 ring-rose-200 dark:bg-rose-950/40 dark:text-rose-200 dark:ring-rose-900/70"
+                : "text-muted-foreground hover:bg-rose-50 hover:text-rose-700 dark:hover:bg-rose-950/25 dark:hover:text-rose-200"
+            }`}
+          >
+            <span className="text-base leading-none">🐹</span>
+            Whack-a-Mole
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveGame("snake");
+              setRunning(false);
+              setMole(null);
+              setCursorVisible(false);
+              setCursorSwinging(false);
+            }}
+            className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition sm:flex-none ${
+              activeGame === "snake"
+                ? "bg-emerald-100 text-emerald-800 shadow-sm ring-1 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-200 dark:ring-emerald-900/70"
+                : "text-muted-foreground hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-950/25 dark:hover:text-emerald-200"
+            }`}
+          >
+            <span className="text-base leading-none">🐍</span>
+            Snake
+          </button>
+        </div>
+      </div>
+
+      {activeGame === "whack" ? (
+        <>
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <Button className="cursor-pointer rounded-xl" onClick={startGame}>
@@ -448,6 +638,161 @@ export default function StressReliefPage() {
           </div>
         </div>
       </div>
+        </>
+      ) : (
+        <>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <Button className="cursor-pointer rounded-xl" onClick={startSnakeGame}>
+                <Sparkles className="mr-2 h-4 w-4" />
+                {snakeRunning ? "Restart Round" : snakeOver ? "Play Again" : "Start Round"}
+              </Button>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="rounded-2xl border bg-card px-4 py-3 shadow-sm">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  Score
+                </div>
+                <div className="mt-1 text-2xl font-black text-foreground">{snakeScore}</div>
+              </div>
+
+              <div className="rounded-2xl border bg-card px-4 py-3 shadow-sm">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  Best
+                </div>
+                <div className="mt-1 flex items-center gap-2 text-2xl font-black text-foreground">
+                  <Trophy className="h-5 w-5 text-amber-500" />
+                  {snakeBestScore}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border bg-card px-4 py-3 shadow-sm">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  Length
+                </div>
+                <div className="mt-1 flex items-center gap-2 text-2xl font-black text-foreground">
+                  <span className="text-xl leading-none">🐍</span>
+                  {snake.length}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-5 xl:grid-cols-[1.35fr_0.65fr]">
+            <div className="overflow-hidden rounded-[28px] border border-border bg-card shadow-sm">
+              <div className="flex items-center justify-between border-b border-border px-5 py-4">
+                <div className="text-sm font-semibold text-foreground">Snake</div>
+              </div>
+
+              <div className="relative flex h-[560px] items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_top,_rgba(253,164,175,0.24),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(196,181,253,0.2),_transparent_35%),linear-gradient(180deg,#fff1f2_0%,#fdf2f8_40%,#eef2ff_100%)] dark:bg-[radial-gradient(circle_at_top,_rgba(244,114,182,0.14),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(129,140,248,0.18),_transparent_35%),linear-gradient(180deg,#3b0764_0%,#581c87_35%,#1e1b4b_100%)]">
+                <div className="relative aspect-square w-[min(78vw,520px)] rounded-[32px] border border-white/45 bg-white/45 p-4 shadow-[0_26px_50px_rgba(236,72,153,0.16)] backdrop-blur dark:border-white/10 dark:bg-slate-950/45">
+                  <div className="absolute inset-4 rounded-[24px] bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.45),_transparent_42%),linear-gradient(180deg,rgba(255,255,255,0.18),rgba(255,255,255,0.05))] dark:bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.06),_transparent_42%),linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01))]" />
+
+                  {snake.slice(1).map((segment, index) => (
+                    <div
+                      key={`${segment.x}-${segment.y}-${index}`}
+                      className="absolute z-10 rounded-[18px] bg-emerald-300 shadow-[0_10px_22px_rgba(16,185,129,0.22)] transition-all duration-100 dark:bg-emerald-800"
+                      style={{
+                        left: `calc(${((segment.x + 0.5) / SNAKE_BOARD_SIZE) * 100}% - 16px)`,
+                        top: `calc(${((segment.y + 0.5) / SNAKE_BOARD_SIZE) * 100}% - 16px)`,
+                        width: "32px",
+                        height: "32px",
+                        opacity: Math.max(0.45, 1 - index * 0.08),
+                      }}
+                    />
+                  ))}
+
+                  {snake[0] && (
+                    <div
+                      className="absolute z-20 rounded-[18px] bg-emerald-500 shadow-[0_0_24px_rgba(16,185,129,0.45)] transition-all duration-100"
+                      style={{
+                        left: `calc(${((snake[0].x + 0.5) / SNAKE_BOARD_SIZE) * 100}% - 18px)`,
+                        top: `calc(${((snake[0].y + 0.5) / SNAKE_BOARD_SIZE) * 100}% - 18px)`,
+                        width: "36px",
+                        height: "36px",
+                      }}
+                    >
+                      <div className="relative h-full w-full">
+                        <div className="absolute left-[8px] top-[10px] h-[5px] w-[5px] rounded-full bg-slate-950/75" />
+                        <div className="absolute right-[8px] top-[10px] h-[5px] w-[5px] rounded-full bg-slate-950/75" />
+                        <div className="absolute left-1/2 top-[20px] h-[6px] w-[14px] -translate-x-1/2 rounded-full bg-emerald-950/25" />
+                      </div>
+                    </div>
+                  )}
+
+                  <div
+                    className="absolute z-0 rounded-full bg-pink-300 shadow-[0_0_22px_rgba(244,114,182,0.4)] transition-all duration-100 dark:bg-pink-500"
+                    style={{
+                      left: `calc(${((snakeFood.x + 0.5) / SNAKE_BOARD_SIZE) * 100}% - 14px)`,
+                      top: `calc(${((snakeFood.y + 0.5) / SNAKE_BOARD_SIZE) * 100}% - 14px)`,
+                      width: "28px",
+                      height: "28px",
+                    }}
+                  >
+                    <div className="absolute inset-[6px] rounded-full bg-white/40" />
+                  </div>
+                </div>
+
+                {!snakeRunning && (
+                  <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-6 text-center">
+                    <div className="rounded-[32px] border border-white/45 bg-white/75 px-8 py-6 shadow-[0_26px_50px_rgba(236,72,153,0.16)] backdrop-blur dark:border-white/10 dark:bg-slate-950/65">
+                      <div className="text-5xl">🐍</div>
+                      <h2 className="mt-4 text-4xl font-black tracking-tight text-foreground">
+                        {snakeOver ? "Game Over" : "Ready to Slither?"}
+                      </h2>
+                      <p className="mt-3 max-w-md text-sm leading-6 text-muted-foreground">
+                        Use arrow keys or WASD to move. Eat the pink food, grow longer, and avoid walls or your own tail.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-5">
+              <div className="rounded-[28px] border border-border bg-card p-5 shadow-sm">
+                <div className="text-sm font-semibold text-foreground">How it works</div>
+                <div className="mt-3 space-y-3 text-sm leading-6 text-muted-foreground">
+                  <p>1. Start the round.</p>
+                  <p>2. Use arrow keys or WASD to control the snake.</p>
+                  <p>3. Eat pink food, grow longer, and stay alive.</p>
+                </div>
+              </div>
+
+              <div className="rounded-[28px] border border-border bg-card p-5 shadow-sm">
+                <div className="text-sm font-semibold text-foreground">Mood Reset</div>
+                <div className="mt-3 grid grid-cols-2 gap-3">
+                  <div className="rounded-2xl border bg-muted/50 p-4">
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                      Direction
+                    </div>
+                    <div className="mt-2 text-2xl font-black text-foreground">
+                      {snakeDirection.toUpperCase()}
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border bg-muted/50 p-4">
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                      Status
+                    </div>
+                    <div className="mt-2 text-2xl font-black text-foreground">
+                      {snakeRunning ? "FLOW" : snakeOver ? "RETRY" : "READY"}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className={`rounded-[28px] border bg-gradient-to-br p-5 shadow-sm transition-colors duration-500 ${reminderStyle}`}>
+                <div className="text-sm font-semibold text-foreground">Fighting</div>
+                <p className="mt-3 text-sm leading-6 text-foreground/80">
+                  {REMINDER_QUOTES[reminderIndex]}
+                </p>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
