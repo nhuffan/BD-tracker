@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -53,8 +53,6 @@ export default function FilterDialog({
   const { items: customerTypes } = useMasters("customer_type");
   const { items: pointTypes } = useMasters("point_type");
   const ALL = "__all__";
-
-  useEffect(() => setDraft(filters), [filters]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

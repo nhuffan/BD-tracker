@@ -1,45 +1,42 @@
 "use client";
 
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { Flower2 } from "lucide-react";
 
+type PetalStyle = CSSProperties & {
+  "--dx": string;
+  "--dy": string;
+  "--rot": string;
+};
 
 export default function WomensDayBackground() {
-  const [show, setShow] = useState(false);
   const [animate, setAnimate] = useState(false);
   const [showWish, setShowWish] = useState(false);
   const [fadeContent, setFadeContent] = useState(false);
   const [hideAll, setHideAll] = useState(false);
+  const today = new Date();
+  const shouldShow = today.getMonth() === 2 && today.getDate() === 8;
 
 
   useEffect(() => {
-    const today = new Date();
-    const month = today.getMonth() + 1;
-    const day = today.getDate();
+    if (!shouldShow) return;
+
+    const t1 = setTimeout(() => setAnimate(true), 200);
+    const t2 = setTimeout(() => setShowWish(true), 4200);
+    const t3 = setTimeout(() => setFadeContent(true), 8800);
+    const t4 = setTimeout(() => setHideAll(true), 11500);
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+      clearTimeout(t4);
+    };
+  }, [shouldShow]);
 
 
-    if (month === 3 && day === 8) {
-      setShow(true);
-
-
-      const t1 = setTimeout(() => setAnimate(true), 200);
-      const t2 = setTimeout(() => setShowWish(true), 4200);
-      const t3 = setTimeout(() => setFadeContent(true), 8800);
-      const t4 = setTimeout(() => setHideAll(true), 11500);
-
-
-      return () => {
-        clearTimeout(t1);
-        clearTimeout(t2);
-        clearTimeout(t3);
-        clearTimeout(t4);
-      };
-    }
-  }, []);
-
-
-  if (!show || hideAll) return null;
+  if (!shouldShow || hideAll) return null;
 
 
   const petals = [
@@ -183,10 +180,10 @@ export default function WomensDayBackground() {
                 animationTimingFunction: animate ? "ease-out" : undefined,
                 animationFillMode: animate ? "forwards" : undefined,
                 animationDelay: animate ? petal.delay : undefined,
-                ["--dx" as any]: petal.dx,
-                ["--dy" as any]: petal.dy,
-                ["--rot" as any]: petal.rotate,
-              }}
+                "--dx": petal.dx,
+                "--dy": petal.dy,
+                "--rot": petal.rotate,
+              } satisfies PetalStyle}
             >
               <Flower2 className="h-6 w-6 text-pink-300/80" />
             </div>

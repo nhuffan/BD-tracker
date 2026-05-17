@@ -145,10 +145,12 @@ export default function CreateQATicketDialog({
   useEffect(() => {
     if (open) return;
 
-    attachments.forEach((item) => {
-      if (item.local_preview_url) URL.revokeObjectURL(item.local_preview_url);
+    setAttachments((prev) => {
+      prev.forEach((item) => {
+        if (item.local_preview_url) URL.revokeObjectURL(item.local_preview_url);
+      });
+      return [];
     });
-    setAttachments([]);
     setDragging(false);
   }, [open]);
 

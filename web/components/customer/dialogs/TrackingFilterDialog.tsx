@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -35,10 +35,6 @@ export default function TrackingFilterDialog({
 }) {
   const [draft, setDraft] = useState<TrackingFilters>(filters);
   const bdList = useMastersActive("bd");
-
-  useEffect(() => {
-    setDraft(filters);
-  }, [filters, open]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

@@ -186,6 +186,7 @@ export default function RecordsToolbar({
       </div>
 
       <FilterDialog
+        key={JSON.stringify(filters)}
         open={openFilter}
         onOpenChange={setOpenFilter}
         filters={filters}

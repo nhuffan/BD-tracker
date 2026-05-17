@@ -434,7 +434,7 @@ export default function QAPage({
       setSelected({});
       setSelectionMode(false);
       await refresh();
-    } catch (error) {
+    } catch {
       toast.error("Delete failed.");
     } finally {
       setDeleting(false);

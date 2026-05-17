@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import CustomerTrackingToolbar from "./CustomerTrackingToolbar";
 import CustomerTrackingTable from "./CustomerTrackingTable";
@@ -42,7 +42,7 @@ export default function CustomerTrackingPage({
     skipRealtimeRefreshUntilRef.current = Date.now() + ms;
   }
 
-  async function refresh(options?: { preserveScroll?: boolean }) {
+  const refresh = useCallback(async (options?: { preserveScroll?: boolean }) => {
     if (options?.preserveScroll) {
       scrollRestoreRef.current = window.scrollY;
     }
@@ -66,11 +66,17 @@ export default function CustomerTrackingPage({
     );
 
     setLoading(false);
-  }
+  }, []);
 
   useEffect(() => {
-    refresh();
-  }, []);
+    const timeoutId = window.setTimeout(() => {
+      void refresh();
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [refresh]);
 
   useEffect(() => {
     const channel = supabase
@@ -84,7 +90,7 @@ export default function CustomerTrackingPage({
         },
         () => {
           if (Date.now() < skipRealtimeRefreshUntilRef.current) return;
-          refresh({ preserveScroll: true });
+          void refresh({ preserveScroll: true });
         }
       )
       .subscribe((status) => {
@@ -94,7 +100,7 @@ export default function CustomerTrackingPage({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [refresh]);
 
   useEffect(() => {
     if (!loading && scrollRestoreRef.current !== null) {

@@ -2,6 +2,9 @@ import * as XLSX from "xlsx-js-style";
 import { RecordRow } from "@/lib/types";
 import { formatDMY } from "@/lib/date";
 
+type ExportCellValue = string | number | null | undefined;
+type ExportRow = Record<string, ExportCellValue>;
+
 export function exportToExcel(
   rows: RecordRow[],
   maps?: {
@@ -48,10 +51,12 @@ export function exportToExcel(
     }
   });
 
+  const typedData: ExportRow[] = data;
+
   const colWidths = headers.map((key) => {
     const maxLength = Math.max(
       key.length,
-      ...data.map((row) => String((row as any)[key] ?? "").length)
+      ...typedData.map((row) => String(row[key] ?? "").length)
     );
     return { wch: maxLength + 3 };
   });
@@ -87,10 +92,12 @@ export function exportToExcel(
   const summaryWs = XLSX.utils.json_to_sheet(summaryData);
 
   const summaryHeaders = Object.keys(summaryData[0] || {});
+  const typedSummaryData: ExportRow[] = summaryData;
+
   const summaryColWidths = summaryHeaders.map((key) => {
     const maxLength = Math.max(
       key.length,
-      ...summaryData.map((row) => String((row as any)[key] ?? "").length)
+      ...typedSummaryData.map((row) => String(row[key] ?? "").length)
     );
     return { wch: maxLength + 3 };
   });

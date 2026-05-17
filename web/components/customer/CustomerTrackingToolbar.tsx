@@ -174,6 +174,7 @@ export default function CustomerTrackingToolbar({
       </div>
 
       <TrackingFilterDialog
+        key={JSON.stringify(filters)}
         open={openFilter}
         onOpenChange={setOpenFilter}
         filters={filters}

@@ -11,7 +11,7 @@ import {
   UploadCloud,
   Trash2,
 } from "lucide-react";
-import { AttachmentIcon, isImageFile, isVideoFile } from "@/components/qa/utils/AttachmentIcon";
+import { AttachmentIcon, isImageFile } from "@/components/qa/utils/AttachmentIcon";
 import { supabase } from "@/lib/supabaseClient";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -112,21 +112,6 @@ function getStatusActionButtonClass(
   return hoverClass;
 }
 
-function getAttachmentOpenUrl(item: QATicketAttachment) {
-  const baseUrl = item.secure_url || item.url || null;
-  if (!baseUrl) return null;
-
-  const isPreviewable =
-    isImageFile(item.type) || isVideoFile(item.type, item.name);
-
-  if (isPreviewable) {
-    return baseUrl;
-  }
-
-  const separator = baseUrl.includes("?") ? "&" : "?";
-  return `${baseUrl}${separator}fl_attachment=${encodeURIComponent(item.name)}`;
-}
-
 type LocalAttachment = QATicketAttachment & {
   file?: File;
   local_preview_url?: string | null;
@@ -204,11 +189,13 @@ export default function QATicketDetailDialog({
   useEffect(() => {
     if (open) return;
 
-    localAttachments.forEach((item) => {
-      if (item.local_preview_url) URL.revokeObjectURL(item.local_preview_url);
-    });
+    setLocalAttachments((prev) => {
+      prev.forEach((item) => {
+        if (item.local_preview_url) URL.revokeObjectURL(item.local_preview_url);
+      });
 
-    setLocalAttachments([]);
+      return [];
+    });
     setDragging(false);
   }, [open]);
 
@@ -301,7 +288,7 @@ export default function QATicketDetailDialog({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [open, ticket?.id, bdMap, onTicketChanged]);
+  }, [open, ticket, bdMap, onTicketChanged]);
 
   useEffect(() => {
     setConflictMessage("");
@@ -337,7 +324,10 @@ export default function QATicketDetailDialog({
     originalStatusAction,
   ]);
 
-  const originalAttachments = ticket?.attachments ?? [];
+  const originalAttachments = useMemo(
+    () => ticket?.attachments ?? [],
+    [ticket?.attachments]
+  );
 
   const hasAttachmentChanges = useMemo(() => {
     if (!ticket) return false;
@@ -586,7 +576,14 @@ export default function QATicketDetailDialog({
         const newFiles = localAttachments.filter((item) => item.file);
         const keptExistingAttachments = localAttachments
           .filter((item) => !item.file)
-          .map(({ file, local_preview_url, upload_status, ...rest }) => rest);
+          .map((item) => {
+            const rest = { ...item };
+            delete rest.file;
+            delete rest.local_preview_url;
+            delete rest.upload_status;
+
+            return rest;
+          });
 
         const removedExistingAttachments = (ticket.attachments ?? []).filter(
           (oldItem) =>

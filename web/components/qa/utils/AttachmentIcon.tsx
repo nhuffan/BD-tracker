@@ -8,6 +8,7 @@ import {
   FileCode2,
   Presentation,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export function isImageFile(type: string) {
   return type.startsWith("image/");
@@ -61,7 +62,10 @@ export function AttachmentIcon({
   name: string;
   className?: string;
 }) {
-  const wrap = "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted";
+  const wrap = cn(
+    "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted",
+    className
+  );
   const iconClass = "h-5 w-5 text-muted-foreground";
 
   if (isImageFile(type)) {

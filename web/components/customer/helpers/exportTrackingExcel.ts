@@ -2,6 +2,9 @@ import * as XLSX from "xlsx-js-style";
 import { formatDMY } from "@/lib/date";
 import type { TrackingRecordRow } from "../types";
 
+type ExportCellValue = string | number | null | undefined;
+type ExportRow = Record<string, ExportCellValue>;
+
 function yesNo(value: boolean | null | undefined) {
   return value === true ? "Yes" : "—";
 }
@@ -48,10 +51,12 @@ export function exportTrackingToExcel(
     }
   });
 
+  const typedData: ExportRow[] = data;
+
   const colWidths = headers.map((key) => {
     const maxLength = Math.max(
       key.length,
-      ...data.map((row) => String((row as any)[key] ?? "").length)
+      ...typedData.map((row) => String(row[key] ?? "").length)
     );
     return { wch: maxLength + 3 };
   });

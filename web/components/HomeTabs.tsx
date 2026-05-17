@@ -23,6 +23,11 @@ export default function HomeTabs() {
     if (typeof window === "undefined") return "home";
     return window.localStorage.getItem("home-active-tab") || "home";
   });
+  const [visitedTabs, setVisitedTabs] = useState<string[]>(() => {
+    if (typeof window === "undefined") return ["home"];
+    const storedTab = window.localStorage.getItem("home-active-tab") || "home";
+    return Array.from(new Set(["home", storedTab]));
+  });
   const [email, setEmail] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string>("");
   const effectiveActiveTab =
@@ -31,11 +36,13 @@ export default function HomeTabs() {
   function handleTabChange(value: string) {
     if (value === "stress-relief" && !isSuperAdmin) {
       setActiveTab("home");
+      setVisitedTabs((prev) => (prev.includes("home") ? prev : [...prev, "home"]));
       window.localStorage.setItem("home-active-tab", "home");
       return;
     }
 
     setActiveTab(value);
+    setVisitedTabs((prev) => (prev.includes(value) ? prev : [...prev, value]));
     window.localStorage.setItem("home-active-tab", value);
   }
 
@@ -48,7 +55,6 @@ export default function HomeTabs() {
 
     loadUser();
   }, []);
-
   async function handleLogout() {
     await supabase.auth.signOut();
     router.replace("/login");
@@ -74,64 +80,76 @@ export default function HomeTabs() {
         />
 
         <main className="relative z-10 h-[calc(100vh-64px)] overflow-y-auto px-6 py-8">
-          <TabsContent
-            value="home"
-            forceMount
-            className={effectiveActiveTab === "home" ? "mt-0 w-full" : "mt-0 hidden"}
-          >
-            <RecordsPage isAdmin={isAdmin} />
-          </TabsContent>
+          {visitedTabs.includes("home") && (
+            <TabsContent
+              value="home"
+              forceMount
+              className={effectiveActiveTab === "home" ? "mt-0 w-full" : "mt-0 hidden"}
+            >
+              <RecordsPage isAdmin={isAdmin} />
+            </TabsContent>
+          )}
 
-          <TabsContent
-            value="tracking"
-            forceMount
-            className={effectiveActiveTab === "tracking" ? "mt-0 w-full" : "mt-0 hidden"}
-          >
-            <CustomerTrackingPage isAdmin={isAdmin} />
-          </TabsContent>
+          {visitedTabs.includes("tracking") && (
+            <TabsContent
+              value="tracking"
+              forceMount
+              className={effectiveActiveTab === "tracking" ? "mt-0 w-full" : "mt-0 hidden"}
+            >
+              <CustomerTrackingPage isAdmin={isAdmin} />
+            </TabsContent>
+          )}
 
-          <TabsContent
-            value="data"
-            forceMount
-            className={effectiveActiveTab === "data" ? "mt-0 w-full" : "mt-0 hidden"}
-          >
-            <ManagementPage isAdmin={isAdmin} />
-          </TabsContent>
+          {visitedTabs.includes("data") && (
+            <TabsContent
+              value="data"
+              forceMount
+              className={effectiveActiveTab === "data" ? "mt-0 w-full" : "mt-0 hidden"}
+            >
+              <ManagementPage isAdmin={isAdmin} />
+            </TabsContent>
+          )}
 
-          <TabsContent
-            value="qa"
-            forceMount
-            className={effectiveActiveTab === "qa" ? "mt-0 w-full" : "mt-0 hidden"}
-          >
-            <QAPage
-              isAdmin={isAdmin}
-              currentUserId={currentUserId}
-            />
-          </TabsContent>
+          {visitedTabs.includes("qa") && (
+            <TabsContent
+              value="qa"
+              forceMount
+              className={effectiveActiveTab === "qa" ? "mt-0 w-full" : "mt-0 hidden"}
+            >
+              <QAPage
+                isAdmin={isAdmin}
+                currentUserId={currentUserId}
+              />
+            </TabsContent>
+          )}
 
-          <TabsContent
-            value="approvals"
-            forceMount
-            className={effectiveActiveTab === "approvals" ? "mt-0 w-full" : "mt-0 hidden"}
-          >
-            <ApprovalsPage
-              isAdmin={isSuperAdmin}
-              currentUserId={currentUserId}
-            />
-          </TabsContent>
+          {visitedTabs.includes("approvals") && (
+            <TabsContent
+              value="approvals"
+              forceMount
+              className={effectiveActiveTab === "approvals" ? "mt-0 w-full" : "mt-0 hidden"}
+            >
+              <ApprovalsPage
+                isAdmin={isSuperAdmin}
+                currentUserId={currentUserId}
+              />
+            </TabsContent>
+          )}
 
-          <TabsContent
-            value="ads-tracking"
-            forceMount
-            className={effectiveActiveTab === "ads-tracking" ? "mt-0 w-full" : "mt-0 hidden"}
-          >
-            <AdsTrackingPage
-              isAdmin={isAdmin}
-              currentUserId={currentUserId}
-            />
-          </TabsContent>
+          {visitedTabs.includes("ads-tracking") && (
+            <TabsContent
+              value="ads-tracking"
+              forceMount
+              className={effectiveActiveTab === "ads-tracking" ? "mt-0 w-full" : "mt-0 hidden"}
+            >
+              <AdsTrackingPage
+                isAdmin={isAdmin}
+                currentUserId={currentUserId}
+              />
+            </TabsContent>
+          )}
 
-          {isSuperAdmin && (
+          {isSuperAdmin && visitedTabs.includes("stress-relief") && (
             <TabsContent
               value="stress-relief"
               forceMount
