@@ -183,7 +183,7 @@ export default function WomensDayBackground() {
                 "--dx": petal.dx,
                 "--dy": petal.dy,
                 "--rot": petal.rotate,
-              } satisfies PetalStyle}
+              } as PetalStyle}
             >
               <Flower2 className="h-6 w-6 text-pink-300/80" />
             </div>
