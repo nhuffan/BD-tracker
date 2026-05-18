@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Hammer, Sparkles, TimerReset, Trophy, Zap } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
@@ -9,6 +9,10 @@ const ROUND_SECONDS = 30;
 const HOLE_COUNT = 9;
 const SNAKE_BOARD_SIZE = 12;
 const SNAKE_SPEED_MS = 170;
+const TETRIS_COLUMNS = 10;
+const TETRIS_ROWS = 20;
+const TETRIS_DROP_MS = 700;
+const TETRIS_MIN_DROP_MS = 120;
 const REMINDER_ROTATE_MS = 10000;
 const POP_MESSAGES = [
   "Client complaint",
@@ -52,6 +56,60 @@ type HitEffect = {
 
 type SnakeCell = { x: number; y: number };
 type SnakeDirection = "up" | "down" | "left" | "right";
+type GameMode = "whack" | "snake" | "tetris";
+type TetrisCell = string | null;
+type TetrisPiece = {
+  shape: number[][];
+  color: string;
+  x: number;
+  y: number;
+};
+
+const TETRIS_PIECES = [
+  { color: "bg-cyan-400", shape: [[1, 1, 1, 1]] },
+  {
+    color: "bg-amber-400",
+    shape: [
+      [1, 1],
+      [1, 1],
+    ],
+  },
+  {
+    color: "bg-fuchsia-400",
+    shape: [
+      [0, 1, 0],
+      [1, 1, 1],
+    ],
+  },
+  {
+    color: "bg-emerald-400",
+    shape: [
+      [0, 1, 1],
+      [1, 1, 0],
+    ],
+  },
+  {
+    color: "bg-rose-400",
+    shape: [
+      [1, 1, 0],
+      [0, 1, 1],
+    ],
+  },
+  {
+    color: "bg-sky-500",
+    shape: [
+      [1, 0, 0],
+      [1, 1, 1],
+    ],
+  },
+  {
+    color: "bg-violet-500",
+    shape: [
+      [0, 0, 1],
+      [1, 1, 1],
+    ],
+  },
+];
 
 function randomFoodPosition(snake: SnakeCell[]) {
   while (true) {
@@ -66,8 +124,77 @@ function randomFoodPosition(snake: SnakeCell[]) {
   }
 }
 
+function createEmptyTetrisBoard(): TetrisCell[][] {
+  return Array.from({ length: TETRIS_ROWS }, () => Array.from({ length: TETRIS_COLUMNS }, () => null));
+}
+
+function createTetrisPiece(): TetrisPiece {
+  const piece = TETRIS_PIECES[Math.floor(Math.random() * TETRIS_PIECES.length)];
+  return {
+    shape: piece.shape,
+    color: piece.color,
+    x: Math.floor((TETRIS_COLUMNS - piece.shape[0].length) / 2),
+    y: 0,
+  };
+}
+
+function rotateTetrisShape(shape: number[][]) {
+  return shape[0].map((_, columnIndex) => shape.map((row) => row[columnIndex]).reverse());
+}
+
+function canPlaceTetrisPiece(board: TetrisCell[][], piece: TetrisPiece) {
+  return piece.shape.every((row, y) =>
+    row.every((cell, x) => {
+      if (!cell) return true;
+
+      const boardX = piece.x + x;
+      const boardY = piece.y + y;
+
+      return (
+        boardX >= 0 &&
+        boardX < TETRIS_COLUMNS &&
+        boardY >= 0 &&
+        boardY < TETRIS_ROWS &&
+        !board[boardY][boardX]
+      );
+    })
+  );
+}
+
+function mergeTetrisPiece(board: TetrisCell[][], piece: TetrisPiece) {
+  const nextBoard = board.map((row) => [...row]);
+
+  piece.shape.forEach((row, y) => {
+    row.forEach((cell, x) => {
+      if (!cell) return;
+
+      const boardX = piece.x + x;
+      const boardY = piece.y + y;
+
+      if (boardY >= 0 && boardY < TETRIS_ROWS && boardX >= 0 && boardX < TETRIS_COLUMNS) {
+        nextBoard[boardY][boardX] = piece.color;
+      }
+    });
+  });
+
+  return nextBoard;
+}
+
+function clearTetrisLines(board: TetrisCell[][]) {
+  const remainingRows = board.filter((row) => row.some((cell) => !cell));
+  const cleared = TETRIS_ROWS - remainingRows.length;
+  const freshRows = Array.from({ length: cleared }, () =>
+    Array.from({ length: TETRIS_COLUMNS }, () => null)
+  );
+
+  return {
+    board: [...freshRows, ...remainingRows],
+    cleared,
+  };
+}
+
 export default function StressReliefPage() {
-  const [activeGame, setActiveGame] = useState<"whack" | "snake">("whack");
+  const [activeGame, setActiveGame] = useState<GameMode>("whack");
   const [running, setRunning] = useState(false);
   const [customerNames, setCustomerNames] = useState<string[]>([]);
   const [score, setScore] = useState(0);
@@ -100,11 +227,27 @@ export default function StressReliefPage() {
     return Number(window.localStorage.getItem("stress-relief-snake-best-score") ?? 0);
   });
   const [snakeOver, setSnakeOver] = useState(false);
+  const [tetrisBoard, setTetrisBoard] = useState<TetrisCell[][]>(() => createEmptyTetrisBoard());
+  const [tetrisPiece, setTetrisPiece] = useState<TetrisPiece>(() => createTetrisPiece());
+  const [nextTetrisPiece, setNextTetrisPiece] = useState<TetrisPiece>(() => createTetrisPiece());
+  const [tetrisRunning, setTetrisRunning] = useState(false);
+  const [tetrisOver, setTetrisOver] = useState(false);
+  const [tetrisScore, setTetrisScore] = useState(0);
+  const [tetrisLines, setTetrisLines] = useState(0);
+  const [tetrisLevel, setTetrisLevel] = useState(1);
+  const [tetrisSpeedStep, setTetrisSpeedStep] = useState(0);
+  const [tetrisBestScore, setTetrisBestScore] = useState(() => {
+    if (typeof window === "undefined") return 0;
+    return Number(window.localStorage.getItem("stress-relief-tetris-best-score") ?? 0);
+  });
 
   const comboTimeoutRef = useRef<number | null>(null);
   const cursorTimeoutRef = useRef<number | null>(null);
   const boardRef = useRef<HTMLDivElement | null>(null);
   const snakeDirectionRef = useRef<SnakeDirection>("right");
+  const tetrisBoardRef = useRef<TetrisCell[][]>(tetrisBoard);
+  const tetrisPieceRef = useRef<TetrisPiece>(tetrisPiece);
+  const nextTetrisPieceRef = useRef<TetrisPiece>(nextTetrisPiece);
 
   useEffect(() => {
     let mounted = true;
@@ -266,6 +409,18 @@ export default function StressReliefPage() {
   }, [activeGame]);
 
   useEffect(() => {
+    tetrisBoardRef.current = tetrisBoard;
+  }, [tetrisBoard]);
+
+  useEffect(() => {
+    tetrisPieceRef.current = tetrisPiece;
+  }, [tetrisPiece]);
+
+  useEffect(() => {
+    nextTetrisPieceRef.current = nextTetrisPiece;
+  }, [nextTetrisPiece]);
+
+  useEffect(() => {
     const reminderInterval = window.setInterval(() => {
       setReminderIndex((prev) => {
         let next = prev;
@@ -322,6 +477,165 @@ export default function StressReliefPage() {
     setSnakeOver(false);
     setSnakeRunning(true);
   }
+
+  function startTetrisGame() {
+    const initialBoard = createEmptyTetrisBoard();
+    const initialPiece = createTetrisPiece();
+    const nextPiece = createTetrisPiece();
+
+    tetrisBoardRef.current = initialBoard;
+    tetrisPieceRef.current = initialPiece;
+    nextTetrisPieceRef.current = nextPiece;
+    setTetrisBoard(initialBoard);
+    setTetrisPiece(initialPiece);
+    setNextTetrisPiece(nextPiece);
+    setTetrisRunning(true);
+    setTetrisOver(false);
+    setTetrisScore(0);
+    setTetrisLines(0);
+    setTetrisLevel(1);
+    setTetrisSpeedStep(0);
+  }
+
+  const moveTetrisPiece = useCallback((deltaX: number, deltaY: number) => {
+    if (!tetrisRunning) return;
+
+    const candidate = {
+      ...tetrisPieceRef.current,
+      x: tetrisPieceRef.current.x + deltaX,
+      y: tetrisPieceRef.current.y + deltaY,
+    };
+
+    if (canPlaceTetrisPiece(tetrisBoardRef.current, candidate)) {
+      tetrisPieceRef.current = candidate;
+      setTetrisPiece(candidate);
+    }
+  }, [tetrisRunning]);
+
+  const rotateTetrisPiece = useCallback(() => {
+    if (!tetrisRunning) return;
+
+    const currentPiece = tetrisPieceRef.current;
+    const rotated = { ...currentPiece, shape: rotateTetrisShape(currentPiece.shape) };
+    const candidates = [rotated, { ...rotated, x: rotated.x - 1 }, { ...rotated, x: rotated.x + 1 }];
+    const nextPiece = candidates.find((candidate) =>
+      canPlaceTetrisPiece(tetrisBoardRef.current, candidate)
+    );
+
+    if (!nextPiece) return;
+
+    tetrisPieceRef.current = nextPiece;
+    setTetrisPiece(nextPiece);
+  }, [tetrisRunning]);
+
+  const lockTetrisPiece = useCallback(() => {
+    const mergedBoard = mergeTetrisPiece(tetrisBoardRef.current, tetrisPieceRef.current);
+    const { board: clearedBoard, cleared } = clearTetrisLines(mergedBoard);
+    const spawnedPiece = nextTetrisPieceRef.current;
+    const queuedPiece = createTetrisPiece();
+    const gameOver = !canPlaceTetrisPiece(clearedBoard, spawnedPiece);
+
+    tetrisBoardRef.current = clearedBoard;
+    nextTetrisPieceRef.current = queuedPiece;
+    setTetrisBoard(clearedBoard);
+    setNextTetrisPiece(queuedPiece);
+    setTetrisSpeedStep((current) => current + 1);
+
+    if (cleared > 0) {
+      const lineBonus = [0, 100, 300, 500, 800][cleared] * tetrisLevel;
+
+      setTetrisLines((current) => {
+        const nextLines = current + cleared;
+        setTetrisLevel(Math.floor(nextLines / 10) + 1);
+        return nextLines;
+      });
+      setTetrisScore((current) => {
+        const nextScore = current + lineBonus;
+        setTetrisBestScore((currentBest) => {
+          if (nextScore > currentBest) {
+            window.localStorage.setItem("stress-relief-tetris-best-score", String(nextScore));
+            return nextScore;
+          }
+          return currentBest;
+        });
+        return nextScore;
+      });
+    }
+
+    if (gameOver) {
+      setTetrisRunning(false);
+      setTetrisOver(true);
+      return;
+    }
+
+    tetrisPieceRef.current = spawnedPiece;
+    setTetrisPiece(spawnedPiece);
+  }, [tetrisLevel]);
+
+  const dropTetrisPiece = useCallback(() => {
+    if (!tetrisRunning) return;
+
+    const candidate = {
+      ...tetrisPieceRef.current,
+      y: tetrisPieceRef.current.y + 1,
+    };
+
+    if (canPlaceTetrisPiece(tetrisBoardRef.current, candidate)) {
+      tetrisPieceRef.current = candidate;
+      setTetrisPiece(candidate);
+      setTetrisScore((current) => {
+        const nextScore = current + 1;
+        setTetrisBestScore((currentBest) => {
+          if (nextScore > currentBest) {
+            window.localStorage.setItem("stress-relief-tetris-best-score", String(nextScore));
+            return nextScore;
+          }
+          return currentBest;
+        });
+        return nextScore;
+      });
+      return;
+    }
+
+    lockTetrisPiece();
+  }, [lockTetrisPiece, tetrisRunning]);
+
+  useEffect(() => {
+    if (!tetrisRunning || activeGame !== "tetris") return;
+
+    const interval = window.setInterval(() => {
+      dropTetrisPiece();
+    }, Math.max(TETRIS_MIN_DROP_MS, TETRIS_DROP_MS - (tetrisLevel - 1) * 55 - tetrisSpeedStep * 22));
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [tetrisRunning, activeGame, tetrisLevel, tetrisSpeedStep, dropTetrisPiece]);
+
+  useEffect(() => {
+    if (activeGame !== "tetris") return;
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "ArrowLeft" || event.key.toLowerCase() === "a") {
+        event.preventDefault();
+        moveTetrisPiece(-1, 0);
+      } else if (event.key === "ArrowRight" || event.key.toLowerCase() === "d") {
+        event.preventDefault();
+        moveTetrisPiece(1, 0);
+      } else if (event.key === "ArrowDown" || event.key.toLowerCase() === "s") {
+        event.preventDefault();
+        dropTetrisPiece();
+      } else if (event.key === "ArrowUp" || event.key.toLowerCase() === "w" || event.key === " ") {
+        event.preventDefault();
+        rotateTetrisPiece();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [activeGame, dropTetrisPiece, moveTetrisPiece, rotateTetrisPiece]);
 
   function whack(hole: number) {
     if (!running || !mole || mole.hole !== hole) return;
@@ -393,6 +707,10 @@ export default function StressReliefPage() {
   }
 
   const reminderStyle = REMINDER_STYLES[reminderIndex % REMINDER_STYLES.length];
+  const tetrisDropSpeed = Math.max(
+    TETRIS_MIN_DROP_MS,
+    TETRIS_DROP_MS - (tetrisLevel - 1) * 55 - tetrisSpeedStep * 22
+  );
 
   return (
     <div className="space-y-6">
@@ -411,6 +729,8 @@ export default function StressReliefPage() {
               setActiveGame("whack");
               setSnakeRunning(false);
               setSnakeOver(false);
+              setTetrisRunning(false);
+              setTetrisOver(false);
             }}
             className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition sm:flex-none ${
               activeGame === "whack"
@@ -429,6 +749,8 @@ export default function StressReliefPage() {
               setMole(null);
               setCursorVisible(false);
               setCursorSwinging(false);
+              setTetrisRunning(false);
+              setTetrisOver(false);
             }}
             className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition sm:flex-none ${
               activeGame === "snake"
@@ -438,6 +760,31 @@ export default function StressReliefPage() {
           >
             <span className="text-base leading-none">🐍</span>
             Snake
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveGame("tetris");
+              setRunning(false);
+              setMole(null);
+              setCursorVisible(false);
+              setCursorSwinging(false);
+              setSnakeRunning(false);
+              setSnakeOver(false);
+            }}
+            className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition sm:flex-none ${
+              activeGame === "tetris"
+                ? "bg-sky-100 text-sky-800 shadow-sm ring-1 ring-sky-200 dark:bg-sky-950/40 dark:text-sky-200 dark:ring-sky-900/70"
+                : "text-muted-foreground hover:bg-sky-50 hover:text-sky-700 dark:hover:bg-sky-950/25 dark:hover:text-sky-200"
+            }`}
+          >
+            <span className="grid grid-cols-2 gap-0.5" aria-hidden="true">
+              <span className="h-2 w-2 rounded-[2px] bg-cyan-400" />
+              <span className="h-2 w-2 rounded-[2px] bg-amber-400" />
+              <span className="h-2 w-2 rounded-[2px] bg-fuchsia-400" />
+              <span className="h-2 w-2 rounded-[2px] bg-emerald-400" />
+            </span>
+            Tetris
           </button>
         </div>
       </div>
@@ -639,7 +986,7 @@ export default function StressReliefPage() {
         </div>
       </div>
         </>
-      ) : (
+      ) : activeGame === "snake" ? (
         <>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
@@ -782,6 +1129,180 @@ export default function StressReliefPage() {
                   </div>
                 </div>
               </div>
+
+              <div className={`rounded-[28px] border bg-gradient-to-br p-5 shadow-sm transition-colors duration-500 ${reminderStyle}`}>
+                <div className="text-sm font-semibold text-foreground">Fighting</div>
+                <p className="mt-3 text-sm leading-6 text-foreground/80">
+                  {REMINDER_QUOTES[reminderIndex]}
+                </p>
+              </div>
+            </div>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <Button className="cursor-pointer rounded-xl" onClick={startTetrisGame}>
+                <Sparkles className="mr-2 h-4 w-4" />
+                {tetrisRunning ? "Restart Round" : tetrisOver ? "Play Again" : "Start Round"}
+              </Button>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="rounded-2xl border bg-card px-4 py-3 shadow-sm">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  Score
+                </div>
+                <div className="mt-1 text-2xl font-black text-foreground">{tetrisScore}</div>
+              </div>
+
+              <div className="rounded-2xl border bg-card px-4 py-3 shadow-sm">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  Best
+                </div>
+                <div className="mt-1 flex items-center gap-2 text-2xl font-black text-foreground">
+                  <Trophy className="h-5 w-5 text-amber-500" />
+                  {tetrisBestScore}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border bg-card px-4 py-3 shadow-sm">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  Lines
+                </div>
+                <div className="mt-1 text-2xl font-black text-foreground">{tetrisLines}</div>
+              </div>
+
+              <div className="rounded-2xl border bg-card px-4 py-3 shadow-sm">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  Level
+                </div>
+                <div className="mt-1 text-2xl font-black text-foreground">{tetrisLevel}</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-5 xl:grid-cols-[1.35fr_0.65fr]">
+            <div className="overflow-hidden rounded-[28px] border border-border bg-card shadow-sm">
+              <div className="flex items-center justify-between border-b border-border px-5 py-4">
+                <div className="text-sm font-semibold text-foreground">Tetris</div>
+              </div>
+
+              <div className="relative flex h-[560px] items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(56,189,248,0.22),_transparent_32%),radial-gradient(circle_at_bottom_right,_rgba(251,191,36,0.2),_transparent_34%),linear-gradient(180deg,#f8fafc_0%,#eff6ff_42%,#fdf2f8_100%)] px-4 py-6 dark:bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.18),_transparent_32%),radial-gradient(circle_at_bottom_right,_rgba(251,191,36,0.13),_transparent_34%),linear-gradient(180deg,#082f49_0%,#172554_46%,#4a044e_100%)]">
+                <div className="grid h-full max-h-[520px] w-full max-w-[620px] grid-cols-[minmax(0,1fr)_120px] gap-4">
+                  <div className="relative mx-auto aspect-[10/20] h-full overflow-hidden rounded-[26px] border border-white/45 bg-slate-950/90 p-2 shadow-[0_26px_50px_rgba(14,165,233,0.2)] dark:border-white/10">
+                    <div
+                      className="grid h-full w-full"
+                      style={{
+                        gridTemplateColumns: `repeat(${TETRIS_COLUMNS}, minmax(0, 1fr))`,
+                        gridTemplateRows: `repeat(${TETRIS_ROWS}, minmax(0, 1fr))`,
+                      }}
+                    >
+                      {tetrisBoard.map((row, y) =>
+                        row.map((cell, x) => {
+                          const activeCell =
+                            tetrisPiece.shape[y - tetrisPiece.y]?.[x - tetrisPiece.x] === 1;
+                          const color = activeCell ? tetrisPiece.color : cell;
+
+                          return (
+                            <div
+                              key={`${x}-${y}`}
+                              className={`${
+                                color
+                                  ? `${color} shadow-[inset_0_1px_0_rgba(255,255,255,0.42)]`
+                                  : "bg-transparent"
+                              }`}
+                            />
+                          );
+                        })
+                      )}
+                    </div>
+
+                    {!tetrisRunning && (
+                      <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center bg-slate-950/45 px-5 text-center backdrop-blur-[2px]">
+                        <div className="rounded-[28px] border border-white/20 bg-white/90 px-7 py-6 shadow-[0_24px_48px_rgba(15,23,42,0.28)] dark:bg-slate-950/85">
+                          <div className="text-5xl">▦</div>
+                          <h2 className="mt-4 text-4xl font-black tracking-tight text-foreground">
+                            {tetrisOver ? "Game Over" : "Ready to Stack?"}
+                          </h2>
+                          <p className="mt-3 max-w-sm text-sm leading-6 text-muted-foreground">
+                            Move, rotate, and clear full rows before the stack reaches the top.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex min-w-0 flex-col gap-4">
+                    <div className="rounded-[24px] border border-white/45 bg-white/60 p-4 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-950/45">
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                        Next
+                      </div>
+                      <div className="mt-4 grid aspect-square grid-cols-4 grid-rows-4 gap-1 rounded-2xl bg-slate-950/90 p-3">
+                        {Array.from({ length: 16 }, (_, index) => {
+                          const x = index % 4;
+                          const y = Math.floor(index / 4);
+                          const shapeX = x - Math.floor((4 - nextTetrisPiece.shape[0].length) / 2);
+                          const shapeY = y - Math.floor((4 - nextTetrisPiece.shape.length) / 2);
+                          const filled = nextTetrisPiece.shape[shapeY]?.[shapeX] === 1;
+
+                          return (
+                            <div
+                              key={index}
+                              className={`rounded-[4px] border border-white/5 ${
+                                filled ? nextTetrisPiece.color : "bg-white/[0.035]"
+                              }`}
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="rounded-[24px] border border-white/45 bg-white/60 p-4 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-950/45">
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                        Status
+                      </div>
+                      <div className="mt-2 text-2xl font-black text-foreground">
+                        {tetrisRunning ? "STACK" : tetrisOver ? "RETRY" : "READY"}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-5">
+              <div className="rounded-[28px] border border-border bg-card p-5 shadow-sm">
+                <div className="text-sm font-semibold text-foreground">How it works</div>
+                <div className="mt-3 space-y-3 text-sm leading-6 text-muted-foreground">
+                  <p>1. Start the round.</p>
+                  <p>2. Use left/right or A/D to move.</p>
+                  <p>3. Use up/W/space to rotate and down/S to drop faster.</p>
+                  <p>4. Clear full lines for bigger points.</p>
+                </div>
+              </div>
+
+              <div className="rounded-[28px] border border-border bg-card p-5 shadow-sm">
+                <div className="text-sm font-semibold text-foreground">Mood Reset</div>
+                <div className="mt-3 grid grid-cols-2 gap-3">
+                  <div className="rounded-2xl border bg-muted/50 p-4">
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                      Cleared
+                    </div>
+                    <div className="mt-2 text-2xl font-black text-foreground">{tetrisLines}</div>
+                  </div>
+
+                  <div className="rounded-2xl border bg-muted/50 p-4">
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                      Speed
+                    </div>
+                      <div className="mt-2 text-2xl font-black text-foreground">
+                        {tetrisDropSpeed}ms
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
               <div className={`rounded-[28px] border bg-gradient-to-br p-5 shadow-sm transition-colors duration-500 ${reminderStyle}`}>
                 <div className="text-sm font-semibold text-foreground">Fighting</div>
