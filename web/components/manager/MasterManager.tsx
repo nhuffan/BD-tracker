@@ -33,8 +33,9 @@ import { invalidateMastersCache } from "@/lib/useMasters";
 import { db } from "@/lib/db";
 import { syncPending } from "@/lib/sync";
 import { fetchBdMonthlyLevels, getBdLevelsForMonth } from "@/lib/bdMonthlyLevels";
-import { Pencil, Trash2, ArrowUpDown, CalendarDays, Plus, Loader2 } from "lucide-react";
+import { Pencil, Trash2, ArrowUpDown, CalendarDays, Plus, Loader2, Download } from "lucide-react";
 import { toast } from "sonner";
+import { exportBdPersonnelToExcel } from "./helpers/exportBdPersonnelExcel";
 
 function normalizeName(value: string) {
   return value
@@ -770,6 +771,20 @@ export default function MasterManager({
     }
   }
 
+  function handleExportBdPersonnel() {
+    exportBdPersonnelToExcel(sortedItems, {
+      title: "BD Personnel",
+      selectedMonthLabel:
+        selectedMonth === ALL_TIME ? "All Time" : formatMonthLabel(selectedMonth),
+      showMonthlyColumns: selectedMonth !== ALL_TIME,
+      bdLevelByBdId,
+      bdLevels,
+      monthlyKpis,
+      totals,
+      trackingTotals,
+    });
+  }
+
   function renderTable(list: MasterItem[], startIndex: number) {
     return (
       <div className="overflow-hidden rounded-xl border">
@@ -1075,6 +1090,18 @@ export default function MasterManager({
                 </Select>
               </div>
             </>
+          )}
+
+          {category === "bd" && (
+            <Button
+              variant="outline"
+              className="flex h-9 cursor-pointer items-center gap-2"
+              onClick={handleExportBdPersonnel}
+              disabled={loading || sortedItems.length === 0}
+            >
+              <Download className="h-4 w-4" />
+              Export Data
+            </Button>
           )}
 
           {isAdmin && (
