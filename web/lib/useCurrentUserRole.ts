@@ -3,17 +3,16 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { isSuperAdminUser } from "@/lib/superAdmin";
 
 
 export type AppRole = "admin" | "viewer";
-
-const SUPER_ADMIN_UID = "a7d27d0a-3f3a-4473-9bae-09ecdb703093";
 
 
 export function useCurrentUserRole() {
   const [role, setRole] = useState<AppRole>("viewer");
   const [loading, setLoading] = useState(true);
-  const [userId, setUserId] = useState<string | null>(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
 
   useEffect(() => {
@@ -36,7 +35,9 @@ export function useCurrentUserRole() {
         return;
       }
 
-      if (mounted) setUserId(user.id);
+      if (mounted) {
+        setIsSuperAdmin(isSuperAdminUser(user));
+      }
 
 
       const { data, error } = await supabase
@@ -71,6 +72,6 @@ export function useCurrentUserRole() {
     loading,
     isAdmin: role === "admin",
     isViewer: role === "viewer",
-    isSuperAdmin: userId === SUPER_ADMIN_UID,
+    isSuperAdmin,
   };
 }
