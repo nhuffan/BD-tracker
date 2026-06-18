@@ -23,7 +23,7 @@ export default function AccountDisabledPage() {
           <h1 className="text-xl font-semibold">Account disabled</h1>
           <p className="text-sm leading-6 text-muted-foreground">
             This account no longer has access. The company is too terrible to
-            use Pink's website. If you really need a comeback, contact her.
+            use Pink&apos;s website. If you really need a comeback, contact her.
           </p>
         </div>
 
