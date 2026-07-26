@@ -14,27 +14,31 @@ import WomensDayBackground from "@/components/WomensDayBackground";
 import QAPage from "./qa/QAPage";
 import ApprovalsPage from "./approvals/ApprovalsPage";
 import AdsTrackingPage from "./ads-tracking/AdsTrackingPage";
-import StressReliefPage from "./stress/StressReliefPage";
+
+const PINK_LIFE_TAB = "stress-relief";
+
+function normalizeActiveTab(value: string | null) {
+  return value === PINK_LIFE_TAB ? "home" : value || "home";
+}
 
 export default function HomeTabs() {
   const router = useRouter();
   const { isAdmin, isSuperAdmin, loading } = useCurrentUserRole();
   const [activeTab, setActiveTab] = useState(() => {
     if (typeof window === "undefined") return "home";
-    return window.localStorage.getItem("home-active-tab") || "home";
+    return normalizeActiveTab(window.localStorage.getItem("home-active-tab"));
   });
   const [visitedTabs, setVisitedTabs] = useState<string[]>(() => {
     if (typeof window === "undefined") return ["home"];
-    const storedTab = window.localStorage.getItem("home-active-tab") || "home";
+    const storedTab = normalizeActiveTab(window.localStorage.getItem("home-active-tab"));
     return Array.from(new Set(["home", storedTab]));
   });
   const [email, setEmail] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string>("");
-  const effectiveActiveTab =
-    activeTab === "stress-relief" && !isSuperAdmin ? "home" : activeTab;
+  const effectiveActiveTab = normalizeActiveTab(activeTab);
 
   function handleTabChange(value: string) {
-    if (value === "stress-relief" && !isSuperAdmin) {
+    if (value === PINK_LIFE_TAB) {
       setActiveTab("home");
       setVisitedTabs((prev) => (prev.includes("home") ? prev : [...prev, "home"]));
       window.localStorage.setItem("home-active-tab", "home");
@@ -76,7 +80,6 @@ export default function HomeTabs() {
         <AppHeader
           email={email}
           onLogout={handleLogout}
-          isSuperAdmin={isSuperAdmin}
         />
 
         <main className="relative z-10 h-[calc(100vh-64px)] overflow-y-auto px-6 py-8">
@@ -146,16 +149,6 @@ export default function HomeTabs() {
                 isAdmin={isAdmin}
                 currentUserId={currentUserId}
               />
-            </TabsContent>
-          )}
-
-          {isSuperAdmin && visitedTabs.includes("stress-relief") && (
-            <TabsContent
-              value="stress-relief"
-              forceMount
-              className={effectiveActiveTab === "stress-relief" ? "mt-0 w-full" : "mt-0 hidden"}
-            >
-              <StressReliefPage />
             </TabsContent>
           )}
 
