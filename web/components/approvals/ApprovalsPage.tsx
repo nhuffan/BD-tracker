@@ -12,10 +12,10 @@ import {
   History,
   Loader2,
 } from "lucide-react";
-import { supabase } from "@/lib/supabaseClient";
+import { supabase } from "@/lib/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useMasters } from "@/lib/useMasters";
+import { useMasters } from "@/lib/features/masters/useMasters";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { ApprovalRequest, ApprovalRequestVM, ApprovalImage } from "./utils/types";

@@ -20,11 +20,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { db } from "@/lib/db";
-import { syncPending } from "@/lib/sync";
+import { db } from "@/lib/features/performance/offlineDb";
+import { syncPending } from "@/lib/features/performance/syncPending";
 import { toast } from "sonner";
 import type { RecordVM } from "../RecordsPage";
-import type { LocalRecord } from "@/lib/db";
+import type { LocalRecord } from "@/lib/features/performance/offlineDb";
 import { Loader2 } from "lucide-react";
 
 function formatNumberInput(value: string) {

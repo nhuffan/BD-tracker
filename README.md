@@ -183,7 +183,8 @@ The web app is built around a tabbed dashboard rendered from [web/components/Hom
 Core behavior:
 
 - Authentication is checked before rendering the main app.
-- The current user role is resolved via [web/lib/useCurrentUserRole.ts](/Users/nhuffan/Documents/Projects/BD-tracker/web/lib/useCurrentUserRole.ts).
+- The current user role is resolved through [web/lib/auth/userRoleContext.tsx](/Users/nhuffan/Documents/Projects/BD-tracker/web/lib/auth/userRoleContext.tsx) and [web/lib/auth/useCurrentUserRole.ts](/Users/nhuffan/Documents/Projects/BD-tracker/web/lib/auth/useCurrentUserRole.ts).
+- Tab configuration lives in [web/lib/app/tabsConfig.tsx](/Users/nhuffan/Documents/Projects/BD-tracker/web/lib/app/tabsConfig.tsx).
 - The header exposes tab navigation and account/logout controls.
 - Each major product area is implemented as a self-contained page component under `web/components/...`.
 
@@ -205,7 +206,7 @@ Core behavior:
 
 ### Roles and Access Model
 
-Role resolution is handled in [web/lib/useCurrentUserRole.ts](/Users/nhuffan/Documents/Projects/BD-tracker/web/lib/useCurrentUserRole.ts).
+Role resolution is handled in [web/lib/auth/useCurrentUserRole.ts](/Users/nhuffan/Documents/Projects/BD-tracker/web/lib/auth/useCurrentUserRole.ts) and exposed to the tab tree through [web/lib/auth/userRoleContext.tsx](/Users/nhuffan/Documents/Projects/BD-tracker/web/lib/auth/userRoleContext.tsx).
 
 Current model:
 
@@ -230,7 +231,7 @@ The app is primarily Supabase-driven:
 
 Master data behavior:
 
-- Shared reference data is loaded via [web/lib/useMasters.ts](/Users/nhuffan/Documents/Projects/BD-tracker/web/lib/useMasters.ts)
+- Shared reference data is loaded via [web/lib/features/masters/useMasters.ts](/Users/nhuffan/Documents/Projects/BD-tracker/web/lib/features/masters/useMasters.ts)
 - It maintains a simple in-memory cache keyed by category
 - It supports invalidation through a custom `masters-updated` browser event
 
@@ -252,6 +253,7 @@ Current behavior:
 - This allows its existing realtime subscriptions to stay active without re-fetching merely because the user switches away and back
 
 This behavior is implemented in [web/components/HomeTabs.tsx](/Users/nhuffan/Documents/Projects/BD-tracker/web/components/HomeTabs.tsx) using an internal visited-tab list.
+The tab registry itself lives in [web/lib/app/tabsConfig.tsx](/Users/nhuffan/Documents/Projects/BD-tracker/web/lib/app/tabsConfig.tsx).
 
 ### Realtime Expectations
 
@@ -395,15 +397,203 @@ If you are modifying this project, the safest working assumptions are:
 6. Performance regressions often come from mounting too much UI too early or forcing unnecessary refreshes.
 7. Role handling is central to behavior and should be checked before changing tab visibility or actions.
 
+### Database and Feature Maintenance Guidelines
+
+Use this section when adding new database objects, product features, or dashboard tabs. It is meant to keep future work aligned with the current project structure instead of growing one-off patterns.
+
+#### Core Rules
+
+- The web app in `web/` is the source of truth for current production behavior.
+- Each feature/tab should own its page, tables, dialogs, export helpers, fetch/save flow, and realtime subscription behavior.
+- Put shared code in `web/lib/shared/` only when at least two unrelated features need it.
+- Put domain-specific helpers under `web/lib/features/<feature>/`.
+- Put external SDK/client setup under `web/lib/integrations/`.
+- Put auth and role helpers under `web/lib/auth/`.
+- Put app-shell configuration, including the tab registry, under `web/lib/app/`.
+- Do not add a new table or column just to duplicate data that can be reached through a foreign key or `masters` lookup.
+- Do not create experiment tables in production Supabase unless the matching feature code is also being added.
+
+#### Current Library Structure
+
+`web/lib/README.md` is the source of truth for helper placement:
+
+- `web/lib/app/`: app-shell configuration and tab composition.
+- `web/lib/auth/`: user role, session, and authorization helpers.
+- `web/lib/features/`: feature-specific business helpers.
+- `web/lib/integrations/`: Supabase, Cloudinary, and other external service clients.
+- `web/lib/shared/`: small cross-feature utilities.
+- `web/lib/utils.ts`: shadcn/ui compatibility helper for `cn`; keep this path stable.
+
+#### Adding a New Feature or Tab
+
+1. Define the workflow first.
+   - What durable business entity does the feature own?
+   - Which users can see it?
+   - Which actions are admin-only or super-admin-only?
+   - Does it need realtime, export, attachments, optimistic updates, or local/offline state?
+
+2. Decide whether a new table is actually needed.
+   - Reuse `masters` for shared reference data.
+   - Reuse existing business tables when the data belongs to an existing workflow.
+   - Add a table only when the feature owns a new durable entity.
+
+3. Add schema through Supabase migrations.
+   - Put migration SQL under `supabase/migrations/`.
+   - Keep SQL explicit and reviewable.
+   - Enable RLS for any table in `public`.
+   - Add policies that match the real access model.
+   - Add indexes for commonly filtered, joined, sorted, or realtime-queried columns.
+
+4. Add the web implementation.
+   - Create feature UI under `web/components/<feature>/`.
+   - Add domain helpers under `web/lib/features/<feature>/` only when needed.
+   - Keep feature-local types close to the feature unless they are used globally.
+   - Wire new tabs in `web/lib/app/tabsConfig.tsx`.
+   - Pass role context from the tab registry instead of re-fetching role state in every child.
+
+5. Keep tab loading lightweight.
+   - New tabs should load data only after they mount.
+   - Do not force-mount every tab.
+   - Do not trigger every feature query during app startup.
+   - If using realtime, subscribe inside the mounted feature page and remove channels on unmount.
+
+6. Add validation and feedback.
+   - Validate required fields before writing.
+   - Use `sonner` toasts for success and failure.
+   - Put destructive actions behind confirmation dialogs.
+   - Preserve existing viewer, admin, and super-admin behavior.
+
+7. Verify the feature.
+   - Run `cd web && npm run lint`.
+   - Run `cd web && npm run build` for larger UI or schema changes.
+   - Test first tab visit, refresh, create/edit/delete, realtime updates, exports, empty states, and role-gated actions.
+
+#### Database Rules
+
+Current active public tables:
+
+- `records`
+- `customer_tracking`
+- `masters`
+- `profiles`
+- `qa_tickets`
+- `approval_requests`
+- `ad_tracking_records`
+- `bd_monthly_levels`
+- `bd_level_monthly_kpis`
+
+Removed unused or experimental tables should not be recreated unless the feature is intentionally restored:
+
+- `word_chain_rooms`
+- `word_chain_moves`
+- `vietnamese_words`
+- `qa_ticket_attachments`
+
+Naming conventions:
+
+- Tables: plural `snake_case`, for example `approval_requests`.
+- Columns: `snake_case` with clear business meaning.
+- Foreign keys: `<entity>_id`, for example `bd_id` or `created_by_user_id`.
+- Date-only values: `date`, for example `event_date`.
+- Timestamps: `created_at`, `updated_at`, `reviewed_at`, `done_at`.
+- Month scope: `month_key` in `YYYY-MM` format where the existing code expects it.
+- Status columns: text with an explicit check constraint when the state set is small and stable.
+
+For normal mutable business tables, prefer:
+
+```sql
+id uuid primary key default gen_random_uuid(),
+created_at timestamptz not null default now(),
+updated_at timestamptz not null default now()
+```
+
+Skip `updated_at` only for append-only tables or static lookup tables where it is genuinely not useful.
+
+#### RLS and Authorization
+
+- Enable RLS on every new table in `public`.
+- Do not use `auth.role()` in new policies.
+- Use `TO authenticated` or `TO anon` policy clauses.
+- `TO authenticated` alone is authentication, not authorization. Add ownership or role checks when users should not see every row.
+- Do not use user-editable metadata for authorization decisions.
+- Prefer `profiles.role` or trusted app metadata for role decisions.
+- For update policies, define both `USING` and `WITH CHECK`.
+- Be careful with `SECURITY DEFINER`; do not add it just to bypass permission errors.
+
+#### Foreign Keys and Master Data
+
+- Use `masters` for shared reference categories such as `bd`, `bd_level`, `customer_type`, and `point_type`.
+- Store ids in business tables and map them to labels in UI.
+- Avoid duplicate label columns unless the label must be snapshotted historically.
+- Keep inactive master rows when historical records still reference them.
+- Before deleting a master item, check every related table that references it.
+
+#### Realtime
+
+If a feature needs realtime:
+
+- Ensure the table is available to Supabase Realtime.
+- Subscribe in the feature page or component that owns the list.
+- Use stable channel names such as `<feature>-changes`.
+- Handle `INSERT`, `UPDATE`, and `DELETE` when the UI can show all three.
+- Keep selected/open dialog state synchronized when realtime updates the selected row.
+- Remember that a tab subscribes only after it has been opened for the first time.
+
+#### Attachments
+
+Current attachment behavior:
+
+- Q&A attachment metadata is stored in `qa_tickets.attachments` JSONB.
+- Approval attachment metadata is stored in `approval_requests.images` JSONB.
+- Files are uploaded and deleted through Cloudinary API routes under `web/app/api/cloudinary/`.
+- Supabase Storage is not currently part of the attachment flow.
+
+Do not add Supabase attachment tables or Supabase Storage flows unless the product intentionally changes this architecture.
+
+When adding attachment support:
+
+- Reuse the Cloudinary API route pattern unless there is a strong reason not to.
+- Store only metadata needed by UI and cleanup: ids, names, sizes, resource type, public id, URLs, format, version, and thumbnail URL.
+- Delete Cloudinary resources when deleting rows or removing attachments.
+- Keep upload routes server-side; never expose Cloudinary secrets in client code.
+
+#### Migrations and Cleanup
+
+Use migrations so the repo remembers schema changes:
+
+- Put schema changes in `supabase/migrations/`.
+- Prefer creating migration files with the Supabase CLI when available.
+- Keep migration SQL explicit.
+- For destructive changes, record why the object is unused and whether data exists.
+- Avoid broad `cascade` drops unless dependencies have been reviewed.
+- After schema changes, verify the live database and update docs, types, and code references.
+
+Before dropping a table or column:
+
+1. Search references in `web`, `mobile`, and `supabase/functions`.
+2. Check row count and non-null count.
+3. Check foreign keys, views, triggers, and policies.
+4. Confirm whether the data belongs only to an old experiment.
+5. Prefer explicit `drop table` or `drop column` statements in a migration.
+6. Verify with Supabase table listing or catalog queries after applying.
+
+#### Mobile Maintenance
+
+- Treat `mobile/` as early-stage unless this README says otherwise.
+- Keep mobile Supabase access aligned with the web schema.
+- Do not add mobile-only tables unless the web app also understands the workflow.
+- When changing a table used by `mobile/lib/features/home/data/performance_repository.dart`, update the Dart models too.
+
 ### Suggested Reading Order for New Contributors
 
 | Step | File or Area | Why |
 | --- | --- | --- |
 | 1 | [web/components/HomeTabs.tsx](/Users/nhuffan/Documents/Projects/BD-tracker/web/components/HomeTabs.tsx) | Understand app entry and tab lifecycle |
-| 2 | [web/lib/useCurrentUserRole.ts](/Users/nhuffan/Documents/Projects/BD-tracker/web/lib/useCurrentUserRole.ts) | Understand role-based behavior |
-| 3 | [web/lib/useMasters.ts](/Users/nhuffan/Documents/Projects/BD-tracker/web/lib/useMasters.ts) | Understand master data caching |
-| 4 | One business module page | Learn a full workflow end-to-end |
-| 5 | Related dialogs/helpers | See write flows, exports, and attachment handling |
+| 2 | [web/lib/app/tabsConfig.tsx](/Users/nhuffan/Documents/Projects/BD-tracker/web/lib/app/tabsConfig.tsx) | Understand tab registration and role-context wiring |
+| 3 | [web/lib/auth/userRoleContext.tsx](/Users/nhuffan/Documents/Projects/BD-tracker/web/lib/auth/userRoleContext.tsx) | Understand role-based behavior |
+| 4 | [web/lib/features/masters/useMasters.ts](/Users/nhuffan/Documents/Projects/BD-tracker/web/lib/features/masters/useMasters.ts) | Understand master data caching |
+| 5 | One business module page | Learn a full workflow end-to-end |
+| 6 | Related dialogs/helpers | See write flows, exports, and attachment handling |
 
 ---
 

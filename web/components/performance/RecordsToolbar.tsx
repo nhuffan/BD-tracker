@@ -2,12 +2,12 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import type { RecordRow } from "@/lib/types";
+import type { RecordRow } from "@/lib/features/performance/types";
 import type { Filters } from "./RecordsPage";
 import FilterDialog from "./dialogs/FilterDialog";
 import CreateDialog from "./dialogs/CreateDialog";
 import { exportToExcel } from "./helpers/exportExcel";
-import { useMasters } from "@/lib/useMasters";
+import { useMasters } from "@/lib/features/masters/useMasters";
 import {
   Filter,
   Plus,

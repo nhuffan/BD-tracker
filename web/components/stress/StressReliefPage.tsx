@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Hammer, Sparkles, TimerReset, Trophy, Zap } from "lucide-react";
-import { supabase } from "@/lib/supabaseClient";
+import { supabase } from "@/lib/integrations/supabase/client";
 
 const ROUND_SECONDS = 30;
 const HOLE_COUNT = 9;

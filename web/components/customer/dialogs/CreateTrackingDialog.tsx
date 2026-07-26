@@ -19,8 +19,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DatePickerDMY } from "@/components/ui/date-picker-dmy";
-import { useMastersActive } from "@/lib/useMasters";
-import { supabase } from "@/lib/supabaseClient";
+import { useMastersActive } from "@/lib/features/masters/useMasters";
+import { supabase } from "@/lib/integrations/supabase/client";
 
 function formatNumberInput(value: string) {
   if (!value) return "";

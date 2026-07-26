@@ -20,19 +20,19 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 
-import type { MasterCategory, MasterItem } from "@/lib/masters";
+import type { MasterCategory, MasterItem } from "@/lib/features/masters/masters";
 import {
   createMaster,
   deleteMaster,
   fetchMasters,
   updateMaster,
-} from "@/lib/masters";
-import { MASTER_CATEGORY_UI } from "@/lib/masterUi";
-import { supabase } from "@/lib/supabaseClient";
-import { invalidateMastersCache } from "@/lib/useMasters";
-import { db } from "@/lib/db";
-import { syncPending } from "@/lib/sync";
-import { fetchBdMonthlyLevels, getBdLevelsForMonth } from "@/lib/bdMonthlyLevels";
+} from "@/lib/features/masters/masters";
+import { MASTER_CATEGORY_UI } from "@/lib/features/masters/masterUi";
+import { supabase } from "@/lib/integrations/supabase/client";
+import { invalidateMastersCache } from "@/lib/features/masters/useMasters";
+import { db } from "@/lib/features/performance/offlineDb";
+import { syncPending } from "@/lib/features/performance/syncPending";
+import { fetchBdMonthlyLevels, getBdLevelsForMonth } from "@/lib/features/performance/bdMonthlyLevels";
 import { Pencil, Trash2, ArrowUpDown, CalendarDays, Plus, Loader2, Download } from "lucide-react";
 import { toast } from "sonner";
 import { exportBdPersonnelToExcel } from "./helpers/exportBdPersonnelExcel";

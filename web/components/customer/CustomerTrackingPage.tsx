@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { supabase } from "@/lib/integrations/supabase/client";
 import CustomerTrackingToolbar from "./CustomerTrackingToolbar";
 import CustomerTrackingTable from "./CustomerTrackingTable";
 import type { TrackingFilters, TrackingRecordVM } from "./types";
-import { useMasters } from "@/lib/useMasters";
+import { useMasters } from "@/lib/features/masters/useMasters";
 
 function getCurrentMonth() {
   const now = new Date();

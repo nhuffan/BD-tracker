@@ -7,8 +7,8 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
-import { formatDMY } from "@/lib/date";
-import { getAdsTrackingStatus } from "@/lib/adsTracking";
+import { formatDMY } from "@/lib/shared/date";
+import { getAdsTrackingStatus } from "@/lib/features/ads-tracking/adsTracking";
 import { Sparkles, Store } from "lucide-react";
 import type { AdTrackingRow } from "./AdsTrackingPage";
 

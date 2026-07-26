@@ -1,8 +1,8 @@
 "use client";
 
 import { FileText, Pencil, Trash2, Sparkles, Store } from "lucide-react";
-import { getAdsTrackingStatus } from "@/lib/adsTracking";
-import { formatDMY } from "@/lib/date";
+import { getAdsTrackingStatus } from "@/lib/features/ads-tracking/adsTracking";
+import { formatDMY } from "@/lib/shared/date";
 import {
   Tooltip,
   TooltipContent,

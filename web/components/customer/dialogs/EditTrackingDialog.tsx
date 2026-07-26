@@ -18,8 +18,8 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { useMastersActive } from "@/lib/useMasters";
-import { supabase } from "@/lib/supabaseClient";
+import { useMastersActive } from "@/lib/features/masters/useMasters";
+import { supabase } from "@/lib/integrations/supabase/client";
 import { toast } from "sonner";
 import type { TrackingRecordVM } from "../types";
 import { Loader2 } from "lucide-react";

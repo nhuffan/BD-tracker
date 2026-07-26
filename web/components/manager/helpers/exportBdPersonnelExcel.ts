@@ -1,5 +1,5 @@
 import * as XLSX from "xlsx-js-style";
-import type { MasterItem } from "@/lib/masters";
+import type { MasterItem } from "@/lib/features/masters/masters";
 
 type BdPersonnelExportRow = {
   "#": number | string;

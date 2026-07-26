@@ -1,19 +1,19 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
-import { db } from "@/lib/db";
-import { syncPending } from "@/lib/sync";
-import { RecordRow } from "@/lib/types";
+import { supabase } from "@/lib/integrations/supabase/client";
+import { db } from "@/lib/features/performance/offlineDb";
+import { syncPending } from "@/lib/features/performance/syncPending";
+import { RecordRow } from "@/lib/features/performance/types";
 import RecordsToolbar from "./RecordsToolbar";
 import RecordsTable from "./RecordsTable";
-import { useMasters } from "@/lib/useMasters";
+import { useMasters } from "@/lib/features/masters/useMasters";
 import {
   fetchBdMonthlyLevels,
   normalizeRecordBdLevel,
   type BdMonthlyLevelMap,
-} from "@/lib/bdMonthlyLevels";
-import type { LocalRecord } from "@/lib/db";
+} from "@/lib/features/performance/bdMonthlyLevels";
+import type { LocalRecord } from "@/lib/features/performance/offlineDb";
 
 export type Filters = {
   month?: string;

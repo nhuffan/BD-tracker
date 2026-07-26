@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import MasterManager from "./MasterManager";
-import type { MasterCategory } from "@/lib/masters";
+import type { MasterCategory } from "@/lib/features/masters/masters";
 import {
   Users,
   BriefcaseBusiness,

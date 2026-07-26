@@ -2,8 +2,8 @@
 
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
-import { isSuperAdminUser } from "@/lib/superAdmin";
+import { supabase } from "@/lib/integrations/supabase/client";
+import { isSuperAdminUser } from "@/lib/auth/superAdmin";
 
 
 export type AppRole = "admin" | "viewer";

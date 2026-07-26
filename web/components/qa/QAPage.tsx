@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Archive, CheckCircle2, CircleDashed, Clock3, Plus, Search, Paperclip, Loader2 } from "lucide-react";
-import { supabase } from "@/lib/supabaseClient";
+import { supabase } from "@/lib/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -18,7 +18,7 @@ import {
   HeadingLevel,
 } from "docx";
 import { Download } from "lucide-react";
-import { useMasters } from "@/lib/useMasters";
+import { useMasters } from "@/lib/features/masters/useMasters";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 

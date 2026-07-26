@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { UploadCloud, Trash2 } from "lucide-react";
 import { AttachmentIcon, isImageFile } from "@/components/qa/utils/AttachmentIcon";
-import { supabase } from "@/lib/supabaseClient";
+import { supabase } from "@/lib/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import type { QAPriority, QATicketAttachment } from "../utils/types";
-import { useMastersActive } from "@/lib/useMasters";
+import { useMastersActive } from "@/lib/features/masters/useMasters";
 import {
   attachmentCardClass,
   interactiveCardClass,

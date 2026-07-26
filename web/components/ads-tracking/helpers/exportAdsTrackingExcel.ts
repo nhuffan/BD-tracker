@@ -1,6 +1,6 @@
 import * as XLSX from "xlsx-js-style";
-import { formatDMY } from "@/lib/date";
-import { getAdsTrackingStatus } from "@/lib/adsTracking";
+import { formatDMY } from "@/lib/shared/date";
+import { getAdsTrackingStatus } from "@/lib/features/ads-tracking/adsTracking";
 import type { AdTrackingRow } from "../AdsTrackingPage";
 
 export function exportAdsTrackingToExcel(

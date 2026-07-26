@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/select";
 import type { Filters } from "../RecordsPage";
 import { DatePickerDMY } from "@/components/ui/date-picker-dmy";
-import { useMasters, useMastersActive } from "@/lib/useMasters";
+import { useMasters, useMastersActive } from "@/lib/features/masters/useMasters";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Popover,

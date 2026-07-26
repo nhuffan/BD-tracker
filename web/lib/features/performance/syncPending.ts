@@ -1,6 +1,6 @@
-import { db } from "./db";
-import type { LocalRecord } from "./db";
-import { supabase } from "./supabaseClient";
+import { supabase } from "@/lib/integrations/supabase/client";
+import { db } from "./offlineDb";
+import type { LocalRecord } from "./offlineDb";
 import {
   fetchBdMonthlyLevels,
   normalizeRecordBdLevel,

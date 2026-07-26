@@ -7,10 +7,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Search, RefreshCw, Loader2 } from "lucide-react";
 import type { TrackingRecordVM } from "./types";
-import { formatDMY } from "@/lib/date";
+import { formatDMY } from "@/lib/shared/date";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import EditTrackingDialog from "./dialogs/EditTrackingDialog";
-import { supabase } from "@/lib/supabaseClient";
+import { supabase } from "@/lib/integrations/supabase/client";
 import { toast } from "sonner";
 
 export default function CustomerTrackingTable({

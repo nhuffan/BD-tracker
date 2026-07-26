@@ -8,9 +8,9 @@ import {
     Plus,
     Search,
 } from "lucide-react";
-import { supabase } from "@/lib/supabaseClient";
-import { getAdsTrackingStatus } from "@/lib/adsTracking";
-import { useMasters } from "@/lib/useMasters";
+import { supabase } from "@/lib/integrations/supabase/client";
+import { getAdsTrackingStatus } from "@/lib/features/ads-tracking/adsTracking";
+import { useMasters } from "@/lib/features/masters/useMasters";
 import CreateAdRecordDialog from "./CreateAdRecordDialog";
 import EditAdRecordDialog from "./EditAdRecordDialog";
 import AdsTrackingTable from "./AdsTrackingTable";
@@ -19,7 +19,7 @@ import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { exportAdsTrackingToExcel } from "./helpers/exportAdsTrackingExcel";
-import { formatDMY } from "@/lib/date";
+import { formatDMY } from "@/lib/shared/date";
 
 type AdsStatusFilter =
     | "all"

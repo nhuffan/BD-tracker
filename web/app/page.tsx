@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { supabase } from "@/lib/integrations/supabase/client";
 import { useRouter } from "next/navigation";
 import HomeTabs from "@/components/HomeTabs";
 

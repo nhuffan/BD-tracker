@@ -12,14 +12,9 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Database,
   LogOut,
-  ShieldCheck,
-  BarChart3,
-  Users,
-  MessageSquareText,
-  ClipboardCheck,
-  Megaphone,
 } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
+import type { TabItem } from "@/lib/app/tabsConfig";
 
 function getInitialsFromEmail(email?: string | null) {
   if (!email) return "??";
@@ -40,9 +35,11 @@ function getInitialsFromEmail(email?: string | null) {
 export default function AppHeader({
   email,
   onLogout,
+  tabs,
 }: {
   email?: string | null;
   onLogout: () => void;
+  tabs: TabItem[];
 }) {
   const initials = useMemo(() => getInitialsFromEmail(email), [email]);
 
@@ -79,36 +76,16 @@ export default function AppHeader({
         <div className="flex justify-center min-w-0 flex-1">
           <TabsList className="h-16 w-full min-w-0 rounded-none border-0 bg-transparent p-0 shadow-none">
             <div className="flex min-w-0 overflow-x-auto scrollbar-hide">
-              <TabsTrigger value="home" className={tabClass}>
-                <BarChart3 className="mr-2 h-6 w-6" />
-                Team Performance
-              </TabsTrigger>
+              {tabs.map((tab) => {
+                const Icon = tab.icon;
 
-              <TabsTrigger value="tracking" className={tabClass}>
-                <Users className="mr-2 h-5 w-5" />
-                Customers
-              </TabsTrigger>
-
-              <TabsTrigger value="data" className={tabClass}>
-                <ShieldCheck className="mr-2 h-5 w-5" />
-                Management
-              </TabsTrigger>
-
-              <TabsTrigger value="qa" className={tabClass}>
-                <MessageSquareText className="mr-2 h-5 w-5" />
-                Q&A
-              </TabsTrigger>
-
-              <TabsTrigger value="ads-tracking" className={tabClass}>
-                <Megaphone className="mr-2 h-5 w-5" />
-                Ads Tracking
-              </TabsTrigger>
-
-              <TabsTrigger value="approvals" className={tabClass}>
-                <ClipboardCheck className="mr-2 h-5 w-5" />
-                Approvals
-              </TabsTrigger>
-
+                return (
+                  <TabsTrigger key={tab.id} value={tab.id} className={tabClass}>
+                    <Icon className="mr-2 h-5 w-5" />
+                    {tab.label}
+                  </TabsTrigger>
+                );
+              })}
             </div>
           </TabsList>
         </div>

@@ -1,4 +1,4 @@
-import { supabase } from "./supabaseClient";
+import { supabase } from "@/lib/integrations/supabase/client";
 
 export type MasterCategory = "bd" | "bd_level" | "customer_type" | "point_type";
 

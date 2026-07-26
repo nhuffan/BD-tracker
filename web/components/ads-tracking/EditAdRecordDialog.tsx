@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { supabase } from "@/lib/supabaseClient";
+import { supabase } from "@/lib/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -14,7 +14,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { DatePickerDMY } from "@/components/ui/date-picker-dmy";
-import { getAdsTrackingStatus } from "@/lib/adsTracking";
+import { getAdsTrackingStatus } from "@/lib/features/ads-tracking/adsTracking";
 
 const infoFieldClass =
     "flex h-10 w-full min-w-0 items-center rounded-lg border border-input bg-muted/60 px-3 text-sm text-foreground";

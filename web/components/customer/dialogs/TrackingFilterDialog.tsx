@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { TrackingFilters } from "../types";
-import { useMastersActive } from "@/lib/useMasters";
+import { useMastersActive } from "@/lib/features/masters/useMasters";
 
 const ALL_VALUE = "__all__";
 

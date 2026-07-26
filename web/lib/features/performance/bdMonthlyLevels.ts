@@ -1,4 +1,4 @@
-import { supabase } from "./supabaseClient";
+import { supabase } from "@/lib/integrations/supabase/client";
 import type { RecordRow } from "./types";
 
 export type BdMonthlyLevelRow = {

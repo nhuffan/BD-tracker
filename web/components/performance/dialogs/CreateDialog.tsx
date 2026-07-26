@@ -19,14 +19,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DatePickerDMY } from "@/components/ui/date-picker-dmy";
-import { useMasters, useMastersActive } from "@/lib/useMasters";
+import { useMasters, useMastersActive } from "@/lib/features/masters/useMasters";
 
-import { db } from "@/lib/db";
-import { syncPending } from "@/lib/sync";
+import { db } from "@/lib/features/performance/offlineDb";
+import { syncPending } from "@/lib/features/performance/syncPending";
 import { toast } from "sonner";
-import type { RecordRow } from "@/lib/types";
+import type { RecordRow } from "@/lib/features/performance/types";
 import { Loader2 } from "lucide-react";
-import { fetchBdMonthlyLevels, getBdLevelsForMonth } from "@/lib/bdMonthlyLevels";
+import { fetchBdMonthlyLevels, getBdLevelsForMonth } from "@/lib/features/performance/bdMonthlyLevels";
 
 function formatNumberInput(value: string) {
   if (!value) return "";

@@ -12,7 +12,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { AttachmentIcon, isImageFile } from "@/components/qa/utils/AttachmentIcon";
-import { supabase } from "@/lib/supabaseClient";
+import { supabase } from "@/lib/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";

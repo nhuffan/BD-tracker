@@ -6,10 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { db } from "@/lib/db";
-import type { LocalRecord } from "@/lib/db";
-import { syncPending } from "@/lib/sync";
-import { formatDMY } from "@/lib/date";
+import { db } from "@/lib/features/performance/offlineDb";
+import type { LocalRecord } from "@/lib/features/performance/offlineDb";
+import { syncPending } from "@/lib/features/performance/syncPending";
+import { formatDMY } from "@/lib/shared/date";
 import {
   FileText,
   Search,

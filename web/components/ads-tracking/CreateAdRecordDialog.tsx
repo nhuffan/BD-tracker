@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { supabase } from "@/lib/supabaseClient";
+import { supabase } from "@/lib/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -31,8 +31,8 @@ import {
 import {
     ADS_TRACKING_POINT_TYPE_CODES,
     calculateAdsEndDate,
-} from "@/lib/adsTracking";
-import { formatDMY } from "@/lib/date";
+} from "@/lib/features/ads-tracking/adsTracking";
+import { formatDMY } from "@/lib/shared/date";
 
 const fieldClass =
     "!h-11 h-11 w-full min-w-0 rounded-lg border border-input bg-background px-3 text-sm shadow-none transition-colors hover:border-border focus-visible:ring-1 focus-visible:ring-ring";

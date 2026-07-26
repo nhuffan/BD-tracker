@@ -1,6 +1,6 @@
 import * as XLSX from "xlsx-js-style";
-import { RecordRow } from "@/lib/types";
-import { formatDMY } from "@/lib/date";
+import { RecordRow } from "@/lib/features/performance/types";
+import { formatDMY } from "@/lib/shared/date";
 
 type ExportCellValue = string | number | null | undefined;
 type ExportRow = Record<string, ExportCellValue>;

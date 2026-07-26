@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { UploadCloud, Trash2 } from "lucide-react";
-import { supabase } from "@/lib/supabaseClient";
-import { useMastersActive } from "@/lib/useMasters";
+import { supabase } from "@/lib/integrations/supabase/client";
+import { useMastersActive } from "@/lib/features/masters/useMasters";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
