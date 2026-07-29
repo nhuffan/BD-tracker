@@ -268,7 +268,7 @@ export default function MerchantInvoicesPage({
         return;
       }
 
-      toast.success("✓ Đã chuyển hóa đơn sang trạng thái Đã xuất!");
+      toast.success("Đã chuyển hóa đơn sang trạng thái Đã xuất!");
       await refresh();
     } finally {
       setMutating(false);
@@ -291,7 +291,7 @@ export default function MerchantInvoicesPage({
       }
 
       await deleteCloudinaryImages(deleteTarget);
-      toast.success("✓ Đã xóa hóa đơn khỏi danh sách!");
+      toast.success("Đã xóa hóa đơn khỏi danh sách!");
       setDeleteTarget(null);
       await refresh();
     } finally {
@@ -392,7 +392,7 @@ export default function MerchantInvoicesPage({
       return;
     }
 
-    toast.success(`✓ Đã nhập thành công ${validPayload.length} hóa đơn từ file CSV!`);
+    toast.success(`Đã nhập thành công ${validPayload.length} hóa đơn từ file CSV!`);
     await refresh();
   }
 
@@ -483,8 +483,12 @@ export default function MerchantInvoicesPage({
                   {card.count} mục
                 </Badge>
               </div>
-              <div className={`mt-3 font-mono text-lg font-extrabold ${card.valueClassName}`}>
-                <MoneyText amount={card.amount} currencyClassName="relative top-[0.14em]" />
+              <div className={`mt-3 font-mono font-extrabold ${card.valueClassName}`}>
+                <MoneyText
+                  amount={card.amount}
+                  amountClassName="text-xl"
+                  currencyClassName="relative top-[0.2em] text-lg font-extrabold"
+                />
               </div>
             </button>
           );
@@ -635,9 +639,9 @@ export default function MerchantInvoicesPage({
           if (!open) setDeleteTarget(null);
         }}
         title="Xóa hóa đơn?"
-        description={`Thao tác này sẽ xóa vĩnh viễn hóa đơn #${deleteTarget?.sequence_no ?? ""} của "${
+        description={`Thao tác này sẽ xóa vĩnh viễn hóa đơn #${deleteTarget?.contract_number ?? ""} của "${
           deleteTarget?.merchant ?? ""
-        }" và xóa hình ảnh minh chứng trên Cloudinary.`}
+        }"`}
         loading={mutating}
         onConfirm={() => void deleteInvoice()}
       />

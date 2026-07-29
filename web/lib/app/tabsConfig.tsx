@@ -104,7 +104,7 @@ const ALL_TABS_REGISTRY: TabItem[] = [
   },
   {
     id: "merchant-invoices",
-    label: "Hóa Đơn",
+    label: "Invoices",
     icon: ReceiptText,
     render: ({ isAdmin, isSuperAdmin }) => (
       <MerchantInvoicesPage isAdmin={isAdmin || isSuperAdmin} />
