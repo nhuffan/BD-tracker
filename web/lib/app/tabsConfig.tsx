@@ -7,6 +7,7 @@ import {
   ClipboardCheck,
   Megaphone,
   MessageSquareText,
+  ReceiptText,
   ShieldCheck,
   Users,
   type LucideIcon,
@@ -23,7 +24,7 @@ export interface TabItem {
 function TabLoading({ label }: { label: string }) {
   return (
     <div className="flex min-h-[320px] items-center justify-center text-sm font-medium text-muted-foreground">
-      Loading {label}...
+      Đang tải {label}...
     </div>
   );
 }
@@ -52,7 +53,13 @@ const ApprovalsPage = dynamic(() => import("@/components/approvals/ApprovalsPage
   loading: () => <TabLoading label="Approvals" />,
 });
 
-export const TABS_REGISTRY: TabItem[] = [
+const MerchantInvoicesPage = dynamic(() => import("@/components/merchant-invoices/MerchantInvoicesPage"), {
+  loading: () => <TabLoading label="Hóa Đơn Merchant" />,
+});
+
+const HIDDEN_TAB_IDS = new Set(["ads-tracking", "approvals"]);
+
+const ALL_TABS_REGISTRY: TabItem[] = [
   {
     id: "home",
     label: "Team Performance",
@@ -95,7 +102,19 @@ export const TABS_REGISTRY: TabItem[] = [
       <ApprovalsPage isAdmin={isSuperAdmin} currentUserId={currentUserId} />
     ),
   },
+  {
+    id: "merchant-invoices",
+    label: "Hóa Đơn",
+    icon: ReceiptText,
+    render: ({ isAdmin, isSuperAdmin }) => (
+      <MerchantInvoicesPage isAdmin={isAdmin || isSuperAdmin} />
+    ),
+  },
 ];
+
+export const TABS_REGISTRY: TabItem[] = ALL_TABS_REGISTRY.filter(
+  (tab) => !HIDDEN_TAB_IDS.has(tab.id)
+);
 
 export const DEFAULT_TAB_ID = TABS_REGISTRY[0]?.id ?? "home";
 

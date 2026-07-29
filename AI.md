@@ -57,6 +57,7 @@ This file is a compact operating guide for AI assistants and developers maintain
 - `qa_tickets`
 - `approval_requests`
 - `ad_tracking_records`
+- `merchant_invoices`
 - `bd_monthly_levels`
 - `bd_level_monthly_kpis`
 
@@ -73,6 +74,7 @@ Current attachments use Cloudinary:
 
 - Q&A: metadata in `qa_tickets.attachments`
 - Approvals: metadata in `approval_requests.images`
+- Merchant invoices: metadata in `merchant_invoices.proof_images`
 - Upload/delete routes: `web/app/api/cloudinary/`
 
 Do not add Supabase attachment tables or Supabase Storage flows unless the product intentionally changes this architecture.

@@ -26,10 +26,23 @@ function normalizeName(name: string) {
     .toLowerCase();
 }
 
+function normalizeFolder(value: FormDataEntryValue | null) {
+  if (typeof value !== "string") return "qa_tickets";
+
+  const folder = value
+    .normalize("NFKD")
+    .replace(/[^\w/-]/g, "")
+    .replace(/\/+/g, "/")
+    .replace(/^\/|\/$/g, "");
+
+  return folder || "qa_tickets";
+}
+
 export async function POST(req: Request) {
   try {
     const formData = await req.formData();
     const files = formData.getAll("files") as File[];
+    const folder = normalizeFolder(formData.get("folder"));
 
     if (!files.length) {
       return NextResponse.json({ error: "No files provided" }, { status: 400 });
@@ -55,7 +68,7 @@ export async function POST(req: Request) {
         const result = await cloudinary.uploader.upload(
           bufferToDataUri(file, buffer),
           {
-            folder: "qa_tickets",
+            folder,
             resource_type: "auto",
             public_id: publicId,
             use_filename: false,

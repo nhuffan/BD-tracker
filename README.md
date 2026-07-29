@@ -57,6 +57,7 @@ The web app is tab-based. Users normally work inside one or more of the followin
 | `Q&A` | Manage internal Q&A tickets | Submit tickets, update status, answer tickets, attach files |
 | `Ads Tracking` | Monitor ad-related records and states | Review records, filter status, inspect details |
 | `Approvals` | Review approval requests | Approve, reject, inspect attachments and request details |
+| `Invoices` | Manage merchant invoice issuance records | Create, edit, filter, import/export CSV, upload proof images |
 | `Pink Life` | Super-admin-only internal module | Restricted internal use |
 
 ### What Each Module Does
@@ -116,6 +117,16 @@ Used for approval workflows.
 - Approve or reject
 - See request details and attachments
 - Follow realtime updates on request state
+
+#### Invoices
+
+Used to manage merchant invoice issuance.
+
+- Create and edit merchant invoice records
+- Track invoice readiness through `not_ready`, `ready`, and `issued`
+- Upload proof images through Cloudinary
+- Filter by month, status, merchant, company, contract number, or tax code
+- Import and export invoice records as CSV
 
 ### Realtime Behavior
 
@@ -202,6 +213,7 @@ Core behavior:
 | Q&A | [web/components/qa/QAPage.tsx](/Users/nhuffan/Documents/Projects/BD-tracker/web/components/qa/QAPage.tsx) | Ticket management |
 | Approvals | [web/components/approvals/ApprovalsPage.tsx](/Users/nhuffan/Documents/Projects/BD-tracker/web/components/approvals/ApprovalsPage.tsx) | Approval request management |
 | Ads tracking | [web/components/ads-tracking/AdsTrackingPage.tsx](/Users/nhuffan/Documents/Projects/BD-tracker/web/components/ads-tracking/AdsTrackingPage.tsx) | Ads tracking workflows |
+| Merchant invoices | [web/components/merchant-invoices/MerchantInvoicesPage.tsx](/Users/nhuffan/Documents/Projects/BD-tracker/web/components/merchant-invoices/MerchantInvoicesPage.tsx) | Merchant invoice issuance workflow |
 | Theme toggle | [web/components/ThemeToggle.tsx](/Users/nhuffan/Documents/Projects/BD-tracker/web/components/ThemeToggle.tsx) | Light/dark toggle |
 
 ### Roles and Access Model
@@ -479,6 +491,7 @@ Current active public tables:
 - `qa_tickets`
 - `approval_requests`
 - `ad_tracking_records`
+- `merchant_invoices`
 - `bd_monthly_levels`
 - `bd_level_monthly_kpis`
 
@@ -545,6 +558,7 @@ Current attachment behavior:
 
 - Q&A attachment metadata is stored in `qa_tickets.attachments` JSONB.
 - Approval attachment metadata is stored in `approval_requests.images` JSONB.
+- Merchant invoice proof image metadata is stored in `merchant_invoices.proof_images` JSONB.
 - Files are uploaded and deleted through Cloudinary API routes under `web/app/api/cloudinary/`.
 - Supabase Storage is not currently part of the attachment flow.
 

@@ -41,6 +41,7 @@ export function ConfirmDialog({
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={loading}
+            className="cursor-pointer"
           >
             Cancel
           </Button>
@@ -48,6 +49,7 @@ export function ConfirmDialog({
             variant="destructive"
             onClick={onConfirm}
             disabled={loading}
+            className="cursor-pointer"
           >
             {loading ? "Deleting..." : "Delete"}
           </Button>
