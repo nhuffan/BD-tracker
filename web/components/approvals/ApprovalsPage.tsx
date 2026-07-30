@@ -13,6 +13,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { supabase } from "@/lib/integrations/supabase/client";
+import { deleteCloudinaryAssets } from "@/lib/integrations/cloudinary/delete-assets";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useMasters } from "@/lib/features/masters/useMasters";
@@ -232,7 +233,7 @@ export default function ApprovalsPage({
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<ApprovalRequestVM | null>(null);
   const [editingRequest, setEditingRequest] = useState<ApprovalRequestVM | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ApprovalRequestVM | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   const { items: bdList, loading: bdLoading } = useMasters("bd");
@@ -273,14 +274,16 @@ export default function ApprovalsPage({
     setCreateOpen(true);
   }
 
-  function openDeleteRequest(id: string, name: string) {
-    setDeleteTarget({ id, name });
+  function openDeleteRequest(request: ApprovalRequestVM) {
+    setDeleteTarget(request);
   }
 
   async function handleDeleteRequest() {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
+      await deleteCloudinaryAssets(deleteTarget.images ?? []);
+
       const { error } = await supabase
         .from("approval_requests")
         .delete()
@@ -295,6 +298,9 @@ export default function ApprovalsPage({
       setDeleteTarget(null);
       setSelectedRequest((prev) => (prev?.id === deleteTarget.id ? null : prev));
       await refresh();
+    } catch (error) {
+      console.error("Failed to delete approval request:", error);
+      toast.error("Failed to delete request or attachments.");
     } finally {
       setDeleting(false);
     }
@@ -762,7 +768,7 @@ export default function ApprovalsPage({
                               size="icon"
                               variant="ghost"
                               className="h-8 w-8 cursor-pointer"
-                              onClick={() => openDeleteRequest(request.id, request.store_name)}
+                              onClick={() => openDeleteRequest(request)}
                             >
                               <Trash2 className="h-4 w-4 text-muted-foreground" />
                             </Button>
@@ -816,7 +822,7 @@ export default function ApprovalsPage({
           open={!!deleteTarget}
           onOpenChange={(open) => !open && setDeleteTarget(null)}
           title="Confirm Delete"
-          description={`Are you sure you want to delete request "${deleteTarget?.name}"? This action cannot be undone.`}
+          description={`Are you sure you want to delete request "${deleteTarget?.store_name}"? This action cannot be undone.`}
           onConfirm={handleDeleteRequest}
           loading={deleting}
         />

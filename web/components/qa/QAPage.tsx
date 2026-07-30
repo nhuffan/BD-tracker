@@ -21,6 +21,7 @@ import { Download } from "lucide-react";
 import { useMasters } from "@/lib/features/masters/useMasters";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { deleteCloudinaryAssets } from "@/lib/integrations/cloudinary/delete-assets";
 
 type QAViewTab = "active" | "in_progress" | "done" | "archive";
 
@@ -393,31 +394,9 @@ export default function QAPage({
         selectedIds.includes(ticket.id)
       );
 
-      const attachmentItems = ticketsToDelete.flatMap((ticket) =>
-        (ticket.attachments ?? [])
-          .filter((item) => item.public_id)
-          .map((item) => ({
-            public_id: item.public_id,
-            resource_type: item.resource_type,
-          }))
+      await deleteCloudinaryAssets(
+        ticketsToDelete.flatMap((ticket) => ticket.attachments ?? [])
       );
-
-      if (attachmentItems.length > 0) {
-        const deleteFilesRes = await fetch("/api/cloudinary/delete", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            items: attachmentItems,
-          }),
-        });
-
-        if (!deleteFilesRes.ok) {
-          toast.error("Failed to delete attachments.");
-          return;
-        }
-      }
 
       const { error } = await supabase
         .from("qa_tickets")

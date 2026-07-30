@@ -1,6 +1,16 @@
 "use client";
 
-import { Check, ChevronDown, Copy, Eye, Pencil, Receipt, Trash2, ZoomIn } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  Copy,
+  Eye,
+  FileText,
+  Pencil,
+  Receipt,
+  Trash2,
+  ZoomIn,
+} from "lucide-react";
 import { useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,10 +23,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   calculatePreVat,
   formatCleanNumber,
-  formatDateTime,
-  getPrimaryImage,
+  formatDateOnly,
   INVOICE_STATUS_LABEL,
 } from "@/lib/features/merchant-invoices/invoices";
 import type { MerchantInvoiceRow, MerchantInvoiceStatus } from "./utils/types";
@@ -35,12 +50,12 @@ function statusClass(status: MerchantInvoiceStatus) {
 function ClampedText({
   value,
   title,
-  lines = 2,
+  lines = 3,
   className = "",
 }: {
   value?: string | null;
   title?: string;
-  lines?: 1 | 2;
+  lines?: 1 | 2 | 3;
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -69,7 +84,7 @@ function ClampedText({
     }
 
     const rect = element.getBoundingClientRect();
-    const popoverWidth = 360;
+    const popoverWidth = 320;
     const estimatedHeight = 132;
     const left = Math.min(
       Math.max(10, rect.left),
@@ -113,7 +128,10 @@ function ClampedText({
         className={[
           lines === 1
             ? "block max-w-full truncate"
-            : "overflow-hidden [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]",
+            : [
+                "overflow-hidden whitespace-normal break-words [display:-webkit-box] [-webkit-box-orient:vertical] [overflow-wrap:anywhere]",
+                lines === 2 ? "[-webkit-line-clamp:2]" : "[-webkit-line-clamp:3]",
+              ].join(" "),
           className,
         ].join(" ")}
       >
@@ -145,6 +163,32 @@ function ClampedText({
         </div>
       )}
     </div>
+  );
+}
+
+function NotePreview({ note }: { note?: string | null }) {
+  const displayNote = note?.trim() ?? "";
+
+  if (!displayNote) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          className="inline-flex items-center justify-center rounded-md p-1 hover:bg-muted"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <FileText className="h-4 w-4 text-muted-foreground" />
+        </button>
+      </TooltipTrigger>
+
+      <TooltipContent className="max-w-xs whitespace-normal break-words">
+        {displayNote}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -296,10 +340,10 @@ export default function InvoiceTable({
   }
 
   return (
-    <>
+    <TooltipProvider>
       <div className="overflow-visible rounded-lg border bg-card">
         <Table className="text-sm">
-        <TableHeader className="bg-muted/50">
+        <TableHeader className="bg-muted/50 [&_th]:border-r [&_th]:border-border/70 [&_th:last-child]:border-r-0">
           <TableRow>
             <TableHead className="w-14 p-3 text-center font-semibold">STT</TableHead>
             <TableHead className="p-3 font-semibold">MERCHANT</TableHead>
@@ -313,23 +357,30 @@ export default function InvoiceTable({
             <TableHead className="p-3 font-semibold">EMAIL</TableHead>
             <TableHead className="p-3 text-center font-semibold">MINH CHỨNG</TableHead>
             <TableHead className="p-3 text-center font-semibold">TRẠNG THÁI</TableHead>
-            <TableHead className="p-3 font-semibold">NGÀY TẠO</TableHead>
+            <TableHead className="p-3 text-center font-semibold">NGÀY TẠO</TableHead>
+            <TableHead className="p-3 text-center font-semibold">NOTE</TableHead>
             {isAdmin && <TableHead className="w-28 p-3 text-center font-semibold">THAO TÁC</TableHead>}
           </TableRow>
         </TableHeader>
-        <TableBody>
+        <TableBody className="[&_td]:border-r [&_td]:border-border/60 [&_td:last-child]:border-r-0">
           {rows.map((row) => {
             const { preVatAmount } = calculatePreVat(row.invoice_amount, row.vat_rate);
-            const image = getPrimaryImage(row);
-            const imageUrl = image?.secure_url || image?.url || "";
+            const imageUrls = (row.proof_images ?? [])
+              .slice(0, 2)
+              .map((image) => image.secure_url || image.url)
+              .filter(Boolean);
 
             return (
               <TableRow key={row.id}>
                 <TableCell className="p-3 text-center text-muted-foreground">
                   {row.sequence_no}
                 </TableCell>
-                <TableCell className="max-w-[180px] p-3 font-medium">
-                  <ClampedText value={row.merchant} className="leading-snug" />
+                <TableCell className="w-[190px] min-w-[190px] max-w-[190px] whitespace-normal p-3 font-medium">
+                  <ClampedText
+                    value={row.merchant}
+                    lines={3}
+                    className="leading-snug text-foreground"
+                  />
                 </TableCell>
                 <TableCell className="p-3 text-sm">
                   <ClampedText value={row.contract_number} className="leading-snug" />
@@ -376,15 +427,28 @@ export default function InvoiceTable({
                 <TableCell className="p-3 text-sm">
                   <ClampedText value={row.tax_code} className="leading-snug" />
                 </TableCell>
-                <TableCell className="max-w-[170px] p-3 text-sm text-primary">
+                <TableCell className="max-w-[200px] p-3 text-sm text-primary">
                   <ClampedText value={row.invoice_email} lines={1} className="leading-snug" />
                 </TableCell>
                 <TableCell className="p-3 text-center">
-                  <ProofImagePreview
-                    src={imageUrl}
-                    alt={`Minh chứng ${row.merchant}`}
-                    onOpen={onOpenImage}
-                  />
+                  {imageUrls.length > 0 ? (
+                    <div className="flex items-center justify-center gap-1.5">
+                      {imageUrls.map((imageUrl, index) => (
+                        <ProofImagePreview
+                          key={`${row.id}-${imageUrl}`}
+                          src={imageUrl}
+                          alt={`Minh chứng ${row.merchant} ${index + 1}`}
+                          onOpen={onOpenImage}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <ProofImagePreview
+                      src=""
+                      alt={`Minh chứng ${row.merchant}`}
+                      onOpen={onOpenImage}
+                    />
+                  )}
                 </TableCell>
                 <TableCell className="p-3 text-center align-middle">
                   {row.status === "issued" ? (
@@ -411,12 +475,19 @@ export default function InvoiceTable({
                     </div>
                   )}
                 </TableCell>
-                <TableCell className="p-3 text-sm text-muted-foreground">
+                <TableCell className="p-3 text-center text-sm text-primary">
                   <ClampedText
-                    value={formatDateTime(row.created_at)}
-                    title={new Date(row.created_at).toLocaleString("vi-VN")}
+                    value={row.status === "issued" ? formatDateOnly(row.issued_at) : "—"}
+                    title={
+                      row.status === "issued" && row.issued_at
+                        ? new Date(row.issued_at).toLocaleDateString("vi-VN")
+                        : "—"
+                    }
                     className="leading-snug"
                   />
+                </TableCell>
+                <TableCell className="p-3 text-center">
+                  <NotePreview note={row.note} />
                 </TableCell>
                 {isAdmin && (
                   <TableCell className="p-3">
@@ -484,6 +555,6 @@ export default function InvoiceTable({
           </div>
         </>
       )}
-    </>
+    </TooltipProvider>
   );
 }

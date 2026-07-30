@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ClipboardList,
   ImageIcon,
@@ -21,6 +21,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import AttachmentLoadingIndicator from "@/components/qa/utils/AttachmentLoadingIndicator";
+import {
+  compressImageFile,
+  formatFileSize,
+  getOversizedFiles,
+  truncateMiddleFileName,
+} from "@/components/qa/utils/attachmentHelpers";
 import {
   calculatePreVat,
   getMissingInvoiceFields,
@@ -36,7 +44,10 @@ import MoneyText from "./MoneyText";
 type LocalProofImage = MerchantInvoiceImage & {
   file?: File;
   local_preview_url?: string | null;
+  upload_status?: "idle" | "uploading" | "uploaded" | "error";
 };
+
+const MAX_PROOF_IMAGES = 2;
 
 const fieldClass =
   "!h-11 h-11 w-full min-w-0 rounded-lg border border-input bg-background px-3 text-sm shadow-none placeholder:font-medium placeholder:text-muted-foreground/65";
@@ -58,6 +69,7 @@ const initialProofImage = (file: File): LocalProofImage => ({
   thumbnail_url: null,
   local_preview_url: URL.createObjectURL(file),
   file,
+  upload_status: "idle",
 });
 
 function mapRemoteProofImages(items?: MerchantInvoiceImage[] | null): LocalProofImage[] {
@@ -65,6 +77,7 @@ function mapRemoteProofImages(items?: MerchantInvoiceImage[] | null): LocalProof
     ...item,
     file: undefined,
     local_preview_url: null,
+    upload_status: "uploaded",
   }));
 }
 
@@ -80,29 +93,6 @@ function formatAmountInput(value: string | number) {
 
 function normalizeAmountInput(value: string) {
   return value.replace(/\D/g, "");
-}
-
-async function uploadProofImages(items: LocalProofImage[]) {
-  const localItems = items.filter((item) => item.file);
-  if (!localItems.length) return [];
-
-  const formData = new FormData();
-  localItems.forEach((item) => {
-    if (item.file) formData.append("files", item.file);
-  });
-  formData.append("folder", "merchant_invoices");
-
-  const response = await fetch("/api/cloudinary/upload", {
-    method: "POST",
-    body: formData,
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to upload invoice proof image.");
-  }
-
-  const data = await response.json();
-  return (data.files ?? []) as MerchantInvoiceImage[];
 }
 
 export default function InvoiceDialog({
@@ -134,9 +124,11 @@ export default function InvoiceDialog({
   const [companyAddress, setCompanyAddress] = useState("");
   const [taxCode, setTaxCode] = useState("");
   const [invoiceEmail, setInvoiceEmail] = useState("");
+  const [note, setNote] = useState("");
   const [proofImages, setProofImages] = useState<LocalProofImage[]>([]);
   const [issuedLocked, setIssuedLocked] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [submitStage, setSubmitStage] = useState<"idle" | "uploading_images" | "saving_invoice">("idle");
   const [autoFillNotice, setAutoFillNotice] = useState("");
   const [imageInputMode, setImageInputMode] = useState<"FILE" | "PASTE">("FILE");
   const [showMerchantSuggestions, setShowMerchantSuggestions] = useState(false);
@@ -214,12 +206,14 @@ export default function InvoiceDialog({
       setCompanyAddress(invoice.company_address ?? "");
       setTaxCode(invoice.tax_code ?? "");
       setInvoiceEmail(invoice.invoice_email ?? "");
+      setNote(invoice.note ?? "");
       setProofImages(mapRemoteProofImages(invoice.proof_images));
       setIssuedLocked(invoice.status === "issued");
       setAutoFillNotice("");
       setImageInputMode("FILE");
       setShowMerchantSuggestions(false);
       setAutoFilledLookup(null);
+      setSubmitStage("idle");
       setSaving(false);
       return;
     }
@@ -233,12 +227,14 @@ export default function InvoiceDialog({
     setCompanyAddress("");
     setTaxCode("");
     setInvoiceEmail("");
+    setNote("");
     setProofImages([]);
     setIssuedLocked(false);
     setAutoFillNotice("");
     setImageInputMode("FILE");
     setShowMerchantSuggestions(false);
     setAutoFilledLookup(null);
+    setSubmitStage("idle");
     setSaving(false);
   }, [open, invoice, nextSequenceNo]);
 
@@ -249,30 +245,6 @@ export default function InvoiceDialog({
       if (item.local_preview_url) URL.revokeObjectURL(item.local_preview_url);
     });
   }, [open, proofImages]);
-
-  useEffect(() => {
-    if (!open) return;
-
-    function handlePaste(event: ClipboardEvent) {
-      const item = Array.from(event.clipboardData?.items ?? []).find((entry) =>
-        entry.type.startsWith("image/")
-      );
-      const file = item?.getAsFile();
-
-      if (!file) return;
-
-      setProofImages((prev) => {
-        prev.forEach((entry) => {
-          if (entry.local_preview_url) URL.revokeObjectURL(entry.local_preview_url);
-        });
-        return [initialProofImage(file)];
-      });
-      toast.success("Đã dán ảnh.");
-    }
-
-    window.addEventListener("paste", handlePaste);
-    return () => window.removeEventListener("paste", handlePaste);
-  }, [open]);
 
   function clearAutoFilledInvoiceInfo({
     merchantValue = "",
@@ -387,30 +359,118 @@ export default function InvoiceDialog({
     setAutoFillNotice(`Đã tự động điền thông tin xuất hóa đơn từ ${row.merchant}.`);
   }
 
-  function replaceImage(file?: File | null) {
-    if (!file || !file.type.startsWith("image/")) return;
+  const mergeProofImages = useCallback(async (fileList: FileList | File[]) => {
+    const rawFiles = Array.from(fileList).filter((file) => file.type.startsWith("image/"));
+    if (!rawFiles.length) return;
+
+    const remainingSlots = MAX_PROOF_IMAGES - proofImages.length;
+    if (remainingSlots <= 0) {
+      toast.error(`Chỉ được tải tối đa ${MAX_PROOF_IMAGES} ảnh minh chứng.`);
+      return;
+    }
+
+    const compressedFiles = await Promise.all(
+      rawFiles.slice(0, remainingSlots).map((file) => compressImageFile(file))
+    );
+    const oversizedFiles = getOversizedFiles(compressedFiles);
+    if (oversizedFiles.length > 0) {
+      toast.error(
+        oversizedFiles.map((file) => `${file.name} vẫn vượt quá 10MB sau khi nén.`).join("\n")
+      );
+    }
+
+    const validFiles = compressedFiles.filter((file) => file.size <= 10 * 1024 * 1024);
+    if (!validFiles.length) return;
 
     setProofImages((prev) => {
-      prev.forEach((item) => {
-        if (item.local_preview_url) URL.revokeObjectURL(item.local_preview_url);
-      });
-      return [initialProofImage(file)];
+      const existing = new Set(prev.map((item) => `${item.name}-${item.size}-${item.type}`));
+      const remain = MAX_PROOF_IMAGES - prev.length;
+      const next = validFiles
+        .filter((file) => !existing.has(`${file.name}-${file.size}-${file.type}`))
+        .slice(0, remain)
+        .map(initialProofImage);
+
+      return [...prev, ...next];
+    });
+    toast.success(`Đã thêm ${validFiles.length} ảnh minh chứng.`);
+  }, [proofImages.length]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    function handlePaste(event: ClipboardEvent) {
+      const files = Array.from(event.clipboardData?.items ?? [])
+        .filter((entry) => entry.type.startsWith("image/"))
+        .map((entry) => entry.getAsFile())
+        .filter((file): file is File => Boolean(file));
+
+      if (!files.length) return;
+
+      void mergeProofImages(files);
+    }
+
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+  }, [open, mergeProofImages]);
+
+  function removeImage(id: string) {
+    setProofImages((prev) => {
+      const target = prev.find((item) => item.id === id);
+      if (target?.local_preview_url) URL.revokeObjectURL(target.local_preview_url);
+      return prev.filter((item) => item.id !== id);
     });
   }
 
-  function removeImage() {
-    setProofImages((prev) => {
-      prev.forEach((item) => {
-        if (item.local_preview_url) URL.revokeObjectURL(item.local_preview_url);
+  async function uploadProofImages(items: LocalProofImage[]) {
+    const localItems = items.filter((item) => item.file);
+    const uploadedImages: MerchantInvoiceImage[] = [];
+
+    for (const item of localItems) {
+      if (!item.file) continue;
+
+      setProofImages((prev) =>
+        prev.map((entry) =>
+          entry.id === item.id ? { ...entry, upload_status: "uploading" } : entry
+        )
+      );
+
+      const formData = new FormData();
+      formData.append("files", item.file);
+      formData.append("folder", "merchant_invoices");
+
+      const response = await fetch("/api/cloudinary/upload", {
+        method: "POST",
+        body: formData,
       });
-      return [];
-    });
+
+      if (!response.ok) {
+        setProofImages((prev) =>
+          prev.map((entry) =>
+            entry.id === item.id ? { ...entry, upload_status: "error" } : entry
+          )
+        );
+        throw new Error("Failed to upload invoice proof image.");
+      }
+
+      const data = await response.json();
+      const [uploaded] = (data.files ?? []) as MerchantInvoiceImage[];
+      if (uploaded) uploadedImages.push(uploaded);
+
+      setProofImages((prev) =>
+        prev.map((entry) =>
+          entry.id === item.id ? { ...entry, upload_status: "uploaded" } : entry
+        )
+      );
+    }
+
+    return uploadedImages;
   }
 
   async function saveInvoice() {
     if (saving) return;
 
     setSaving(true);
+    setSubmitStage("idle");
 
     try {
       const {
@@ -433,8 +493,12 @@ export default function InvoiceDialog({
           thumbnail_url: item.thumbnail_url ?? null,
         }));
 
-      const uploadedImages = await uploadProofImages(proofImages);
+      const hasLocalImages = proofImages.some((item) => item.file);
+      if (hasLocalImages) setSubmitStage("uploading_images");
+      const uploadedImages = hasLocalImages ? await uploadProofImages(proofImages) : [];
       const mergedProofImages = [...remoteImages, ...uploadedImages];
+
+      setSubmitStage("saving_invoice");
 
       const payload: MerchantInvoiceFormValues = {
         id: invoice?.id,
@@ -447,6 +511,7 @@ export default function InvoiceDialog({
         company_address: companyAddress.trim(),
         tax_code: taxCode.trim(),
         invoice_email: invoiceEmail.trim(),
+        note: note.trim() || null,
         proof_images: mergedProofImages,
         status: currentStatus,
         created_at: invoice?.created_at,
@@ -465,6 +530,7 @@ export default function InvoiceDialog({
             company_address: payload.company_address || null,
             tax_code: payload.tax_code,
             invoice_email: payload.invoice_email || null,
+            note: payload.note,
             proof_images: payload.proof_images,
             status: payload.status,
             issued_at:
@@ -492,6 +558,7 @@ export default function InvoiceDialog({
           company_address: payload.company_address || null,
           tax_code: payload.tax_code,
           invoice_email: payload.invoice_email || null,
+          note: payload.note,
           proof_images: payload.proof_images,
           status: payload.status,
           issued_at: payload.status === "issued" ? new Date().toISOString() : null,
@@ -513,6 +580,7 @@ export default function InvoiceDialog({
       toast.error("Không thể lưu hóa đơn.");
     } finally {
       setSaving(false);
+      setSubmitStage("idle");
     }
   }
 
@@ -523,7 +591,6 @@ export default function InvoiceDialog({
       taxCode.trim() &&
       numericInvoiceAmount >= 0
   );
-  const primaryImage = proofImages[0] ?? null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -733,6 +800,16 @@ export default function InvoiceDialog({
             </div>
           )}
 
+          <div>
+            <label className={labelClass}>Note</label>
+            <Textarea
+              value={note}
+              onChange={(event) => setNote(event.target.value)}
+              placeholder="Nhập ghi chú cho hóa đơn..."
+              className="min-h-[82px] resize-none rounded-lg border-input bg-background px-3 py-2 text-sm shadow-none placeholder:font-medium placeholder:text-muted-foreground/65"
+            />
+          </div>
+
           <div className="space-y-2 rounded-xl border bg-muted/30 p-4">
             <div className="flex items-center justify-between gap-3">
               <label className="flex items-center gap-1.5 text-xs font-bold text-foreground">
@@ -757,7 +834,7 @@ export default function InvoiceDialog({
               </span>
             </div>
 
-            <div className="text-[11px] leading-relaxed text-muted-foreground">
+            <div className="text-xs leading-relaxed text-muted-foreground">
               {currentStatus === "issued" ? (
                 <span className="font-medium text-emerald-700 dark:text-emerald-300">
                   • Hóa đơn đã ở trạng thái <strong>Đã xuất</strong> và được cố định, không thể chuyển lại thành Chưa xuất / Chờ xuất.
@@ -768,7 +845,7 @@ export default function InvoiceDialog({
                 </span>
               ) : (
                 <div className="space-y-1 font-medium text-red-700 dark:text-red-300">
-                  <p className="rounded-md border border-red-200 bg-red-50 px-2 py-1 text-[11px] font-semibold dark:border-red-900/70 dark:bg-red-950/40">
+                  <p className="rounded-md border border-red-200 bg-red-50 px-2 py-1 text-xs font-semibold dark:border-red-900/70 dark:bg-red-950/40">
                     📌 Cần bổ sung các trường:{" "}
                     <span className="underline">{missingFields.join(", ")}</span>
                   </p>
@@ -776,12 +853,11 @@ export default function InvoiceDialog({
               )}
             </div>
 
-            {isEditMode && (
+            {isEditMode && invoice?.status !== "issued" && (
               <label className="mt-3 flex cursor-pointer items-center gap-2 text-sm font-medium">
                 <Input
                   type="checkbox"
                   checked={issuedLocked}
-                  disabled={invoice?.status === "issued"}
                   onChange={(event) => setIssuedLocked(event.target.checked)}
                   className="h-4 w-4 cursor-pointer"
                 />
@@ -823,9 +899,10 @@ export default function InvoiceDialog({
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
+                multiple
                 className="hidden"
                 onChange={(event) => {
-                  replaceImage(event.target.files?.[0]);
+                  if (event.target.files?.length) void mergeProofImages(event.target.files);
                   event.target.value = "";
                 }}
               />
@@ -834,29 +911,66 @@ export default function InvoiceDialog({
                 onDragOver={(event) => event.preventDefault()}
                 onDrop={(event) => {
                   event.preventDefault();
-                  replaceImage(event.dataTransfer.files?.[0]);
+                  if (event.dataTransfer.files?.length) void mergeProofImages(event.dataTransfer.files);
                 }}
-                className="flex min-h-[120px] flex-col items-center justify-center rounded-xl border border-dashed bg-background p-4 text-center transition hover:border-primary/50"
+                className="flex min-h-[120px] flex-col justify-center rounded-xl border border-dashed bg-background p-4 text-center transition hover:border-primary/50"
               >
-                {primaryImage ? (
-                  <div className="relative w-full max-w-xs">
-                    <img
-                      src={getImageUrl(primaryImage)}
-                      alt="Xem trước minh chứng"
-                      className="mx-auto max-h-40 rounded-lg border object-contain shadow-xs"
-                    />
-                    <Button
-                      type="button"
-                      size="icon-xs"
-                      variant="destructive"
-                      onClick={removeImage}
-                      className="absolute right-2 top-2 cursor-pointer"
-                    >
-                      <Trash2 />
-                    </Button>
+                {proofImages.length > 0 ? (
+                  <div className="grid w-full grid-cols-1 gap-3 md:grid-cols-2">
+                    {proofImages.map((item) => (
+                      <div
+                        key={item.id}
+                        className="relative flex h-[112px] min-w-0 items-center gap-3 rounded-lg border bg-background p-2 pr-10 text-left shadow-xs"
+                      >
+                        <img
+                          src={getImageUrl(item)}
+                          alt={item.name}
+                          className="h-24 w-24 shrink-0 rounded-md border object-cover object-top"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-xs font-semibold text-foreground">
+                            {truncateMiddleFileName(item.name, 28)}
+                          </div>
+                          <div className="mt-1 text-[11px] text-muted-foreground">
+                            {formatFileSize(item.size)}
+                          </div>
+                          {item.upload_status === "uploading" && (
+                            <div className="mt-1 text-[11px] font-semibold text-primary">
+                              Đang tải...
+                            </div>
+                          )}
+                          {item.upload_status === "error" && (
+                            <div className="mt-1 text-[11px] font-semibold text-destructive">
+                              Upload lỗi
+                            </div>
+                          )}
+                        </div>
+                        <Button
+                          type="button"
+                          size="icon-xs"
+                          variant="destructive"
+                          onClick={() => removeImage(item.id)}
+                          disabled={saving}
+                          className="absolute right-2 top-2 cursor-pointer"
+                        >
+                          <Trash2 />
+                        </Button>
+                      </div>
+                    ))}
+
+                    {proofImages.length < MAX_PROOF_IMAGES && (
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={saving}
+                        className="flex h-[112px] cursor-pointer items-center justify-center rounded-lg border border-dashed bg-background text-sm font-semibold text-muted-foreground transition hover:border-primary/50 hover:bg-muted/40 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        + Thêm ảnh
+                      </button>
+                    )}
                   </div>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-2 text-center">
                     <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
                       <UploadCloud className="h-5 w-5" />
                     </div>
@@ -868,7 +982,7 @@ export default function InvoiceDialog({
                       >
                         Tải ảnh lên
                       </button>
-                      , kéo thả vào đây, hoặc nhấn{" "}
+                      , kéo thả tối đa 2 ảnh vào đây, hoặc nhấn{" "}
                       <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]">
                         Ctrl + V
                       </kbd>{" "}
@@ -893,6 +1007,17 @@ export default function InvoiceDialog({
         </div>
 
         <DialogFooter className="border-t bg-muted/40 px-6 py-4">
+          <div className="flex min-h-10 flex-1 items-center">
+            {saving && (
+              <AttachmentLoadingIndicator
+                text={
+                  submitStage === "uploading_images"
+                    ? `Đang tải ${proofImages.filter((item) => item.file).length} ảnh...`
+                    : "Đang lưu hóa đơn..."
+                }
+              />
+            )}
+          </div>
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}

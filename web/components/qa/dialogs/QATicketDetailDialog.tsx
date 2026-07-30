@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { AttachmentIcon, isImageFile } from "@/components/qa/utils/AttachmentIcon";
 import { supabase } from "@/lib/integrations/supabase/client";
+import { deleteCloudinaryAssets } from "@/lib/integrations/cloudinary/delete-assets";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -655,28 +656,10 @@ export default function QATicketDetailDialog({
         }
 
         if (removedExistingAttachments.length > 0) {
-          const deleteItems = removedExistingAttachments
-            .filter((item) => item.public_id)
-            .map((item) => ({
-              public_id: item.public_id,
-              resource_type: item.resource_type,
-            }));
-
-          if (deleteItems.length > 0) {
-            const deleteFilesRes = await fetch("/api/cloudinary/delete", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                items: deleteItems,
-              }),
-            });
-
-            if (!deleteFilesRes.ok) {
-              const err = await deleteFilesRes.json().catch(() => null);
-              console.error("Failed to delete cloudinary files:", err);
-            }
+          try {
+            await deleteCloudinaryAssets(removedExistingAttachments);
+          } catch (error) {
+            console.error("Failed to delete cloudinary files:", error);
           }
         }
       }

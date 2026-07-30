@@ -8,13 +8,14 @@ import {
   Clock,
   Download,
   Loader2,
-  PlusCircle,
+  Plus,
   ReceiptText,
   Search,
   Upload,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/integrations/supabase/client";
+import { deleteCloudinaryAssets } from "@/lib/integrations/cloudinary/delete-assets";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -39,14 +40,15 @@ function getCurrentMonthKey() {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
-function parseCsvLine(line: string) {
-  const values: string[] = [];
+function parseCsvRows(text: string) {
+  const rows: string[][] = [];
+  let row: string[] = [];
   let current = "";
   let inQuotes = false;
 
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-    const next = line[i + 1];
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const next = text[i + 1];
 
     if (char === "\"" && inQuotes && next === "\"") {
       current += "\"";
@@ -60,16 +62,29 @@ function parseCsvLine(line: string) {
     }
 
     if (char === "," && !inQuotes) {
-      values.push(current.trim());
+      row.push(current.trim());
       current = "";
+      continue;
+    }
+
+    if ((char === "\n" || char === "\r") && !inQuotes) {
+      if (char === "\r" && next === "\n") i++;
+      row.push(current.trim());
+      current = "";
+      rows.push(row);
+      row = [];
       continue;
     }
 
     current += char;
   }
 
-  values.push(current.trim());
-  return values;
+  if (current || row.length) {
+    row.push(current.trim());
+    rows.push(row);
+  }
+
+  return rows.filter((item) => item.some((value) => value.trim()));
 }
 
 function escapeCsv(value: string | number | null | undefined) {
@@ -77,23 +92,86 @@ function escapeCsv(value: string | number | null | undefined) {
   return `"${text.replace(/"/g, "\"\"")}"`;
 }
 
-async function deleteCloudinaryImages(row: MerchantInvoiceRow) {
-  const items = (row.proof_images ?? [])
-    .filter((item) => item.public_id)
-    .map((item) => ({
-      public_id: item.public_id,
-      resource_type: item.resource_type,
-    }));
+function normalizeCsvHeader(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
 
-  if (!items.length) return;
+function findCsvIndex(headers: string[], names: string[]) {
+  const normalizedHeaders = headers.map(normalizeCsvHeader);
+  const normalizedNames = names.map(normalizeCsvHeader);
 
-  await fetch("/api/cloudinary/delete", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ items }),
-  });
+  const exactIndex = normalizedHeaders.findIndex((header) =>
+    normalizedNames.some((name) => header === name)
+  );
+
+  if (exactIndex >= 0) return exactIndex;
+
+  return normalizedHeaders.findIndex((header) =>
+    normalizedNames.some((name) => name.length > 3 && header.includes(name))
+  );
+}
+
+function getCsvValue(cols: string[], index: number) {
+  return index >= 0 ? cols[index]?.trim() ?? "" : "";
+}
+
+function parseCsvAmount(value: string) {
+  const digits = value.replace(/\D/g, "");
+  return digits ? Number(digits) : 0;
+}
+
+function parseCsvVatRate(value: string) {
+  const digits = value.replace(/\D/g, "");
+  return digits ? Number(digits) : 10;
+}
+
+function parseCsvStatus(value: string): MerchantInvoiceStatus | null {
+  const normalized = normalizeCsvHeader(value);
+
+  if (!normalized) return null;
+  if (normalized.includes("da xuat") || normalized === "issued") return "issued";
+  if (normalized.includes("cho xuat") || normalized === "ready") return "ready";
+  if (normalized.includes("chua xuat") || normalized === "not ready") {
+    return "not_ready";
+  }
+
+  return null;
+}
+
+function parseCsvDate(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  const slashMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if (slashMatch) {
+    const day = Number(slashMatch[1]);
+    const month = Number(slashMatch[2]);
+    const yearValue = Number(slashMatch[3]);
+    const year = yearValue < 100 ? 2000 + yearValue : yearValue;
+    const date = new Date(year, month - 1, day);
+
+    if (!Number.isNaN(date.getTime())) return date.toISOString();
+  }
+
+  const date = new Date(trimmed);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+function getNextAvailableSequenceNo(items: Pick<MerchantInvoiceRow, "sequence_no">[]) {
+  const used = new Set(items.map((item) => Number(item.sequence_no)).filter(Number.isFinite));
+  let sequenceNo = 1;
+
+  while (used.has(sequenceNo)) {
+    sequenceNo += 1;
+  }
+
+  return sequenceNo;
 }
 
 export default function MerchantInvoicesPage({
@@ -159,8 +237,7 @@ export default function MerchantInvoicesPage({
   }, [refresh]);
 
   const nextSequenceNo = useMemo(() => {
-    if (!rows.length) return 1;
-    return Math.max(...rows.map((row) => row.sequence_no || 0)) + 1;
+    return getNextAvailableSequenceNo(rows);
   }, [rows]);
 
   const monthOptions = useMemo(() => {
@@ -280,6 +357,8 @@ export default function MerchantInvoicesPage({
 
     setMutating(true);
     try {
+      await deleteCloudinaryAssets(deleteTarget.proof_images ?? []);
+
       const { error } = await supabase
         .from("merchant_invoices")
         .delete()
@@ -290,10 +369,12 @@ export default function MerchantInvoicesPage({
         return;
       }
 
-      await deleteCloudinaryImages(deleteTarget);
       toast.success("Đã xóa hóa đơn khỏi danh sách!");
       setDeleteTarget(null);
       await refresh();
+    } catch (error) {
+      console.error("Failed to delete invoice:", error);
+      toast.error("Không thể xóa hóa đơn hoặc ảnh minh chứng.");
     } finally {
       setMutating(false);
     }
@@ -312,6 +393,7 @@ export default function MerchantInvoicesPage({
       "Invoice Email",
       "Status",
       "Created At",
+      "Note",
     ];
 
     const lines = filteredRows.map((row) =>
@@ -327,6 +409,7 @@ export default function MerchantInvoicesPage({
         row.invoice_email ?? "",
         row.status,
         row.created_at,
+        row.note ?? "",
       ]
         .map(escapeCsv)
         .join(",")
@@ -349,32 +432,90 @@ export default function MerchantInvoicesPage({
     if (!isAdmin) return;
 
     const text = await file.text();
-    const lines = text.split(/\r?\n/).filter((line) => line.trim());
+    const csvRows = parseCsvRows(text);
 
-    if (lines.length <= 1) {
+    if (csvRows.length <= 1) {
       toast.error("File CSV đang trống.");
       return;
     }
 
-    const payload = lines.slice(1).map((line, index) => {
-      const cols = parseCsvLine(line);
-      const invoiceAmount = Number(String(cols[3] ?? "").replace(/[^\d.]/g, "")) || 0;
+    const headerIndex = csvRows.findIndex((row) => {
+      const merchantIndex = findCsvIndex(row, ["Merchant"]);
+      const amountIndex = findCsvIndex(row, [
+        "Invoice Amount",
+        "Số tiền xuất",
+        "Số tiền xuất hóa đơn",
+        "Số tiền xuất (Đã VAT)",
+      ]);
+      const taxCodeIndex = findCsvIndex(row, ["Tax Code", "Mã số thuế"]);
+
+      return merchantIndex >= 0 && amountIndex >= 0 && taxCodeIndex >= 0;
+    });
+
+    if (headerIndex < 0) {
+      toast.error("Không tìm thấy dòng header hợp lệ trong file CSV.");
+      return;
+    }
+
+    const headers = csvRows[headerIndex];
+    const csvIndexes = {
+      merchant: findCsvIndex(headers, ["Merchant"]),
+      contractNumber: findCsvIndex(headers, ["Contract Number", "Số hợp đồng"]),
+      invoiceAmount: findCsvIndex(headers, [
+        "Invoice Amount",
+        "Số tiền xuất",
+        "Số tiền xuất hóa đơn",
+        "Số tiền xuất (Đã VAT)",
+      ]),
+      vatRate: findCsvIndex(headers, ["VAT Rate", "VAT (%)"]),
+      companyName: findCsvIndex(headers, ["Company Name", "Tên đơn vị xuất hóa đơn", "Tên đơn vị"]),
+      companyAddress: findCsvIndex(headers, ["Company Address", "Địa chỉ"]),
+      taxCode: findCsvIndex(headers, ["Tax Code", "Mã số thuế"]),
+      invoiceEmail: findCsvIndex(headers, ["Invoice Email", "Email nhận hóa đơn", "Email"]),
+      status: findCsvIndex(headers, ["Status", "Trạng thái"]),
+      createdAt: findCsvIndex(headers, ["Created At", "Ngày tạo"]),
+      note: findCsvIndex(headers, ["Note", "Ghi chú"]),
+    };
+
+    const reservedSequenceRows = rows.map((row) => ({ sequence_no: row.sequence_no }));
+    const payload = csvRows.slice(headerIndex + 1).map((cols) => {
+      const sequenceNo = getNextAvailableSequenceNo(reservedSequenceRows);
+      reservedSequenceRows.push({ sequence_no: sequenceNo });
+      const merchant = getCsvValue(cols, csvIndexes.merchant) || getCsvValue(cols, 1);
+      const contractNumber =
+        getCsvValue(cols, csvIndexes.contractNumber) || getCsvValue(cols, 2);
+      const invoiceAmount = parseCsvAmount(
+        getCsvValue(cols, csvIndexes.invoiceAmount) || getCsvValue(cols, 3)
+      );
+      const vatRate =
+        csvIndexes.vatRate >= 0 ? parseCsvVatRate(getCsvValue(cols, csvIndexes.vatRate)) : 10;
+      const companyName =
+        getCsvValue(cols, csvIndexes.companyName) || getCsvValue(cols, 4) || merchant;
+      const companyAddress = getCsvValue(cols, csvIndexes.companyAddress);
+      const taxCode = getCsvValue(cols, csvIndexes.taxCode);
+      const invoiceEmail = getCsvValue(cols, csvIndexes.invoiceEmail).replace(/\s+/g, " ").trim();
+      const status = parseCsvStatus(getCsvValue(cols, csvIndexes.status));
+      const issuedAt =
+        status === "issued" ? parseCsvDate(getCsvValue(cols, csvIndexes.createdAt)) : null;
+      const note = getCsvValue(cols, csvIndexes.note);
       const row = {
-        sequence_no: nextSequenceNo + index,
-        merchant: cols[1] || cols[0] || "Merchant",
-        contract_number: cols[2] || null,
+        sequence_no: sequenceNo,
+        merchant: merchant || getCsvValue(cols, 0) || "Merchant",
+        contract_number: contractNumber || null,
         invoice_amount: invoiceAmount,
-        vat_rate: Number(String(cols[4] ?? "10").replace(/[^\d.]/g, "")) || 10,
-        company_name: cols[5] || cols[1] || "Company",
-        company_address: cols[6] || null,
-        tax_code: cols[7] || "",
-        invoice_email: cols[8] || null,
+        vat_rate: vatRate,
+        company_name: companyName || "Company",
+        company_address: companyAddress || null,
+        tax_code: taxCode,
+        invoice_email: invoiceEmail || null,
+        note: note || null,
         proof_images: [],
       };
 
       return {
         ...row,
-        status: resolveInvoiceStatus(row),
+        status: status ?? resolveInvoiceStatus(row),
+        ...(issuedAt ? { issued_at: issuedAt } : {}),
       };
     });
 
@@ -549,17 +690,24 @@ export default function MerchantInvoicesPage({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" onClick={exportCsv} className="cursor-pointer">
+          {isAdmin && (
+            <Button onClick={openCreate} className="cursor-pointer">
+              <Plus className="h-4 w-4" />
+              Tạo hoá đơn
+            </Button>
+          )}
+
+          <Button
+            variant="outline"
+            onClick={exportCsv}
+            className="cursor-pointer"
+          >
             <Download className="h-4 w-4" />
             Xuất Excel
           </Button>
 
           {isAdmin && (
             <>
-              <Button onClick={openCreate} className="cursor-pointer">
-                <PlusCircle className="h-4 w-4" />
-                Tạo hoá đơn
-              </Button>
               <input
                 ref={fileInputRef}
                 type="file"
@@ -572,7 +720,7 @@ export default function MerchantInvoicesPage({
                 }}
               />
               <Button
-                variant="outline"
+                variant="secondary"
                 onClick={() => fileInputRef.current?.click()}
                 className="cursor-pointer"
               >
@@ -606,14 +754,24 @@ export default function MerchantInvoicesPage({
         )}
       </div>
 
-      <InvoiceTable
-        rows={filteredRows}
-        isAdmin={isAdmin}
-        onEdit={openEdit}
-        onDelete={setDeleteTarget}
-        onMarkIssued={(row) => void markIssued(row)}
-        onOpenImage={setLightboxUrl}
-      />
+      <div className="relative overflow-visible">
+        {(loading || mutating) && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center rounded-lg bg-background/55 backdrop-blur-[1px]">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        )}
+
+        <div className={loading || mutating ? "pointer-events-none" : ""}>
+          <InvoiceTable
+            rows={filteredRows}
+            isAdmin={isAdmin}
+            onEdit={openEdit}
+            onDelete={setDeleteTarget}
+            onMarkIssued={(row) => void markIssued(row)}
+            onOpenImage={setLightboxUrl}
+          />
+        </div>
+      </div>
 
       {isAdmin && (
         <InvoiceDialog

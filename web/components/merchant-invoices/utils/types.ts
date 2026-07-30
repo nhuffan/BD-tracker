@@ -21,8 +21,8 @@ export type MerchantInvoiceFormValues = {
   company_address: string;
   tax_code: string;
   invoice_email: string;
+  note?: string | null;
   proof_images: MerchantInvoiceImage[];
   status: MerchantInvoiceStatus;
   created_at?: string;
 };
-

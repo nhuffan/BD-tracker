@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { UploadCloud, Trash2 } from "lucide-react";
 import { supabase } from "@/lib/integrations/supabase/client";
+import { deleteCloudinaryAssets } from "@/lib/integrations/cloudinary/delete-assets";
 import { useMastersActive } from "@/lib/features/masters/useMasters";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -401,6 +402,16 @@ export default function CreateApprovalRequestDialog({
         }));
 
       const newLocalAttachments = attachments.filter((item) => !!item.file);
+      const removedExistingAttachments =
+        isEditMode && request
+          ? (request.images ?? []).filter(
+              (oldItem) =>
+                !attachments.some(
+                  (current) =>
+                    !current.file && getAttachmentKey(current) === getAttachmentKey(oldItem)
+                )
+            )
+          : [];
 
       let uploadedAttachments: ApprovalImage[] = [];
 
@@ -433,6 +444,15 @@ export default function CreateApprovalRequestDialog({
           toast.error("Failed to update request.");
           return;
         }
+
+        if (removedExistingAttachments.length > 0) {
+          try {
+            await deleteCloudinaryAssets(removedExistingAttachments);
+          } catch (error) {
+            console.error("Failed to delete cloudinary files:", error);
+          }
+        }
+
         toast.success("Request updated successfully.");
       } else {
         setSubmitStage("creating_request");
