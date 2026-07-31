@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import {
   BarChart3,
   ClipboardCheck,
+  Landmark,
   Megaphone,
   MessageSquareText,
   ReceiptText,
@@ -55,6 +56,10 @@ const ApprovalsPage = dynamic(() => import("@/components/approvals/ApprovalsPage
 
 const MerchantInvoicesPage = dynamic(() => import("@/components/merchant-invoices/MerchantInvoicesPage"), {
   loading: () => <TabLoading label="Hóa Đơn Merchant" />,
+});
+
+const MerchantTransfersPage = dynamic(() => import("@/components/merchant-transfers/MerchantTransfersPage"), {
+  loading: () => <TabLoading label="Merchant Transfers" />,
 });
 
 const HIDDEN_TAB_IDS = new Set(["ads-tracking", "approvals"]);
@@ -108,6 +113,14 @@ const ALL_TABS_REGISTRY: TabItem[] = [
     icon: ReceiptText,
     render: ({ isAdmin, isSuperAdmin }) => (
       <MerchantInvoicesPage isAdmin={isAdmin || isSuperAdmin} />
+    ),
+  },
+  {
+    id: "merchant-transfers",
+    label: "Transfers",
+    icon: Landmark,
+    render: ({ isAdmin, isSuperAdmin }) => (
+      <MerchantTransfersPage isAdmin={isAdmin || isSuperAdmin} />
     ),
   },
 ];

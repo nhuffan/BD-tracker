@@ -597,6 +597,13 @@ export default function MerchantInvoicesPage({
 
   return (
     <div className="space-y-4">
+      <div className="py-2">
+        <h1 className="flex items-center gap-2 text-[30px] font-extrabold tracking-tight text-foreground">
+          <ReceiptText className="h-7 w-7 text-primary" />
+          Quản Lý Xuất Hóa Đơn
+        </h1>
+      </div>
+
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
         {statCards.map((card) => {
           const Icon = card.icon;
