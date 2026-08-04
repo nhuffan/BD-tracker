@@ -80,6 +80,7 @@ export default function MerchantTransfersPage({ isAdmin }: { isAdmin: boolean })
   const [openDialog, setOpenDialog] = useState(false);
   const [editingTransfer, setEditingTransfer] = useState<MerchantTransferRow | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<MerchantTransferRow | null>(null);
+  const [dialogBusy, setDialogBusy] = useState(false);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -127,6 +128,7 @@ export default function MerchantTransfersPage({ isAdmin }: { isAdmin: boolean })
   }, [refresh]);
 
   const nextSequenceNo = useMemo(() => getNextAvailableSequenceNo(rows), [rows]);
+  const isTableBusy = loading || mutating || dialogBusy;
 
   const monthOptions = useMemo(() => {
     const months = Array.from(
@@ -170,20 +172,15 @@ export default function MerchantTransfersPage({ isAdmin }: { isAdmin: boolean })
   }, [rows, search, selectedMonth, statusFilter]);
 
   const stats = useMemo(() => {
-    const scopedRows =
-      selectedMonth === ALL
-        ? rows
-        : rows.filter((row) => getMonthKey(row.transaction_date) === selectedMonth);
-
     const byStatus = {
-      not_transferred: scopedRows.filter((row) => row.status === "not_transferred"),
-      ready: scopedRows.filter((row) => row.status === "ready"),
-      transferred: scopedRows.filter((row) => row.status === "transferred"),
+      not_transferred: rows.filter((row) => row.status === "not_transferred"),
+      ready: rows.filter((row) => row.status === "ready"),
+      transferred: rows.filter((row) => row.status === "transferred"),
     };
 
     return {
-      total: scopedRows.length,
-      totalAmount: scopedRows.reduce((sum, row) => sum + Number(row.amount || 0), 0),
+      total: rows.length,
+      totalAmount: rows.reduce((sum, row) => sum + Number(row.amount || 0), 0),
       notTransferredCount: byStatus.not_transferred.length,
       notTransferredAmount: byStatus.not_transferred.reduce(
         (sum, row) => sum + Number(row.amount || 0),
@@ -196,10 +193,10 @@ export default function MerchantTransfersPage({ isAdmin }: { isAdmin: boolean })
         (sum, row) => sum + Number(row.amount || 0),
         0
       ),
-      merchants: new Set(scopedRows.map((row) => row.merchant.trim().toLowerCase()).filter(Boolean))
+      merchants: new Set(rows.map((row) => row.merchant.trim().toLowerCase()).filter(Boolean))
         .size,
     };
-  }, [rows, selectedMonth]);
+  }, [rows]);
 
   function openCreate() {
     setEditingTransfer(null);
@@ -455,7 +452,7 @@ export default function MerchantTransfersPage({ isAdmin }: { isAdmin: boolean })
           {isAdmin && (
             <Button onClick={openCreate} className="cursor-pointer">
               <Plus className="h-4 w-4" />
-              Thêm lượt mới
+              Tạo giao dịch
             </Button>
           )}
           <Button
@@ -486,14 +483,14 @@ export default function MerchantTransfersPage({ isAdmin }: { isAdmin: boolean })
         )}
       </div>
 
-      <div className="relative overflow-visible">
-        {(loading || mutating) && (
-          <div className="absolute inset-0 z-20 flex items-center justify-center rounded-lg bg-background/55 backdrop-blur-[1px]">
+      <div className="relative overflow-hidden rounded-xl">
+        {isTableBusy && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center rounded-xl bg-background/55 backdrop-blur-[1px]">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         )}
 
-        <div className={loading || mutating ? "pointer-events-none" : ""}>
+        <div className={isTableBusy ? "pointer-events-none" : ""}>
           <TransferTable
             rows={filteredRows}
             isAdmin={isAdmin}
@@ -509,6 +506,7 @@ export default function MerchantTransfersPage({ isAdmin }: { isAdmin: boolean })
           open={openDialog}
           onOpenChange={setOpenDialog}
           onSaved={refresh}
+          onBusyChange={setDialogBusy}
           transfer={editingTransfer}
           existingTransfers={rows}
           nextSequenceNo={nextSequenceNo}

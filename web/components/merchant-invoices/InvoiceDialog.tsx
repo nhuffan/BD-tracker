@@ -99,6 +99,7 @@ export default function InvoiceDialog({
   open,
   onOpenChange,
   onSaved,
+  onBusyChange,
   invoice,
   existingInvoices,
   nextSequenceNo,
@@ -106,6 +107,7 @@ export default function InvoiceDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSaved: () => void | Promise<void>;
+  onBusyChange?: (busy: boolean) => void;
   invoice?: MerchantInvoiceRow | null;
   existingInvoices: MerchantInvoiceRow[];
   nextSequenceNo: number;
@@ -470,6 +472,7 @@ export default function InvoiceDialog({
     if (saving) return;
 
     setSaving(true);
+    onBusyChange?.(true);
     setSubmitStage("idle");
 
     try {
@@ -581,6 +584,7 @@ export default function InvoiceDialog({
     } finally {
       setSaving(false);
       setSubmitStage("idle");
+      onBusyChange?.(false);
     }
   }
 

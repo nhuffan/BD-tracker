@@ -188,6 +188,7 @@ export default function MerchantInvoicesPage({
   const [editingInvoice, setEditingInvoice] = useState<MerchantInvoiceRow | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<MerchantInvoiceRow | null>(null);
   const [mutating, setMutating] = useState(false);
+  const [dialogBusy, setDialogBusy] = useState(false);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -239,6 +240,7 @@ export default function MerchantInvoicesPage({
   const nextSequenceNo = useMemo(() => {
     return getNextAvailableSequenceNo(rows);
   }, [rows]);
+  const isTableBusy = loading || mutating || dialogBusy;
 
   const monthOptions = useMemo(() => {
     const months = Array.from(
@@ -283,20 +285,15 @@ export default function MerchantInvoicesPage({
   }, [rows, search, selectedMonth, statusFilter]);
 
   const stats = useMemo(() => {
-    const scopedRows =
-      selectedMonth === ALL
-        ? rows
-        : rows.filter((row) => getMonthKey(row.created_at) === selectedMonth);
-
     const byStatus = {
-      not_ready: scopedRows.filter((row) => row.status === "not_ready"),
-      ready: scopedRows.filter((row) => row.status === "ready"),
-      issued: scopedRows.filter((row) => row.status === "issued"),
+      not_ready: rows.filter((row) => row.status === "not_ready"),
+      ready: rows.filter((row) => row.status === "ready"),
+      issued: rows.filter((row) => row.status === "issued"),
     };
 
     return {
-      total: scopedRows.length,
-      totalAmount: scopedRows.reduce((sum, row) => sum + Number(row.invoice_amount || 0), 0),
+      total: rows.length,
+      totalAmount: rows.reduce((sum, row) => sum + Number(row.invoice_amount || 0), 0),
       notReadyCount: byStatus.not_ready.length,
       notReadyAmount: byStatus.not_ready.reduce(
         (sum, row) => sum + Number(row.invoice_amount || 0),
@@ -313,7 +310,7 @@ export default function MerchantInvoicesPage({
         0
       ),
     };
-  }, [rows, selectedMonth]);
+  }, [rows]);
 
   function openCreate() {
     setEditingInvoice(null);
@@ -473,7 +470,7 @@ export default function MerchantInvoicesPage({
       taxCode: findCsvIndex(headers, ["Tax Code", "Mã số thuế"]),
       invoiceEmail: findCsvIndex(headers, ["Invoice Email", "Email nhận hóa đơn", "Email"]),
       status: findCsvIndex(headers, ["Status", "Trạng thái"]),
-      createdAt: findCsvIndex(headers, ["Created At", "Ngày tạo"]),
+      createdAt: findCsvIndex(headers, ["Created At", "Ngày xuất"]),
       note: findCsvIndex(headers, ["Note", "Ghi chú"]),
     };
 
@@ -761,14 +758,14 @@ export default function MerchantInvoicesPage({
         )}
       </div>
 
-      <div className="relative overflow-visible">
-        {(loading || mutating) && (
-          <div className="absolute inset-0 z-20 flex items-center justify-center rounded-lg bg-background/55 backdrop-blur-[1px]">
+      <div className="relative overflow-hidden rounded-xl">
+        {isTableBusy && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center rounded-xl bg-background/55 backdrop-blur-[1px]">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         )}
 
-        <div className={loading || mutating ? "pointer-events-none" : ""}>
+        <div className={isTableBusy ? "pointer-events-none" : ""}>
           <InvoiceTable
             rows={filteredRows}
             isAdmin={isAdmin}
@@ -785,6 +782,7 @@ export default function MerchantInvoicesPage({
           open={openDialog}
           onOpenChange={setOpenDialog}
           onSaved={refresh}
+          onBusyChange={setDialogBusy}
           invoice={editingInvoice}
           existingInvoices={rows}
           nextSequenceNo={nextSequenceNo}

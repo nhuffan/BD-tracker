@@ -66,6 +66,7 @@ export default function TransferDialog({
   open,
   onOpenChange,
   onSaved,
+  onBusyChange,
   transfer,
   existingTransfers,
   nextSequenceNo,
@@ -73,6 +74,7 @@ export default function TransferDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSaved: () => void | Promise<void>;
+  onBusyChange?: (busy: boolean) => void;
   transfer?: MerchantTransferRow | null;
   existingTransfers: MerchantTransferRow[];
   nextSequenceNo: number;
@@ -203,6 +205,7 @@ export default function TransferDialog({
     if (!canSave) return;
 
     setSaving(true);
+    onBusyChange?.(true);
     try {
       const {
         data: { user },
@@ -279,6 +282,7 @@ export default function TransferDialog({
       await onSaved();
     } finally {
       setSaving(false);
+      onBusyChange?.(false);
     }
   }
 

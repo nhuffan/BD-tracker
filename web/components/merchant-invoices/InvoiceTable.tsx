@@ -357,7 +357,7 @@ export default function InvoiceTable({
             <TableHead className="p-3 font-semibold">EMAIL</TableHead>
             <TableHead className="p-3 text-center font-semibold">MINH CHỨNG</TableHead>
             <TableHead className="p-3 text-center font-semibold">TRẠNG THÁI</TableHead>
-            <TableHead className="p-3 text-center font-semibold">NGÀY TẠO</TableHead>
+            <TableHead className="p-3 text-center font-semibold">NGÀY XUẤT</TableHead>
             <TableHead className="p-3 text-center font-semibold">NOTE</TableHead>
             {isAdmin && <TableHead className="w-28 p-3 text-center font-semibold">THAO TÁC</TableHead>}
           </TableRow>
