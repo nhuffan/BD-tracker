@@ -11,13 +11,13 @@ export default function InvoiceImageDialog({
 }) {
   return (
     <Dialog open={!!imageUrl} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92vh] max-w-[92vw] overflow-hidden p-3">
+      <DialogContent className="max-h-[96vh] w-[min(1120px,96vw)] max-w-[96vw] overflow-hidden p-3 sm:max-w-[96vw]">
         <DialogTitle className="sr-only">Hình ảnh minh chứng giao dịch</DialogTitle>
         {imageUrl && (
           <img
             src={imageUrl}
             alt="Hình ảnh minh chứng giao dịch"
-            className="max-h-[84vh] w-full rounded-md object-contain"
+            className="max-h-[90vh] w-full rounded-md object-contain"
           />
         )}
       </DialogContent>

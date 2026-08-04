@@ -212,8 +212,8 @@ function ProofImagePreview({
     );
   }
 
-  const zoomWidth = 320;
-  const zoomHeight = 440;
+  const zoomWidth = 420;
+  const zoomHeight = 560;
   const screenWidth = typeof window !== "undefined" ? window.innerWidth : 1200;
   const screenHeight = typeof window !== "undefined" ? window.innerHeight : 800;
   const leftPos =
