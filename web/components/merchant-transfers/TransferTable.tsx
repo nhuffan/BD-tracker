@@ -150,11 +150,23 @@ export default function TransferTable({
                     <ClampedText value={row.merchant} lines={3} className="leading-snug text-foreground" />
                   </TableCell>
                   <TableCell className="p-3 text-right font-mono font-bold text-foreground">
-                    <MoneyText
-                      amount={row.amount}
-                      amountClassName="text-[15px]"
-                      currencyClassName="relative top-[0.14em]"
-                    />
+                    <div className="group flex items-center justify-end gap-2">
+                      <MoneyText
+                        amount={row.amount}
+                        amountClassName="text-[15px]"
+                        currencyClassName="relative top-[0.14em]"
+                      />
+                      <Button
+                        type="button"
+                        size="icon-xs"
+                        variant="ghost"
+                        onClick={() => void copyText(String(row.amount), `${row.id}-amount`)}
+                        title="Sao chép số tiền"
+                        className="cursor-pointer opacity-60 group-hover:opacity-100"
+                      >
+                        {copiedId === `${row.id}-amount` ? <Check /> : <Copy />}
+                      </Button>
+                    </div>
                   </TableCell>
                   <TableCell className="p-3 font-mono text-sm">
                     <div className="flex items-center justify-between gap-2 group">
