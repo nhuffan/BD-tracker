@@ -4,8 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
   Calendar,
+  Check,
   CheckCircle2,
   Clock,
+  Copy,
   Download,
   Landmark,
   Loader2,
@@ -81,6 +83,7 @@ export default function MerchantTransfersPage({ isAdmin }: { isAdmin: boolean })
   const [editingTransfer, setEditingTransfer] = useState<MerchantTransferRow | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<MerchantTransferRow | null>(null);
   const [dialogBusy, setDialogBusy] = useState(false);
+  const [copiedStatKey, setCopiedStatKey] = useState("");
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -310,6 +313,12 @@ export default function MerchantTransfersPage({ isAdmin }: { isAdmin: boolean })
     URL.revokeObjectURL(url);
   }
 
+  async function copyStatAmount(amount: number, key: string) {
+    await navigator.clipboard.writeText(String(amount));
+    setCopiedStatKey(key);
+    window.setTimeout(() => setCopiedStatKey(""), 1400);
+  }
+
   const statCards = [
     {
       key: "not_transferred",
@@ -364,12 +373,19 @@ export default function MerchantTransfersPage({ isAdmin }: { isAdmin: boolean })
           const active = statusFilter === card.filter;
 
           return (
-            <button
+            <div
               key={card.key}
-              type="button"
+              role="button"
+              tabIndex={0}
               onClick={() => setStatusFilter(card.filter)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  setStatusFilter(card.filter);
+                }
+              }}
               className={[
-                "cursor-pointer rounded-xl border p-4 text-left shadow-xs transition hover:-translate-y-0.5 hover:shadow-md",
+                "cursor-pointer rounded-xl border p-4 text-left shadow-xs transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 card.card,
                 active ? "ring-2 ring-current/30" : "",
               ].join(" ")}
@@ -383,14 +399,28 @@ export default function MerchantTransfersPage({ isAdmin }: { isAdmin: boolean })
                   {card.count} mục
                 </Badge>
               </div>
-              <div className="mt-3 font-mono font-extrabold">
+              <div className="group mt-3 flex items-center gap-2 font-mono font-extrabold">
                 <MoneyText
                   amount={card.amount}
                   amountClassName="text-xl"
                   currencyClassName="relative top-[0.2em] text-lg font-extrabold"
                 />
+                <Button
+                  type="button"
+                  size="icon-sm"
+                  variant="ghost"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    void copyStatAmount(card.amount, card.key);
+                  }}
+                  title="Sao chép số tiền"
+                  aria-label={`Sao chép số tiền ${card.label}`}
+                  className="cursor-pointer opacity-60 hover:bg-foreground/10 hover:text-inherit group-hover:opacity-100 dark:hover:bg-foreground/15"
+                >
+                  {copiedStatKey === card.key ? <Check /> : <Copy />}
+                </Button>
               </div>
-            </button>
+            </div>
           );
         })}
       </div>

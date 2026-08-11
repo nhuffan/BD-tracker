@@ -341,7 +341,7 @@ export default function InvoiceTable({
 
   return (
     <TooltipProvider>
-      <div className="overflow-visible rounded-lg border bg-card">
+      <div className="relative overflow-hidden rounded-xl border bg-card">
         <Table className="text-sm">
         <TableHeader className="bg-muted/50 [&_th]:border-r [&_th]:border-border/70 [&_th:last-child]:border-r-0">
           <TableRow>

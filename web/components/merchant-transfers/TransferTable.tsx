@@ -121,13 +121,13 @@ export default function TransferTable({
 
   return (
     <>
-      <div className="overflow-visible rounded-lg border bg-card">
+      <div className="relative overflow-hidden rounded-xl border bg-card">
         <Table className="text-sm">
           <TableHeader className="bg-muted/50 [&_th]:border-r [&_th]:border-border/70 [&_th:last-child]:border-r-0">
             <TableRow>
               <TableHead className="w-14 p-3 text-center font-semibold">STT</TableHead>
               <TableHead className="w-[190px] p-3 font-semibold">MERCHANT</TableHead>
-              <TableHead className="min-w-[150px] p-3 text-right font-semibold">SỐ TIỀN</TableHead>
+              <TableHead className="min-w-[150px] p-3 text-left font-semibold">SỐ TIỀN</TableHead>
               <TableHead className="min-w-[150px] p-3 font-semibold">SỐ TÀI KHOẢN</TableHead>
               <TableHead className="min-w-[200px] p-3 font-semibold">CHỦ TÀI KHOẢN</TableHead>
               <TableHead className="min-w-[140px] p-3 font-semibold">NGÂN HÀNG</TableHead>
@@ -149,12 +149,12 @@ export default function TransferTable({
                   <TableCell className="w-[190px] min-w-[190px] max-w-[190px] whitespace-normal p-3 font-medium">
                     <ClampedText value={row.merchant} lines={3} className="leading-snug text-foreground" />
                   </TableCell>
-                  <TableCell className="p-3 text-right font-mono font-bold text-foreground">
-                    <div className="group flex items-center justify-end gap-2">
+                  <TableCell className="p-3 text-left text-foreground">
+                    <div className="group flex items-center justify-between gap-2">
                       <MoneyText
                         amount={row.amount}
-                        amountClassName="text-[15px]"
-                        currencyClassName="relative top-[0.14em]"
+                        amountClassName="text-[15px] font-semibold"
+                        currencyClassName="relative top-[1px] text-sm"
                       />
                       <Button
                         type="button"
@@ -168,7 +168,7 @@ export default function TransferTable({
                       </Button>
                     </div>
                   </TableCell>
-                  <TableCell className="p-3 font-mono text-sm">
+                  <TableCell className="p-3 text-sm">
                     <div className="flex items-center justify-between gap-2 group">
                       <ClampedText value={row.account_number} lines={1} />
                       <Button
@@ -183,7 +183,7 @@ export default function TransferTable({
                       </Button>
                     </div>
                   </TableCell>
-                  <TableCell className="p-3 text-xs font-semibold uppercase tracking-tight">
+                  <TableCell className="p-3 text-sm font-semibold uppercase tracking-tight">
                     <div className="flex items-center justify-between gap-2 group">
                       <ClampedText value={row.account_holder} lines={2} />
                       <Button

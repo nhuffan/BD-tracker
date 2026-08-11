@@ -4,8 +4,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertCircle,
   Calendar,
+  Check,
   CheckCircle2,
   Clock,
+  Copy,
   Download,
   Loader2,
   Plus,
@@ -189,6 +191,7 @@ export default function MerchantInvoicesPage({
   const [deleteTarget, setDeleteTarget] = useState<MerchantInvoiceRow | null>(null);
   const [mutating, setMutating] = useState(false);
   const [dialogBusy, setDialogBusy] = useState(false);
+  const [copiedStatKey, setCopiedStatKey] = useState("");
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -425,6 +428,12 @@ export default function MerchantInvoicesPage({
     URL.revokeObjectURL(url);
   }
 
+  async function copyStatAmount(amount: number, key: string) {
+    await navigator.clipboard.writeText(String(amount));
+    setCopiedStatKey(key);
+    window.setTimeout(() => setCopiedStatKey(""), 1400);
+  }
+
   async function importCsv(file: File) {
     if (!isAdmin) return;
 
@@ -607,12 +616,19 @@ export default function MerchantInvoicesPage({
           const active = statusFilter === card.key;
 
           return (
-            <button
+            <div
               key={card.key}
-              type="button"
+              role="button"
+              tabIndex={0}
               onClick={() => setStatusFilter(active ? ALL : card.key)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  setStatusFilter(active ? ALL : card.key);
+                }
+              }}
               className={[
-                "cursor-pointer rounded-xl border p-4 text-left shadow-xs transition-all duration-200 ease-out hover:-translate-y-1 hover:shadow-md",
+                "cursor-pointer rounded-xl border p-4 text-left shadow-xs transition-all duration-200 ease-out hover:-translate-y-1 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 card.className,
                 active ? card.activeClassName : "",
               ].join(" ")}
@@ -628,14 +644,30 @@ export default function MerchantInvoicesPage({
                   {card.count} mục
                 </Badge>
               </div>
-              <div className={`mt-3 font-mono font-extrabold ${card.valueClassName}`}>
+              <div
+                className={`group mt-3 flex items-center gap-2 font-mono font-extrabold ${card.valueClassName}`}
+              >
                 <MoneyText
                   amount={card.amount}
                   amountClassName="text-xl"
                   currencyClassName="relative top-[0.2em] text-lg font-extrabold"
                 />
+                <Button
+                  type="button"
+                  size="icon-sm"
+                  variant="ghost"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    void copyStatAmount(card.amount, card.key);
+                  }}
+                  title="Sao chép số tiền"
+                  aria-label={`Sao chép số tiền ${card.label}`}
+                  className="cursor-pointer opacity-60 hover:bg-foreground/10 hover:text-inherit group-hover:opacity-100 dark:hover:bg-foreground/15"
+                >
+                  {copiedStatKey === card.key ? <Check /> : <Copy />}
+                </Button>
               </div>
-            </button>
+            </div>
           );
         })}
       </div>
