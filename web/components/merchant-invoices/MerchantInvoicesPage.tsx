@@ -780,6 +780,7 @@ export default function MerchantInvoicesPage({
           <Button
             variant="outline"
             onClick={exportExcel}
+            disabled={filteredRows.length === 0}
             className="cursor-pointer"
           >
             <Download className="h-4 w-4" />
