@@ -16,6 +16,7 @@ import {
   Upload,
 } from "lucide-react";
 import { toast } from "sonner";
+import * as XLSX from "xlsx-js-style";
 import { supabase } from "@/lib/integrations/supabase/client";
 import { deleteCloudinaryAssets } from "@/lib/integrations/cloudinary/delete-assets";
 import { Badge } from "@/components/ui/badge";
@@ -23,8 +24,10 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import {
+  formatDateOnly,
   formatMonthLabel,
   getMonthKey,
+  INVOICE_STATUS_LABEL,
   resolveInvoiceStatus,
 } from "@/lib/features/merchant-invoices/invoices";
 import type { MerchantInvoiceRow, MerchantInvoiceStatus } from "./utils/types";
@@ -89,9 +92,10 @@ function parseCsvRows(text: string) {
   return rows.filter((item) => item.some((value) => value.trim()));
 }
 
-function escapeCsv(value: string | number | null | undefined) {
-  const text = String(value ?? "");
-  return `"${text.replace(/"/g, "\"\"")}"`;
+function getExportDateStamp(date = new Date()) {
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  return `${day}-${month}-${date.getFullYear()}`;
 }
 
 function normalizeCsvHeader(value: string) {
@@ -380,24 +384,23 @@ export default function MerchantInvoicesPage({
     }
   }
 
-  function exportCsv() {
+  function exportExcel() {
     const headers = [
       "STT",
       "Merchant",
-      "Contract Number",
-      "Invoice Amount",
-      "VAT Rate",
-      "Company Name",
-      "Company Address",
-      "Tax Code",
-      "Invoice Email",
-      "Status",
-      "Created At",
-      "Note",
+      "SỐ HỢP ĐỒNG",
+      "SỐ TIỀN HÓA ĐƠN",
+      "TỶ LỆ VAT",
+      "TÊM CÔNG TY",
+      "ĐỊA CHỈ CÔNG TY",
+      "MÃ SỐ THUẾ",
+      "EMAIL HOÁ ĐƠN",
+      "TRẠNG THÁI",
+      "NGÀY XUẤT",
+      "NOTE",
     ];
 
-    const lines = filteredRows.map((row) =>
-      [
+    const data = filteredRows.map((row) => [
         row.sequence_no,
         row.merchant,
         row.contract_number ?? "",
@@ -407,25 +410,66 @@ export default function MerchantInvoicesPage({
         row.company_address ?? "",
         row.tax_code,
         row.invoice_email ?? "",
-        row.status,
-        row.created_at,
+        INVOICE_STATUS_LABEL[row.status],
+        row.status === "issued" ? formatDateOnly(row.issued_at) : "—",
         row.note ?? "",
-      ]
-        .map(escapeCsv)
-        .join(",")
-    );
+      ]);
 
-    const blob = new Blob(["\uFEFF" + [headers.join(","), ...lines].join("\n")], {
-      type: "text/csv;charset=utf-8;",
+    const worksheet = XLSX.utils.aoa_to_sheet([headers, ...data]);
+    const alignments: Array<"left" | "right" | "center"> = [
+      "center",
+      "left",
+      "left",
+      "right",
+      "center",
+      "left",
+      "left",
+      "left",
+      "left",
+      "center",
+      "center",
+      "center",
+    ];
+
+    headers.forEach((_, columnIndex) => {
+      const headerCell = worksheet[XLSX.utils.encode_cell({ r: 0, c: columnIndex })];
+      if (headerCell) {
+        headerCell.s = {
+          font: { bold: true },
+          fill: { fgColor: { rgb: "F1F5F9" } },
+          alignment: { horizontal: alignments[columnIndex], vertical: "center" },
+        };
+      }
     });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `merchant_invoices_${new Date().toISOString().slice(0, 10)}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+
+    data.forEach((_, rowIndex) => {
+      alignments.forEach((horizontal, columnIndex) => {
+        const cell = worksheet[XLSX.utils.encode_cell({ r: rowIndex + 1, c: columnIndex })];
+        if (!cell) return;
+
+        cell.s = { alignment: { horizontal, vertical: "center" } };
+        if (columnIndex === 3) cell.z = "#,##0";
+      });
+    });
+
+    worksheet["!cols"] = [
+      { wch: 8 },
+      { wch: 24 },
+      { wch: 20 },
+      { wch: 20 },
+      { wch: 12 },
+      { wch: 28 },
+      { wch: 34 },
+      { wch: 18 },
+      { wch: 28 },
+      { wch: 18 },
+      { wch: 18 },
+      { wch: 28 },
+    ];
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Quản Lý Xuất Hóa Đơn");
+    XLSX.writeFile(workbook, `Quản Lý Xuất Hóa Đơn_${getExportDateStamp()}.xlsx`);
   }
 
   async function copyStatAmount(amount: number, key: string) {
@@ -735,7 +779,7 @@ export default function MerchantInvoicesPage({
 
           <Button
             variant="outline"
-            onClick={exportCsv}
+            onClick={exportExcel}
             className="cursor-pointer"
           >
             <Download className="h-4 w-4" />

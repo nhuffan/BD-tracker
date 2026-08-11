@@ -16,6 +16,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { toast } from "sonner";
+import * as XLSX from "xlsx-js-style";
 import { supabase } from "@/lib/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -42,9 +43,10 @@ function getCurrentMonthKey() {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
-function escapeCsv(value: string | number | null | undefined) {
-  const text = String(value ?? "");
-  return `"${text.replace(/"/g, "\"\"")}"`;
+function getExportDateStamp(date = new Date()) {
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  return `${day}-${month}-${date.getFullYear()}`;
 }
 
 function statusCardClass(status: MerchantTransferStatus | "total") {
@@ -269,22 +271,20 @@ export default function MerchantTransfersPage({ isAdmin }: { isAdmin: boolean })
     }
   }
 
-  function exportCsv() {
+  function exportExcel() {
     const headers = [
       "STT",
-      "Merchant",
-      "Amount",
-      "Account Number",
-      "Account Holder",
-      "Bank Name",
-      "Branch",
-      "Status",
-      "Transaction Date",
-      "Completion Date",
+      "MERCHANT",
+      "SỐ TIỀN",
+      "SỐ TÀI KHOẢN",
+      "CHỦ TÀI KHOẢN",
+      "NGÂN HÀNG",
+      "CHI NHÁNH",
+      "TÌNH TRẠNG",
+      "NGÀY HOÀN THÀNH",
     ];
 
-    const lines = filteredRows.map((row) =>
-      [
+    const data = filteredRows.map((row) => [
         row.sequence_no,
         row.merchant,
         row.amount,
@@ -293,24 +293,58 @@ export default function MerchantTransfersPage({ isAdmin }: { isAdmin: boolean })
         row.bank_name,
         row.branch ?? "",
         TRANSFER_STATUS_LABEL[row.status],
-        formatTransferDate(row.transaction_date),
-        row.status === "transferred" ? formatTransferDate(row.completion_date) : "",
-      ]
-        .map(escapeCsv)
-        .join(",")
-    );
+        row.status === "transferred" ? formatTransferDate(row.completion_date) : "—",
+      ]);
 
-    const blob = new Blob(["\uFEFF" + [headers.join(","), ...lines].join("\n")], {
-      type: "text/csv;charset=utf-8;",
+    const worksheet = XLSX.utils.aoa_to_sheet([headers, ...data]);
+    const alignments: Array<"left" | "center"> = [
+      "center",
+      "left",
+      "left",
+      "left",
+      "left",
+      "left",
+      "left",
+      "center",
+      "center",
+    ];
+
+    headers.forEach((_, columnIndex) => {
+      const headerCell = worksheet[XLSX.utils.encode_cell({ r: 0, c: columnIndex })];
+      if (headerCell) {
+        headerCell.s = {
+          font: { bold: true },
+          fill: { fgColor: { rgb: "F1F5F9" } },
+          alignment: { horizontal: alignments[columnIndex], vertical: "center" },
+        };
+      }
     });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `merchant_transfers_${new Date().toISOString().slice(0, 10)}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+
+    data.forEach((_, rowIndex) => {
+      alignments.forEach((horizontal, columnIndex) => {
+        const cell = worksheet[XLSX.utils.encode_cell({ r: rowIndex + 1, c: columnIndex })];
+        if (!cell) return;
+
+        cell.s = { alignment: { horizontal, vertical: "center" } };
+        if (columnIndex === 2) cell.z = "#,##0";
+      });
+    });
+
+    worksheet["!cols"] = [
+      { wch: 8 },
+      { wch: 24 },
+      { wch: 18 },
+      { wch: 20 },
+      { wch: 26 },
+      { wch: 20 },
+      { wch: 22 },
+      { wch: 22 },
+      { wch: 20 },
+    ];
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Quản Lý Giao Dịch");
+    XLSX.writeFile(workbook, `Quản Lý Giao Dịch_${getExportDateStamp()}.xlsx`);
   }
 
   async function copyStatAmount(amount: number, key: string) {
@@ -487,7 +521,7 @@ export default function MerchantTransfersPage({ isAdmin }: { isAdmin: boolean })
           )}
           <Button
             variant="outline"
-            onClick={exportCsv}
+            onClick={exportExcel}
             disabled={filteredRows.length === 0}
             className="cursor-pointer"
           >
