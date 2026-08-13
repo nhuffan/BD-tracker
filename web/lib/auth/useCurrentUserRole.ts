@@ -6,7 +6,7 @@ import { supabase } from "@/lib/integrations/supabase/client";
 import { isSuperAdminUser } from "@/lib/auth/superAdmin";
 
 
-export type AppRole = "admin" | "viewer";
+export type AppRole = "admin" | "viewer" | "accountant";
 
 
 export function useCurrentUserRole() {
@@ -72,6 +72,8 @@ export function useCurrentUserRole() {
     loading,
     isAdmin: role === "admin",
     isViewer: role === "viewer",
+    isAccountant: role === "accountant",
+    canManageFinanceTabs: role === "admin" || role === "accountant" || isSuperAdmin,
     isSuperAdmin,
   };
 }

@@ -4,12 +4,14 @@ import { createContext, ReactNode, useContext, useEffect, useState } from "react
 import { isSuperAdminUser } from "@/lib/auth/superAdmin";
 import { supabase } from "@/lib/integrations/supabase/client";
 
-export type AppRole = "admin" | "viewer";
+export type AppRole = "admin" | "viewer" | "accountant";
 
 export interface UserRoleContextValue {
   role: AppRole;
   isAdmin: boolean;
   isViewer: boolean;
+  isAccountant: boolean;
+  canManageFinanceTabs: boolean;
   isSuperAdmin: boolean;
   currentUserId: string;
   email: string | null;
@@ -73,6 +75,8 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
     role,
     isAdmin: role === "admin",
     isViewer: role === "viewer",
+    isAccountant: role === "accountant",
+    canManageFinanceTabs: role === "admin" || role === "accountant" || isSuperAdmin,
     isSuperAdmin,
     currentUserId,
     email,

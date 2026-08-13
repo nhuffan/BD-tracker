@@ -63,6 +63,7 @@ const MerchantTransfersPage = dynamic(() => import("@/components/merchant-transf
 });
 
 const HIDDEN_TAB_IDS = new Set(["ads-tracking", "approvals"]);
+const ACCOUNTANT_TAB_IDS = new Set(["merchant-invoices", "merchant-transfers"]);
 
 const ALL_TABS_REGISTRY: TabItem[] = [
   {
@@ -111,16 +112,16 @@ const ALL_TABS_REGISTRY: TabItem[] = [
     id: "merchant-invoices",
     label: "Invoices",
     icon: ReceiptText,
-    render: ({ isAdmin, isSuperAdmin }) => (
-      <MerchantInvoicesPage isAdmin={isAdmin || isSuperAdmin} />
+    render: ({ canManageFinanceTabs }) => (
+      <MerchantInvoicesPage isAdmin={canManageFinanceTabs} />
     ),
   },
   {
     id: "merchant-transfers",
     label: "Transfers",
     icon: Landmark,
-    render: ({ isAdmin, isSuperAdmin }) => (
-      <MerchantTransfersPage isAdmin={isAdmin || isSuperAdmin} />
+    render: ({ canManageFinanceTabs }) => (
+      <MerchantTransfersPage isAdmin={canManageFinanceTabs} />
     ),
   },
 ];
@@ -131,6 +132,19 @@ export const TABS_REGISTRY: TabItem[] = ALL_TABS_REGISTRY.filter(
 
 export const DEFAULT_TAB_ID = TABS_REGISTRY[0]?.id ?? "home";
 
-export function normalizeTabId(value: string | null) {
-  return TABS_REGISTRY.some((tab) => tab.id === value) ? value ?? DEFAULT_TAB_ID : DEFAULT_TAB_ID;
+export function getVisibleTabs(context: UserRoleContextValue) {
+  if (context.isAccountant && !context.isAdmin && !context.isSuperAdmin) {
+    return TABS_REGISTRY.filter((tab) => ACCOUNTANT_TAB_IDS.has(tab.id));
+  }
+
+  return TABS_REGISTRY;
+}
+
+export function getDefaultTabId(tabs: TabItem[] = TABS_REGISTRY) {
+  return tabs[0]?.id ?? DEFAULT_TAB_ID;
+}
+
+export function normalizeTabId(value: string | null, tabs: TabItem[] = TABS_REGISTRY) {
+  const fallback = getDefaultTabId(tabs);
+  return tabs.some((tab) => tab.id === value) ? value ?? fallback : fallback;
 }

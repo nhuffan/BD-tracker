@@ -7,13 +7,18 @@ import { useRouter } from "next/navigation";
 import AppHeader from "@/components/AppHeader";
 import { Loader2 } from "lucide-react";
 import WomensDayBackground from "@/components/WomensDayBackground";
-import { DEFAULT_TAB_ID, normalizeTabId, TABS_REGISTRY } from "@/lib/app/tabsConfig";
+import {
+  DEFAULT_TAB_ID,
+  getVisibleTabs,
+  normalizeTabId,
+} from "@/lib/app/tabsConfig";
 import { UserRoleProvider, useUserRole } from "@/lib/auth/userRoleContext";
 
 function HomeTabsContent() {
   const router = useRouter();
   const userRole = useUserRole();
   const { email, loading } = userRole;
+  const visibleTabs = getVisibleTabs(userRole);
   const [activeTab, setActiveTab] = useState(() => {
     if (typeof window === "undefined") return DEFAULT_TAB_ID;
     return normalizeTabId(window.localStorage.getItem("home-active-tab"));
@@ -23,10 +28,10 @@ function HomeTabsContent() {
     const storedTab = normalizeTabId(window.localStorage.getItem("home-active-tab"));
     return Array.from(new Set([DEFAULT_TAB_ID, storedTab]));
   });
-  const effectiveActiveTab = normalizeTabId(activeTab);
+  const effectiveActiveTab = normalizeTabId(activeTab, visibleTabs);
 
   function handleTabChange(value: string) {
-    const nextTab = normalizeTabId(value);
+    const nextTab = normalizeTabId(value, visibleTabs);
 
     if (nextTab !== value) {
       setActiveTab(nextTab);
@@ -61,12 +66,12 @@ function HomeTabsContent() {
         <AppHeader
           email={email}
           onLogout={handleLogout}
-          tabs={TABS_REGISTRY}
+          tabs={visibleTabs}
         />
 
         <main className="relative z-10 h-[calc(100vh-64px)] overflow-y-auto px-6 py-8">
-          {TABS_REGISTRY.map((tab) => {
-            if (!visitedTabs.includes(tab.id)) return null;
+          {visibleTabs.map((tab) => {
+            if (!visitedTabs.includes(tab.id) && tab.id !== effectiveActiveTab) return null;
 
             return (
               <TabsContent
