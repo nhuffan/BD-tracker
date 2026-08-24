@@ -62,6 +62,39 @@ function statusClass(status: MerchantTransferStatus) {
   return "border-red-200 bg-red-50 text-red-700 dark:border-red-900/70 dark:bg-red-950/40 dark:text-red-300";
 }
 
+function normalizeLookupValue(value?: string | null) {
+  return value?.trim().toLowerCase() ?? "";
+}
+
+function getTransferLookupKey(row: MerchantTransferRow) {
+  return [
+    normalizeLookupValue(row.merchant),
+    normalizeLookupValue(row.bank_name),
+    normalizeLookupValue(row.account_number),
+  ].join("|");
+}
+
+function getMerchantLookupRows(rows: MerchantTransferRow[], query: string) {
+  const keyword = query.trim().toLowerCase();
+  if (!keyword) return [];
+
+  const latestByMerchantAccount = new Map<string, MerchantTransferRow>();
+  rows.forEach((item) => {
+    const key = getTransferLookupKey(item);
+    if (key.replace(/\|/g, "") && !latestByMerchantAccount.has(key)) {
+      latestByMerchantAccount.set(key, item);
+    }
+  });
+
+  return Array.from(latestByMerchantAccount.values())
+    .filter((row) =>
+      [row.merchant, row.account_number, row.account_holder, row.bank_name, row.branch ?? ""].some(
+        (value) => value.toLowerCase().includes(keyword)
+      )
+    )
+    .slice(0, 8);
+}
+
 export default function TransferDialog({
   open,
   onOpenChange,
@@ -97,22 +130,7 @@ export default function TransferDialog({
   const [saving, setSaving] = useState(false);
 
   const merchantLookupRows = useMemo(() => {
-    const keyword = merchant.trim().toLowerCase();
-    if (!keyword) return [];
-
-    const latestByMerchant = new Map<string, MerchantTransferRow>();
-    existingTransfers.forEach((item) => {
-      const key = item.merchant.trim().toLowerCase();
-      if (key && !latestByMerchant.has(key)) latestByMerchant.set(key, item);
-    });
-
-    return Array.from(latestByMerchant.values())
-      .filter((row) =>
-        [row.merchant, row.account_number, row.account_holder, row.bank_name, row.branch ?? ""].some(
-          (value) => value.toLowerCase().includes(keyword)
-        )
-      )
-      .slice(0, 5);
+    return getMerchantLookupRows(existingTransfers, merchant);
   }, [existingTransfers, merchant]);
 
   const numericAmount = parseMoneyInput(amount);
@@ -182,20 +200,16 @@ export default function TransferDialog({
       return;
     }
 
-    const exact = existingTransfers.find(
-      (row) => row.merchant.trim().toLowerCase() === value.trim().toLowerCase()
+    const exactMatches = getMerchantLookupRows(existingTransfers, value).filter(
+      (row) => normalizeLookupValue(row.merchant) === normalizeLookupValue(value)
     );
 
-    if (exact) applyMerchantLookup(exact);
+    if (exactMatches.length === 1) applyMerchantLookup(exactMatches[0]);
     else setAutoFillNotice("");
   }
 
-  function selectFirstMerchantSuggestion(value: string) {
-    const keyword = value.trim().toLowerCase();
-    const first = merchantLookupRows.find((row) =>
-      row.merchant.trim().toLowerCase().includes(keyword)
-    );
-
+  function selectFirstMerchantSuggestion() {
+    const first = merchantLookupRows[0];
     if (!first) return false;
     applyMerchantLookup(first);
     return true;
@@ -319,7 +333,7 @@ export default function TransferDialog({
                 onFocus={() => setShowMerchantSuggestions(true)}
                 onBlur={() => window.setTimeout(() => setShowMerchantSuggestions(false), 120)}
                 onKeyDownCapture={(event) => {
-                  if (event.key === "Enter" && selectFirstMerchantSuggestion(event.currentTarget.value)) {
+                  if (event.key === "Enter" && selectFirstMerchantSuggestion()) {
                     event.preventDefault();
                     event.stopPropagation();
                   }
