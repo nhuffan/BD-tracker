@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useMemo } from "react";
 import { TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -10,7 +11,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
-  Database,
   LogOut,
 } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -63,8 +63,14 @@ export default function AppHeader({
       <div className="mx-auto grid h-16 w-full grid-cols-[1fr_auto_1fr] items-center px-6">
         <div className="flex items-center">
           <div className="hidden xl:flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
-              <Database className="h-4 w-4" />
+            <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-primary shadow-sm">
+              <Image
+                src="/mt-life-logo.png"
+                alt="MT Life"
+                width={36}
+                height={36}
+                className="h-full w-full object-cover"
+              />
             </div>
 
             <div className="text-xl font-extrabold tracking-tight text-foreground">

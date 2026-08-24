@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Operation Hub",
-  description: "Operation Hub",
+  title: "Operations Hub",
+  description: "Operations Hub",
   icons: {
     icon: "/mt-life-logo.png",
     shortcut: "/mt-life-logo.png",
