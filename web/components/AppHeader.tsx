@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useMemo } from "react";
 import { TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -63,12 +62,11 @@ export default function AppHeader({
       <div className="mx-auto grid h-16 w-full grid-cols-[1fr_auto_1fr] items-center px-6">
         <div className="flex items-center">
           <div className="hidden xl:flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-primary shadow-sm">
-              <Image
-                src="/mt-life-logo.png"
-                alt="MT Life"
-                width={36}
-                height={36}
+            <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl border border-pink-300 bg-primary shadow-sm dark:border-pink-200/85 dark:shadow-[0_0_0_1px_rgba(244,114,182,0.28),0_0_12px_rgba(244,114,182,0.18)]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="https://lh3.googleusercontent.com/a-/ALV-UjUx6n8ly4egQZAKxsUhRzV6B1lnO-XuxlIO-yyRIcb1VAVFIJ9LoA=s80-p"
+                alt="Operations Hub"
                 className="h-full w-full object-cover"
               />
             </div>
