@@ -38,6 +38,14 @@ function normalizeFolder(value: FormDataEntryValue | null) {
   return folder || "qa_tickets";
 }
 
+function createPublicId(baseName: string, ext: string, includeExtension: boolean) {
+  const safeBase = baseName || "upload";
+  const uniqueSuffix = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
+  const name = `${safeBase}-${uniqueSuffix}`;
+
+  return includeExtension && ext ? `${name}.${ext}` : name;
+}
+
 export async function POST(req: Request) {
   try {
     const formData = await req.formData();
@@ -59,11 +67,7 @@ export async function POST(req: Request) {
         const isImageOrVideo =
           file.type.startsWith("image/") || file.type.startsWith("video/");
 
-        const publicId = isImageOrVideo
-          ? base
-          : ext
-            ? `${base}.${ext}`
-            : base;
+        const publicId = createPublicId(base, ext, !isImageOrVideo);
 
         const result = await cloudinary.uploader.upload(
           bufferToDataUri(file, buffer),

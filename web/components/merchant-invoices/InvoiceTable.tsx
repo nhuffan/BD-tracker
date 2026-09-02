@@ -205,11 +205,7 @@ function ProofImagePreview({
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
   if (!src) {
-    return (
-      <div className="mx-auto flex h-16 w-14 items-center justify-center rounded-md border border-dashed bg-muted text-[10px] text-muted-foreground">
-        Chưa có ảnh
-      </div>
-    );
+    return null;
   }
 
   const zoomWidth = 420;
@@ -435,7 +431,7 @@ export default function InvoiceTable({
                     <div className="flex items-center justify-center gap-1.5">
                       {imageUrls.map((imageUrl, index) => (
                         <ProofImagePreview
-                          key={`${row.id}-${imageUrl}`}
+                          key={`${row.id}-${index}-${imageUrl}`}
                           src={imageUrl}
                           alt={`Minh chứng ${row.merchant} ${index + 1}`}
                           onOpen={onOpenImage}
@@ -443,11 +439,7 @@ export default function InvoiceTable({
                       ))}
                     </div>
                   ) : (
-                    <ProofImagePreview
-                      src=""
-                      alt={`Minh chứng ${row.merchant}`}
-                      onOpen={onOpenImage}
-                    />
+                    <span className="text-sm text-muted-foreground">—</span>
                   )}
                 </TableCell>
                 <TableCell className="p-3 text-center align-middle">
