@@ -24,7 +24,7 @@ export function DatePickerDMY({ value, onChange, placeholder = "Chọn ngày", c
       <PopoverTrigger asChild>
         <Button
           variant="outline"
-          className={cn("w-full justify-start text-left font-normal", !value && "text-muted-foreground", className)}
+          className={cn("w-full cursor-pointer justify-start text-left font-normal", !value && "text-muted-foreground", className)}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
           {value ? format(selected!, "dd/MM/yyyy") : placeholder}

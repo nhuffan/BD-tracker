@@ -543,7 +543,7 @@ export default function QAPage({
             onClick={() => setCreateOpen(true)}
           >
             <Plus className="mr-1 h-4 w-4" />
-            Create Question
+            Create
           </Button>
         </div>
       </div>

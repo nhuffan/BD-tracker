@@ -4,13 +4,13 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -27,6 +27,12 @@ import { toast } from "sonner";
 import type { RecordRow } from "@/lib/features/performance/types";
 import { Loader2 } from "lucide-react";
 import { fetchBdMonthlyLevels, getBdLevelsForMonth } from "@/lib/features/performance/bdMonthlyLevels";
+import {
+  CategoryPicker,
+  FormField,
+  OptionalDetails,
+  RecordFormSection,
+} from "./RecordFormUI";
 
 function formatNumberInput(value: string) {
   if (!value) return "";
@@ -232,238 +238,244 @@ export default function CreateDialog({
         onOpenChange(nextOpen);
       }}
     >
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
+      <DialogContent className="max-h-[92dvh] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-w-3xl">
+        <DialogHeader className="border-b bg-card px-5 py-4 pr-12 sm:px-6 sm:py-5">
           <DialogTitle className="text-xl font-semibold tracking-tight">
-            Create Record
+            Create performance record
           </DialogTitle>
+          <DialogDescription>
+            Complete the core details first, then add optional context if needed.
+          </DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div className="col-span-2">
-            <p className="mb-1.5 text-sm font-medium text-foreground">Date</p>
-            <DatePickerDMY
-              value={form.event_date}
-              onChange={(iso) =>
-                setForm((f) => ({ ...f, event_date: iso ?? f.event_date }))
-              }
-              placeholder="Select date"
-            />
-          </div>
+        <div className="min-h-0 space-y-4 overflow-y-auto bg-muted/25 px-4 py-4 sm:px-6 sm:py-5">
+          <RecordFormSection
+            step={1}
+            title="Record details"
+            description="When the activity happened and who owns it."
+          >
+            <div className="grid gap-4 sm:grid-cols-3">
+              <FormField id="record-date" label="Date">
+                <DatePickerDMY
+                  value={form.event_date}
+                  onChange={(iso) =>
+                    setForm((f) => ({ ...f, event_date: iso ?? f.event_date }))
+                  }
+                  placeholder="Select date"
+                  className="h-10"
+                />
+              </FormField>
 
-          <div className="w-full">
-            <p className="mb-1.5 text-sm font-medium text-foreground">BD Name</p>
-            <Select
-              value={form.bd_id || undefined}
-              onValueChange={(v) => setForm((f) => ({ ...f, bd_id: v }))}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select BD name" />
-              </SelectTrigger>
-              <SelectContent>
-                {bdList.map((x) => (
-                  <SelectItem key={x.id} value={x.id}>
-                    {x.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+              <FormField label="BD name">
+                <Select
+                  value={form.bd_id || undefined}
+                  onValueChange={(v) => setForm((f) => ({ ...f, bd_id: v }))}
+                >
+                  <SelectTrigger className="h-10 w-full data-[size=default]:h-10">
+                    <SelectValue placeholder="Select BD name" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {bdList.map((x) => (
+                      <SelectItem key={x.id} value={x.id}>
+                        {x.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormField>
 
-          <div className="w-full">
-            <p className="mb-1.5 text-sm font-medium text-foreground">BD Level</p>
-            <Input
-              value={
-                loadingBdLevels
-                  ? "Loading..."
-                  : selectedBdLevelLabel || ""
-              }
-              placeholder={
-                form.bd_id
-                  ? `No BD level found up to ${selectedMonthKey}`
-                  : "Select BD name first"
-              }
-              readOnly
-            />
-            {!loadingBdLevels && form.bd_id && !form.bd_level_id && (
-              <p className="mt-1 text-sm text-destructive">
-                No BD level has been set for this BD up to {selectedMonthKey}.
-              </p>
-            )}
-          </div>
+              <FormField
+                label="BD level"
+                hint={
+                  !loadingBdLevels && form.bd_id && !form.bd_level_id
+                    ? `No level set up to ${selectedMonthKey}.`
+                    : undefined
+                }
+              >
+                <div
+                  className="flex h-10 items-center gap-2.5 rounded-lg bg-muted/60 px-3 text-sm"
+                  aria-live="polite"
+                >
+                  {loadingBdLevels && (
+                    <Loader2 className="size-4 shrink-0 animate-spin text-muted-foreground" />
+                  )}
+                  <span
+                    className={
+                      selectedBdLevelLabel
+                        ? "font-medium text-foreground"
+                        : "text-muted-foreground"
+                    }
+                  >
+                    {loadingBdLevels
+                      ? "Finding BD level..."
+                      : selectedBdLevelLabel ||
+                        (form.bd_id ? "No level assigned" : "Available after selecting BD")}
+                  </span>
+                </div>
+              </FormField>
+            </div>
+          </RecordFormSection>
 
-          <div className="w-full min-w-0">
-            <p className="mb-1.5 text-sm font-medium text-foreground">
-              Customer Name
-            </p>
-            <Input
-              value={form.customer_name}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, customer_name: e.target.value }))
-              }
-              placeholder="Enter customer name"
-            />
-          </div>
+          <RecordFormSection
+            step={2}
+            title="Customer"
+            description="Identify the customer and how they are classified."
+          >
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField id="customer-name" label="Customer name">
+                <Input
+                  id="customer-name"
+                  className="h-10"
+                  value={form.customer_name}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, customer_name: e.target.value }))
+                  }
+                  placeholder="Enter customer name"
+                />
+              </FormField>
 
-          <div className="w-full min-w-0">
-            <p className="mb-1.5 text-sm font-medium text-foreground">
-              Branch Number (optional)
-            </p>
-            <Input
-              inputMode="numeric"
-              value={branchNumberInput}
-              onChange={(e) => {
-                const formatted = formatNumberInput(e.target.value);
-                const parsed = parseNumberInput(e.target.value);
+              <FormField label="Customer type">
+                <Select
+                  value={form.customer_type_id || undefined}
+                  onValueChange={(v) =>
+                    setForm((f) => ({ ...f, customer_type_id: v }))
+                  }
+                >
+                  <SelectTrigger className="h-10 w-full">
+                    <SelectValue placeholder="Select customer type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {customerTypes.map((x) => (
+                      <SelectItem key={x.id} value={x.id}>
+                        {x.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormField>
+            </div>
+          </RecordFormSection>
 
-                setBranchNumberInput(formatted);
-                setForm((f) => ({
-                  ...f,
-                  branch_number: parsed,
-                }));
-              }}
-              placeholder="Enter branch number"
-            />
-          </div>
+          <RecordFormSection
+            step={3}
+            title="Performance"
+            description="Choose the activity type and record the result."
+          >
+            <div className="space-y-4">
+              <FormField label="Category">
+                <CategoryPicker
+                  value={form.category}
+                  onChange={(category) => setForm((f) => ({ ...f, category }))}
+                />
+              </FormField>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField label="Point type">
+                  <Select
+                    value={form.point_type_id || undefined}
+                    onValueChange={(v) =>
+                      setForm((f) => ({ ...f, point_type_id: v }))
+                    }
+                  >
+                    <SelectTrigger className="h-10 w-full">
+                      <SelectValue placeholder="Select point type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {pointTypes.map((x) => (
+                        <SelectItem key={x.id} value={x.id}>
+                          {x.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormField>
 
-          <div className="w-full">
-            <p className="mb-1.5 text-sm font-medium text-foreground">Category</p>
-            <Select
-              value={form.category}
-              onValueChange={(v: "entertainment" | "restaurant") =>
-                setForm((f) => ({ ...f, category: v }))
-              }
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="entertainment">Entertainment</SelectItem>
-                <SelectItem value="restaurant">Restaurant</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+                <FormField id="record-points" label="Points">
+                  <Input
+                    id="record-points"
+                    className="h-10"
+                    inputMode="numeric"
+                    value={pointsInput}
+                    onChange={(e) => {
+                      const formatted = formatNumberInput(e.target.value);
+                      const parsed = parseNumberInput(e.target.value);
+                      setPointsInput(formatted);
+                      setForm((f) => ({ ...f, points: parsed ?? 0 }));
+                    }}
+                    placeholder="0"
+                  />
+                </FormField>
+              </div>
+            </div>
+          </RecordFormSection>
 
-          <div className="w-full">
-            <p className="mb-1.5 text-sm font-medium text-foreground">
-              Customer Type
-            </p>
-            <Select
-              value={form.customer_type_id || undefined}
-              onValueChange={(v) =>
-                setForm((f) => ({ ...f, customer_type_id: v }))
-              }
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select customer type" />
-              </SelectTrigger>
-              <SelectContent>
-                {customerTypes.map((x) => (
-                  <SelectItem key={x.id} value={x.id}>
-                    {x.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <OptionalDetails>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField id="branch-number" label="Branch number" optional>
+                <Input
+                  id="branch-number"
+                  className="h-10"
+                  inputMode="numeric"
+                  value={branchNumberInput}
+                  onChange={(e) => {
+                    const formatted = formatNumberInput(e.target.value);
+                    const parsed = parseNumberInput(e.target.value);
+                    setBranchNumberInput(formatted);
+                    setForm((f) => ({ ...f, branch_number: parsed }));
+                  }}
+                  placeholder="0"
+                />
+              </FormField>
 
-          <div className="w-full">
-            <p className="mb-1.5 text-sm font-medium text-foreground">Point Type</p>
-            <Select
-              value={form.point_type_id || undefined}
-              onValueChange={(v) => setForm((f) => ({ ...f, point_type_id: v }))}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select point type" />
-              </SelectTrigger>
-              <SelectContent>
-                {pointTypes.map((x) => (
-                  <SelectItem key={x.id} value={x.id}>
-                    {x.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+              <FormField id="package-amount" label="Package amount" optional>
+                <Input
+                  id="package-amount"
+                  className="h-10"
+                  inputMode="numeric"
+                  value={packageAmountInput}
+                  onChange={(e) => {
+                    const formatted = formatNumberInput(e.target.value);
+                    const parsed = parseNumberInput(e.target.value);
+                    setPackageAmountInput(formatted);
+                    setForm((f) => ({ ...f, package_amount: parsed }));
+                  }}
+                  placeholder="0"
+                />
+              </FormField>
 
-          <div className="w-full min-w-0">
-            <p className="mb-1.5 text-sm font-medium text-foreground">
-              Package Amount (optional)
-            </p>
-            <Input
-              inputMode="numeric"
-              value={packageAmountInput}
-              onChange={(e) => {
-                const formatted = formatNumberInput(e.target.value);
-                const parsed = parseNumberInput(e.target.value);
+              <FormField id="record-bonus" label="Bonus" optional>
+                <Input
+                  id="record-bonus"
+                  className="h-10"
+                  inputMode="numeric"
+                  value={moneyInput}
+                  onChange={(e) => {
+                    const formatted = formatNumberInput(e.target.value);
+                    const parsed = parseNumberInput(e.target.value);
+                    setMoneyInput(formatted);
+                    setForm((f) => ({ ...f, money: parsed }));
+                  }}
+                  placeholder="0"
+                />
+              </FormField>
 
-                setPackageAmountInput(formatted);
-                setForm((f) => ({
-                  ...f,
-                  package_amount: parsed,
-                }));
-              }}
-              placeholder="Enter package amount"
-            />
-          </div>
-
-          <div className="w-full min-w-0">
-            <p className="mb-1.5 text-sm font-medium text-foreground">Points</p>
-            <Input
-              inputMode="numeric"
-              value={pointsInput}
-              onChange={(e) => {
-                const formatted = formatNumberInput(e.target.value);
-                const parsed = parseNumberInput(e.target.value);
-
-                setPointsInput(formatted);
-                setForm((f) => ({
-                  ...f,
-                  points: parsed ?? 0,
-                }));
-              }}
-              placeholder="Enter points"
-            />
-          </div>
-
-          <div className="w-full min-w-0">
-            <p className="mb-1.5 text-sm font-medium text-foreground">
-              Bonus (optional)
-            </p>
-            <Input
-              inputMode="numeric"
-              value={moneyInput}
-              onChange={(e) => {
-                const formatted = formatNumberInput(e.target.value);
-                const parsed = parseNumberInput(e.target.value);
-
-                setMoneyInput(formatted);
-                setForm((f) => ({
-                  ...f,
-                  money: parsed,
-                }));
-              }}
-              placeholder="Enter bonus"
-            />
-          </div>
-
-          <div className="col-span-2">
-            <p className="mb-1.5 text-sm font-medium text-foreground">
-              Note (optional)
-            </p>
-            <Textarea
-              value={form.note ?? ""}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, note: e.target.value || null }))
-              }
-              placeholder="Enter note"
-            />
-          </div>
+              <FormField id="record-note" label="Note" optional>
+                <Input
+                  id="record-note"
+                  className="h-10"
+                  value={form.note ?? ""}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, note: e.target.value || null }))
+                  }
+                  placeholder="Add context for your team"
+                />
+              </FormField>
+            </div>
+          </OptionalDetails>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="border-t bg-card px-4 py-3 sm:px-6 sm:py-4">
           <Button
-            className="cursor-pointer"
+            className="cursor-pointer sm:min-w-24"
             variant="secondary"
             onClick={() => onOpenChange(false)}
             disabled={isLoading}
@@ -471,7 +483,7 @@ export default function CreateDialog({
             Cancel
           </Button>
           <Button
-            className="cursor-pointer"
+            className="cursor-pointer sm:min-w-32"
             onClick={submit}
             disabled={isSaveDisabled || isLoading}
           >
@@ -481,7 +493,7 @@ export default function CreateDialog({
                 Saving...
               </>
             ) : (
-              "Save"
+              "Create record"
             )}
           </Button>
         </DialogFooter>

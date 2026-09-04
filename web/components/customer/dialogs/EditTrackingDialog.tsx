@@ -4,13 +4,13 @@ import { useEffect, useState } from "react";
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
     DialogFooter,
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
     Select,
     SelectContent,
@@ -24,6 +24,11 @@ import { toast } from "sonner";
 import type { TrackingRecordVM } from "../types";
 import { Loader2 } from "lucide-react";
 import { DatePickerDMY } from "@/components/ui/date-picker-dmy";
+import {
+    CustomerFormField,
+    CustomerFormSection,
+    VoucherPicker,
+} from "./CustomerFormUI";
 
 function formatNumberInput(value: string) {
     if (!value) return "";
@@ -165,166 +170,166 @@ export default function EditTrackingDialog({
     return (
         <Dialog open={open} onOpenChange={handleDialogOpenChange}>
             <DialogContent
-                className="max-w-lg"
+                className="max-h-[92dvh] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-w-3xl"
                 onOpenAutoFocus={(e) => e.preventDefault()}
             >
-                <DialogHeader>
+                <DialogHeader className="border-b bg-card px-5 py-4 pr-12 sm:px-6 sm:py-5">
                     <DialogTitle className="text-xl font-semibold tracking-tight">
-                        Edit Customer
+                        Edit customer
                     </DialogTitle>
+                    <DialogDescription>
+                        Update the customer owner, footprint and offer details.
+                    </DialogDescription>
                 </DialogHeader>
 
-                <div className="grid grid-cols-2 gap-3">
-                    <div className="col-span-2">
-                        <p className="mb-1.5 text-sm font-medium text-foreground">Date</p>
-                        <DatePickerDMY
-                            value={form.event_date}
-                            onChange={(iso) =>
-                                setForm((f) => ({ ...f, event_date: iso ?? f.event_date }))
-                            }
-                            placeholder="Select date"
-                        />
-                    </div>
+                <div className="min-h-0 space-y-4 overflow-y-auto bg-muted/25 px-4 py-4 sm:px-6 sm:py-5">
+                    <CustomerFormSection
+                        step={1}
+                        title="Record details"
+                        description="When the customer was added and who owns the relationship."
+                    >
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            <CustomerFormField label="Date">
+                                <DatePickerDMY
+                                    value={form.event_date}
+                                    onChange={(iso) =>
+                                        setForm((f) => ({ ...f, event_date: iso ?? f.event_date }))
+                                    }
+                                    placeholder="Select date"
+                                    className="h-10"
+                                />
+                            </CustomerFormField>
 
-                    <div>
-                        <p className="mb-1.5 text-sm font-medium text-foreground">
-                            Customer Name
-                        </p>
-                        <Input
-                            value={form.customer_name}
-                            onChange={(e) =>
-                                setForm((f) => ({ ...f, customer_name: e.target.value }))
-                            }
-                            placeholder="Enter customer name"
-                        />
-                    </div>
-
-                    <div>
-                        <p className="mb-1.5 text-sm font-medium text-foreground">BD Name</p>
-                        <Select
-                            value={form.bd_id || undefined}
-                            onValueChange={(v) => setForm((f) => ({ ...f, bd_id: v }))}
-                        >
-                            <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Select BD name" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {bdList.map((x) => (
-                                    <SelectItem key={x.id} value={x.id}>
-                                        {x.label}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-
-                    <div>
-                        <p className="mb-1.5 text-sm font-medium text-foreground">Branches</p>
-                        <Input
-                            inputMode="numeric"
-                            value={branchInput}
-                            onChange={(e) => {
-                                const formatted = formatNumberInput(e.target.value);
-                                const parsed = parseNumberInput(e.target.value) ?? 0;
-
-                                setBranchInput(formatted);
-                                setForm((f) => ({
-                                    ...f,
-                                    branch: parsed,
-                                }));
-                            }}
-                            placeholder="Enter branches"
-                        />
-                    </div>
-
-                    <div>
-                        <p className="mb-1.5 text-sm font-medium text-foreground">
-                            In hot list
-                        </p>
-                        <Input
-                            inputMode="numeric"
-                            value={hotListInput}
-                            onChange={(e) => {
-                                const formatted = formatNumberInput(e.target.value);
-                                const parsed = parseNumberInput(e.target.value) ?? 0;
-
-                                setHotListInput(formatted);
-                                setForm((f) => ({
-                                    ...f,
-                                    in_hot_list: parsed,
-                                }));
-                            }}
-                            placeholder="Enter hot list number"
-                        />
-                    </div>
-
-                    <div className="col-span-2">
-                        <p className="mb-1.5 text-sm font-medium text-foreground">
-                            Combo/Voucher
-                        </p>
-                        <Select
-                            value={form.combo_voucher ? "yes" : "none"}
-                            onValueChange={(v) =>
-                                setForm((f) => ({
-                                    ...f,
-                                    combo_voucher: v === "yes",
-                                }))
-                            }
-                        >
-                            <SelectTrigger className="w-full">
-                                <SelectValue>
-                                    {form.combo_voucher ? (
-                                        <span className="inline-flex items-center rounded-md bg-green-100 px-2 py-0.5 text-xs font-bold text-green-700 dark:bg-emerald-950/40 dark:text-emerald-300">
-                                            YES
-                                        </span>
-                                    ) : (
-                                        <span>—</span>
-                                    )}
-                                </SelectValue>
-                            </SelectTrigger>
-
-                            <SelectContent>
-                                <SelectItem
-                                    value="yes"
-                                    className="font-semibold text-green-700 focus:bg-green-50 focus:text-green-700 dark:text-emerald-300 dark:focus:bg-emerald-950/40 dark:focus:text-emerald-300"
+                            <CustomerFormField label="BD name">
+                                <Select
+                                    value={form.bd_id || undefined}
+                                    onValueChange={(v) =>
+                                        setForm((f) => ({ ...f, bd_id: v }))
+                                    }
                                 >
-                                    <span className="inline-flex items-center rounded-md bg-green-100 px-2 py-0.5 text-xs font-bold text-green-700 dark:bg-emerald-950/40 dark:text-emerald-300">
-                                        YES
-                                    </span>
-                                </SelectItem>
+                                    <SelectTrigger className="h-10 w-full data-[size=default]:h-10">
+                                        <SelectValue placeholder="Select BD name" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {bdList.map((x) => (
+                                            <SelectItem key={x.id} value={x.id}>
+                                                {x.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </CustomerFormField>
+                        </div>
+                    </CustomerFormSection>
 
-                                <SelectItem value="none">—</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
+                    <CustomerFormSection
+                        step={2}
+                        title="Customer"
+                        description="Identify the customer and capture their current footprint."
+                    >
+                        <div className="grid gap-4 sm:grid-cols-3">
+                            <CustomerFormField id="edit-customer-name" label="Customer name">
+                                <Input
+                                    id="edit-customer-name"
+                                    className="h-10"
+                                    value={form.customer_name}
+                                    onChange={(e) =>
+                                        setForm((f) => ({ ...f, customer_name: e.target.value }))
+                                    }
+                                    placeholder="Enter customer name"
+                                />
+                            </CustomerFormField>
 
-                    <div>
-                        <p className="mb-1.5 text-sm font-medium text-foreground">Note</p>
-                        <Textarea
-                            value={form.note ?? ""}
-                            onChange={(e) =>
-                                setForm((f) => ({ ...f, note: e.target.value || null }))
-                            }
-                            placeholder="Enter note"
-                        />
-                    </div>
+                            <CustomerFormField id="edit-customer-branches" label="Branches">
+                                <Input
+                                    id="edit-customer-branches"
+                                    className="h-10"
+                                    inputMode="numeric"
+                                    value={branchInput}
+                                    onChange={(e) => {
+                                        const formatted = formatNumberInput(e.target.value);
+                                        const parsed = parseNumberInput(e.target.value) ?? 0;
+                                        setBranchInput(formatted);
+                                        setForm((f) => ({ ...f, branch: parsed }));
+                                    }}
+                                    placeholder="0"
+                                />
+                            </CustomerFormField>
 
-                    <div>
-                        <p className="mb-1.5 text-sm font-medium text-foreground">Info</p>
-                        <Textarea
-                            value={form.info ?? ""}
-                            onChange={(e) =>
-                                setForm((f) => ({ ...f, info: e.target.value || null }))
-                            }
-                            placeholder="Enter info"
-                        />
-                    </div>
+                            <CustomerFormField id="edit-customer-hot-list" label="In hot list">
+                                <Input
+                                    id="edit-customer-hot-list"
+                                    className="h-10"
+                                    inputMode="numeric"
+                                    value={hotListInput}
+                                    onChange={(e) => {
+                                        const formatted = formatNumberInput(e.target.value);
+                                        const parsed = parseNumberInput(e.target.value) ?? 0;
+                                        setHotListInput(formatted);
+                                        setForm((f) => ({ ...f, in_hot_list: parsed }));
+                                    }}
+                                    placeholder="0"
+                                />
+                            </CustomerFormField>
+                        </div>
+                    </CustomerFormSection>
+
+                    <CustomerFormSection
+                        step={3}
+                        title="Offer"
+                        description="Indicate whether this customer uses a combo or voucher."
+                    >
+                        <CustomerFormField label="Combo/Voucher">
+                            <VoucherPicker
+                                value={form.combo_voucher}
+                                onChange={(comboVoucher) =>
+                                    setForm((f) => ({ ...f, combo_voucher: comboVoucher }))
+                                }
+                            />
+                        </CustomerFormField>
+                    </CustomerFormSection>
+
+                    <CustomerFormSection
+                        step={4}
+                        title="Optional details"
+                        description="Add any context that will help the team follow up."
+                    >
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            <CustomerFormField id="edit-customer-note" label="Note" optional>
+                                <Input
+                                    id="edit-customer-note"
+                                    className="h-10"
+                                    value={form.note ?? ""}
+                                    onChange={(e) =>
+                                        setForm((f) => ({ ...f, note: e.target.value || null }))
+                                    }
+                                    placeholder="Enter note"
+                                />
+                            </CustomerFormField>
+
+                            <CustomerFormField
+                                id="edit-customer-info"
+                                label="Information"
+                                optional
+                            >
+                                <Input
+                                    id="edit-customer-info"
+                                    className="h-10"
+                                    value={form.info ?? ""}
+                                    onChange={(e) =>
+                                        setForm((f) => ({ ...f, info: e.target.value || null }))
+                                    }
+                                    placeholder="Enter information"
+                                />
+                            </CustomerFormField>
+                        </div>
+                    </CustomerFormSection>
                 </div>
 
-                <DialogFooter>
+                <DialogFooter className="border-t bg-card px-4 py-3 sm:px-6 sm:py-4">
                     <Button
                         variant="secondary"
-                        className="cursor-pointer"
+                        className="cursor-pointer sm:min-w-24"
                         onClick={() => handleDialogOpenChange(false)}
                         disabled={isLoading}
                     >
@@ -332,7 +337,7 @@ export default function EditTrackingDialog({
                     </Button>
 
                     <Button
-                        className="cursor-pointer"
+                        className="cursor-pointer sm:min-w-32"
                         onClick={handleSave}
                         disabled={isSaveDisabled}
                     >
@@ -342,7 +347,7 @@ export default function EditTrackingDialog({
                                 Saving...
                             </>
                         ) : (
-                            "Save"
+                            "Save changes"
                         )}
                     </Button>
                 </DialogFooter>

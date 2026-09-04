@@ -4,28 +4,27 @@ import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
 
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-
 import { db } from "@/lib/features/performance/offlineDb";
 import { syncPending } from "@/lib/features/performance/syncPending";
 import { toast } from "sonner";
 import type { RecordVM } from "../RecordsPage";
 import type { LocalRecord } from "@/lib/features/performance/offlineDb";
 import { Loader2 } from "lucide-react";
+import { formatDMY } from "@/lib/shared/date";
+import {
+  CategoryPicker,
+  FormField,
+  OptionalDetails,
+  RecordFormSection,
+} from "./RecordFormUI";
 
 function formatNumberInput(value: string) {
   if (!value) return "";
@@ -210,110 +209,114 @@ export default function EditRecordDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
-        className="max-w-md"
+        className="max-h-[92dvh] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-w-2xl"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
-        <DialogHeader>
+        <DialogHeader className="border-b bg-card px-5 py-4 pr-12 sm:px-6 sm:py-5">
           <DialogTitle className="text-xl font-semibold tracking-tight">
-            Edit Record
+            Edit performance record
           </DialogTitle>
+          <DialogDescription>
+            Update the result while keeping the original record context visible.
+          </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-3">
-          <div>
-            <p className="mb-1.5 text-sm font-medium text-foreground">
-              Category
-            </p>
-            <Select
-              value={category}
-              onValueChange={(v: "entertainment" | "restaurant") =>
-                setCategory(v)
-              }
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="entertainment">Entertainment</SelectItem>
-                <SelectItem value="restaurant">Restaurant</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="w-full min-w-0">
-              <p className="mb-1.5 text-sm font-medium text-foreground">
-                Package Amount
-              </p>
-              <Input
-                inputMode="numeric"
-                value={packageAmountInput}
-                onChange={(e) =>
-                  setPackageAmountInput(formatNumberInput(e.target.value))
-                }
-                placeholder="Enter package amount"
-              />
+        <div className="min-h-0 space-y-4 overflow-y-auto bg-muted/25 px-4 py-4 sm:px-6 sm:py-5">
+          {record && (
+            <div className="grid gap-2 rounded-xl border bg-card px-4 py-3 text-sm shadow-xs sm:grid-cols-[1fr_auto] sm:items-center sm:px-5">
+              <div className="min-w-0">
+                <p className="truncate font-semibold text-foreground">
+                  {record.customer_name}
+                </p>
+              </div>
+              <span className="w-fit rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                {formatDMY(record.event_date)}
+              </span>
             </div>
+          )}
 
-            <div className="w-full min-w-0">
-              <p className="mb-1.5 text-sm font-medium text-foreground">
-                Branch Number (Optional)
-              </p>
-              <Input
-                inputMode="numeric"
-                value={branchNumberInput}
-                onChange={(e) =>
-                  setBranchNumberInput(formatNumberInput(e.target.value))
-                }
-                placeholder="Enter branch number"
-              />
+          <RecordFormSection
+            step={1}
+            title="Performance"
+            description="Update the activity category and points earned."
+          >
+            <div className="space-y-4">
+              <FormField label="Category">
+                <CategoryPicker value={category} onChange={setCategory} />
+              </FormField>
+              <FormField id="edit-points" label="Points">
+                <Input
+                  id="edit-points"
+                  className="h-10"
+                  inputMode="numeric"
+                  value={pointsInput}
+                  onChange={(e) =>
+                    setPointsInput(formatNumberInput(e.target.value))
+                  }
+                  placeholder="0"
+                />
+              </FormField>
             </div>
-          </div>
+          </RecordFormSection>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="w-full min-w-0">
-              <p className="mb-1.5 text-sm font-medium text-foreground">
-                Points
-              </p>
-              <Input
-                inputMode="numeric"
-                value={pointsInput}
-                onChange={(e) =>
-                  setPointsInput(formatNumberInput(e.target.value))
-                }
-                placeholder="Enter points"
-              />
+          <OptionalDetails>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField id="edit-package-amount" label="Package amount" optional>
+                <Input
+                  id="edit-package-amount"
+                  className="h-10"
+                  inputMode="numeric"
+                  value={packageAmountInput}
+                  onChange={(e) =>
+                    setPackageAmountInput(formatNumberInput(e.target.value))
+                  }
+                  placeholder="0"
+                />
+              </FormField>
+
+              <FormField id="edit-branch-number" label="Branch number" optional>
+                <Input
+                  id="edit-branch-number"
+                  className="h-10"
+                  inputMode="numeric"
+                  value={branchNumberInput}
+                  onChange={(e) =>
+                    setBranchNumberInput(formatNumberInput(e.target.value))
+                  }
+                  placeholder="Enter branch number"
+                />
+              </FormField>
+
+              <FormField id="edit-bonus" label="Bonus" optional>
+                <Input
+                  id="edit-bonus"
+                  className="h-10"
+                  inputMode="numeric"
+                  value={moneyInput}
+                  onChange={(e) =>
+                    setMoneyInput(formatNumberInput(e.target.value))
+                  }
+                  placeholder="0"
+                />
+              </FormField>
+
+              <FormField id="edit-note" label="Note" optional>
+                <Input
+                  id="edit-note"
+                  className="h-10"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="Add context for your team"
+                />
+              </FormField>
             </div>
-
-            <div className="w-full min-w-0">
-              <p className="mb-1.5 text-sm font-medium text-foreground">
-                Bonus
-              </p>
-              <Input
-                inputMode="numeric"
-                value={moneyInput}
-                onChange={(e) =>
-                  setMoneyInput(formatNumberInput(e.target.value))
-                }
-                placeholder="Enter bonus"
-              />
-            </div>
-          </div>
-
-          <div>
-            <p className="mb-1.5 text-sm font-medium text-foreground">Note</p>
-            <Textarea
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="Enter note"
-            />
-          </div>
+          </OptionalDetails>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="border-t bg-card px-4 py-3 sm:px-6 sm:py-4">
           <Button
             variant="secondary"
-            className="cursor-pointer"
+            className="cursor-pointer sm:min-w-24"
             onClick={() => handleOpenChange(false)}
             disabled={isLoading}
           >
@@ -321,7 +324,7 @@ export default function EditRecordDialog({
           </Button>
 
           <Button
-            className="cursor-pointer"
+            className="cursor-pointer sm:min-w-32"
             onClick={handleSave}
             disabled={isSaveDisabled}
           >
@@ -331,7 +334,7 @@ export default function EditRecordDialog({
                 Saving...
               </>
             ) : (
-              "Save"
+              "Save changes"
             )}
           </Button>
         </DialogFooter>
