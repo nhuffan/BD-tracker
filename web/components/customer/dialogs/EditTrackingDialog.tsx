@@ -18,7 +18,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { useMastersActive } from "@/lib/features/masters/useMasters";
+import { useMasters } from "@/lib/features/masters/useMasters";
 import { supabase } from "@/lib/integrations/supabase/client";
 import { toast } from "sonner";
 import type { TrackingRecordVM } from "../types";
@@ -54,7 +54,8 @@ export default function EditTrackingDialog({
     record: TrackingRecordVM | null;
     onSaved: () => Promise<void> | void;
 }) {
-    const bdList = useMastersActive("bd");
+    const { items: allBdList } = useMasters("bd");
+    const bdList = allBdList.filter((item) => item.is_active);
 
     const [form, setForm] = useState({
         event_date: "",
@@ -114,6 +115,8 @@ export default function EditTrackingDialog({
     const originalNote = (currentRecord.note ?? "").trim();
     const originalInfo = (currentRecord.info ?? "").trim();
     const originalEventDate = currentRecord.event_date ?? "";
+    const selectedBdLabel =
+        allBdList.find((item) => item.id === form.bd_id)?.label ?? "Unknown BD";
 
     const hasChanges =
         normalizedCustomerName !== originalCustomerName ||
@@ -208,7 +211,9 @@ export default function EditTrackingDialog({
                                     }
                                 >
                                     <SelectTrigger className="h-10 w-full data-[size=default]:h-10">
-                                        <SelectValue placeholder="Select BD name" />
+                                        <SelectValue placeholder="Select BD name">
+                                            {selectedBdLabel}
+                                        </SelectValue>
                                     </SelectTrigger>
                                     <SelectContent>
                                         {bdList.map((x) => (

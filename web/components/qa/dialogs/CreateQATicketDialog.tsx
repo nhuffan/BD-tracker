@@ -35,12 +35,7 @@ import {
 } from "../utils/attachmentHelpers";
 import AttachmentLoadingIndicator from "../utils/AttachmentLoadingIndicator";
 import { toast } from "sonner";
-
-const fieldClass =
-  "h-11 w-full min-w-0 rounded-lg border border-input bg-background px-3 text-sm shadow-none";
-
-const labelClass =
-  "mb-2 block text-[11px] font-bold uppercase tracking-wide text-muted-foreground";
+import { QAFormField, QAFormSection, QAPriorityOption } from "./QAFormUI";
 
 type LocalAttachment = QATicketAttachment & {
   file?: File;
@@ -216,7 +211,7 @@ export default function CreateQATicketDialog({
         if (item.local_preview_url) URL.revokeObjectURL(item.local_preview_url);
       });
       setAttachments([]);
-      toast.success("Question submitted successfully.");
+      toast.success("Ticket created successfully.");
       onOpenChange(false);
       onSaved();
     } finally {
@@ -226,81 +221,113 @@ export default function CreateQATicketDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (saving) return;
+        onOpenChange(nextOpen);
+      }}
+    >
       <DialogContent
-        className="flex max-h-[90vh] w-[66vw] max-w-none min-w-[900px] flex-col overflow-hidden rounded-xl border bg-background p-0 shadow-xl"
+        className="max-h-[92dvh] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-w-4xl"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
-
-        <DialogHeader className="border-b px-6 py-4">
-          <DialogTitle className="text-2xl font-bold tracking-tight text-foreground">
-            Submit a New Question
+        <DialogHeader className="border-b bg-card px-5 py-4 pr-12 sm:px-6 sm:py-5">
+          <DialogTitle className="text-xl font-semibold tracking-tight">
+            Create a new ticket
           </DialogTitle>
-          <DialogDescription className="mt-1 text-sm text-muted-foreground">
-            Please provide details regarding your inquiry.
+          <DialogDescription>
+            Provide the details the team needs to review and resolve this ticket.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 space-y-4 overflow-y-auto px-6">
-          <div>
-            <label className={labelClass}>Subject / Title</label>
-            <Input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g., Issue with point calculation"
-              className={fieldClass}
-            />
-          </div>
+        <div className="min-h-0 space-y-4 overflow-y-auto bg-muted/25 px-4 py-4 sm:px-6 sm:py-5">
+          <QAFormSection
+            step={1}
+            title="Ticket details"
+            description="Give the ticket a clear title, requester and priority."
+          >
+            <div className="space-y-4">
+              <QAFormField id="qa-title" label="Subject / title">
+                <Input
+                  id="qa-title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="e.g., Issue with point calculation"
+                  className="h-10"
+                />
+              </QAFormField>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="w-full min-w-0">
-              <label className={labelClass}>Asked by</label>
-              <Select value={askedByBdId} onValueChange={setAskedByBdId}>
-                <SelectTrigger className={fieldClass}>
-                  <SelectValue placeholder="Select BD" />
-                </SelectTrigger>
-                <SelectContent>
-                  {bdOptions.map((bd) => (
-                    <SelectItem key={bd.id} value={bd.id}>
-                      {bd.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <QAFormField label="Asked by">
+                  <Select value={askedByBdId} onValueChange={setAskedByBdId}>
+                    <SelectTrigger className="h-10 w-full data-[size=default]:h-10">
+                      <SelectValue placeholder="Select BD" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {bdOptions.map((bd) => (
+                        <SelectItem key={bd.id} value={bd.id}>
+                          {bd.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </QAFormField>
+
+                <QAFormField label="Priority level">
+                  <Select
+                    value={priority}
+                    onValueChange={(value) => setPriority(value as QAPriority)}
+                  >
+                    <SelectTrigger className="h-10 w-full data-[size=default]:h-10">
+                      <SelectValue>
+                        <QAPriorityOption priority={priority} />
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="low">
+                        <QAPriorityOption priority="low" />
+                      </SelectItem>
+                      <SelectItem value="medium">
+                        <QAPriorityOption priority="medium" />
+                      </SelectItem>
+                      <SelectItem value="high">
+                        <QAPriorityOption priority="high" />
+                      </SelectItem>
+                      <SelectItem value="urgent">
+                        <QAPriorityOption priority="urgent" />
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </QAFormField>
+              </div>
             </div>
+          </QAFormSection>
 
-            <div className="w-full min-w-0">
-              <label className={labelClass}>Priority level</label>
-              <Select
-                value={priority}
-                onValueChange={(value) => setPriority(value as QAPriority)}
-              >
-                <SelectTrigger className={fieldClass}>
-                  <SelectValue placeholder="Select priority" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="low">Low</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
-                  <SelectItem value="urgent">Urgent</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div>
-            <label className={labelClass}>Detailed description</label>
+          <QAFormSection
+            step={2}
+            title="Description"
+            description="Explain what happened, what you expected and any relevant context."
+            optional
+          >
             <Textarea
+              id="qa-description"
+              aria-label="Ticket description"
+              rows={4}
               wrap="soft"
               value={issueDetail}
               onChange={(e) => setIssueDetail(e.target.value)}
-              placeholder="Describe your question or issue in detail..."
-              className="min-h-[140px] whitespace-pre-wrap break-all"
+              placeholder="Describe the ticket issue in detail..."
+              className="min-h-[96px] resize-none whitespace-pre-wrap break-all"
             />
-          </div>
+          </QAFormSection>
 
-          <div>
-            <label className={labelClass}>Attachments (optional)</label>
+          <QAFormSection
+            step={3}
+            title="Attachments"
+            description="Add screenshots or documents when they help explain the issue."
+          >
+            <QAFormField label="Files" optional>
 
             <input
               ref={fileInputRef}
@@ -443,12 +470,13 @@ export default function CreateQATicketDialog({
                 )}
               </div>
             )}
-          </div>
+            </QAFormField>
+          </QAFormSection>
         </div>
 
-        <DialogFooter className="border-t px-6 py-4">
-          <div className="flex h-11 flex-1 items-center">
-            <div className="flex min-h-[44px] flex-1 items-center">
+        <DialogFooter className="border-t bg-card px-4 py-3 sm:px-6 sm:py-4">
+          <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="flex min-h-5 flex-1 items-center">
               {saving && (
                 <AttachmentLoadingIndicator
                   text={
@@ -460,11 +488,11 @@ export default function CreateQATicketDialog({
               )}
             </div>
 
-            <div className="flex shrink-0 items-center gap-3">
+            <div className="flex shrink-0 flex-col-reverse gap-2 sm:flex-row sm:items-center">
               <Button
                 type="button"
-                variant="ghost"
-                className="h-11 rounded-lg px-5 cursor-pointer"
+                variant="secondary"
+                className="h-10 cursor-pointer rounded-lg px-5 sm:min-w-24"
                 onClick={() => onOpenChange(false)}
                 disabled={saving}
               >
@@ -473,11 +501,11 @@ export default function CreateQATicketDialog({
 
               <Button
                 type="button"
-                className="h-11 rounded-lg px-6 cursor-pointer"
+                className="h-10 cursor-pointer rounded-lg px-6 sm:min-w-36"
                 onClick={handleSave}
                 disabled={isDisabled}
               >
-                Submit Question
+                Submit ticket
               </Button>
             </div>
           </div>

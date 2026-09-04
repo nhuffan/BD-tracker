@@ -37,6 +37,7 @@ import {
   getOversizedFiles,
 } from "../utils/attachmentHelpers";
 import AttachmentLoadingIndicator from "../utils/AttachmentLoadingIndicator";
+import { QAFormSection, QAPriorityOption } from "./QAFormUI";
 
 const fieldClass =
   "!h-11 h-11 w-full min-w-0 rounded-lg border border-input bg-background px-3 text-sm shadow-none";
@@ -674,14 +675,20 @@ export default function QATicketDetailDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (saving) return;
+        onOpenChange(nextOpen);
+      }}
+    >
       <DialogContent
-        className="flex max-h-[90vh] w-[66vw] max-w-none min-w-[900px] flex-col overflow-hidden rounded-xl border bg-background p-0"
+        className="max-h-[92dvh] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-w-5xl"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <DialogTitle className="sr-only">{ticket.title}</DialogTitle>
 
-        <div className="border-b px-6 py-4">
+        <div className="border-b bg-card px-5 py-4 pr-12 sm:px-6 sm:py-5">
           <div className="min-w-0">
 
             <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -726,7 +733,13 @@ export default function QATicketDetailDialog({
           </div>
         </div>
 
-        <div className="flex-1 space-y-4 overflow-y-auto px-6">
+        <div className="min-h-0 space-y-4 overflow-y-auto bg-muted/25 px-4 py-4 sm:px-6 sm:py-5">
+          <QAFormSection
+            step={1}
+            title="Ticket details"
+            description="Review the requester, priority and original issue."
+          >
+            <div className="space-y-4">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:items-stretch">
             <div className="min-w-0">
               <div className={labelClass}>Requester</div>
@@ -748,13 +761,23 @@ export default function QATicketDetailDialog({
                   disabled={lockedByOtherAdmin}
                 >
                   <SelectTrigger className={fieldClass}>
-                    <SelectValue />
+                    <SelectValue>
+                      <QAPriorityOption priority={priority} />
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="low">Low</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="urgent">Urgent</SelectItem>
+                    <SelectItem value="low">
+                      <QAPriorityOption priority="low" />
+                    </SelectItem>
+                    <SelectItem value="medium">
+                      <QAPriorityOption priority="medium" />
+                    </SelectItem>
+                    <SelectItem value="high">
+                      <QAPriorityOption priority="high" />
+                    </SelectItem>
+                    <SelectItem value="urgent">
+                      <QAPriorityOption priority="urgent" />
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               ) : (
@@ -783,7 +806,14 @@ export default function QATicketDetailDialog({
               </div>
             </div>
           </div>
+            </div>
+          </QAFormSection>
 
+          <QAFormSection
+            step={2}
+            title="Attachments"
+            description="Review supporting files or add more context when permitted."
+          >
           <div>
             <div className="mb-2 flex items-center gap-2">
               <div className="block text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
@@ -958,7 +988,17 @@ export default function QATicketDetailDialog({
               <div className="text-sm text-primary">None</div>
             )}
           </div>
+          </QAFormSection>
 
+          <QAFormSection
+            step={3}
+            title="Response"
+            description={
+              isAdmin
+                ? "Provide a clear answer for the requester."
+                : "Review the answer or add more details to this ticket."
+            }
+          >
           <div>
             <div className="mb-2 flex items-center justify-between">
               <div className="block text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
@@ -1014,6 +1054,7 @@ export default function QATicketDetailDialog({
               </div>
 
               <Textarea
+                rows={4}
                 value={additionalDescription}
                 onChange={(e) => setAdditionalDescription(e.target.value)}
                 placeholder={
@@ -1023,15 +1064,21 @@ export default function QATicketDetailDialog({
                 }
                 wrap="soft"
                 disabled={lockedByOtherAdmin}
-                className={`min-h-[112px] resize-none break-all whitespace-pre-wrap leading-7 ${lockedByOtherAdmin
+                className={`min-h-[112px] resize-none break-all whitespace-pre-wrap leading-6 ${lockedByOtherAdmin
                   ? "cursor-not-allowed border-amber-200 bg-amber-50 text-muted-foreground opacity-100 dark:border-amber-900/70 dark:bg-amber-950/40"
                   : ""
                   }`}
               />
             </div>
           )}
+          </QAFormSection>
 
           {isAdmin && (
+            <QAFormSection
+              step={4}
+              title="Status"
+              description="Update progress or archive the ticket when work is complete."
+            >
             <div className="space-y-3">
               <div>
                 <div className={labelClass}>Progress</div>
@@ -1104,11 +1151,12 @@ export default function QATicketDetailDialog({
                 </Button>
               </div>
             </div>
+            </QAFormSection>
           )}
         </div>
 
-        <div className="border-t bg-muted/50 dark:bg-muted/70 px-6 py-4">
-          <div className="flex h-11 items-center gap-4">
+        <div className="border-t bg-card px-4 py-3 sm:px-6 sm:py-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="flex min-w-0 flex-1 items-center">
               {saving && !isAdmin && (
                 <AttachmentLoadingIndicator
@@ -1122,7 +1170,7 @@ export default function QATicketDetailDialog({
             </div>
 
             <Button
-              className="h-11 w-full max-w-[220px] rounded-lg cursor-pointer"
+              className="h-10 w-full cursor-pointer rounded-lg sm:max-w-[220px]"
               onClick={handleSave}
               disabled={isDisabledSave || lockedByOtherAdmin}
             >

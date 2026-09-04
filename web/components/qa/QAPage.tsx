@@ -561,7 +561,7 @@ export default function QAPage({
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search question, priority, BD..."
+              placeholder="Search ticket, priority, BD..."
               className="h-10 rounded-lg pl-9 shadow-none"
             />
           </div>
