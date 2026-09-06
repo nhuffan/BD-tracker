@@ -107,7 +107,7 @@ export default function TransferTable({
 
   if (rows.length === 0) {
     return (
-      <div className="rounded-lg border bg-card p-12 text-center text-card-foreground">
+      <div className="rounded-xl border bg-card p-12 text-center text-card-foreground">
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-lg bg-muted text-muted-foreground">
           <Landmark className="h-7 w-7" />
         </div>

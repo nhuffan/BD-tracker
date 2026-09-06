@@ -67,6 +67,24 @@ function getMonthRange(month: string) {
   return { start, end };
 }
 
+function getNearestMonth(months: string[], targetMonth: string) {
+  if (months.length === 0) return null;
+
+  const [targetYear, targetMonthNumber] = targetMonth.split("-").map(Number);
+  if (!targetYear || !targetMonthNumber) return months[0];
+
+  const targetIndex = targetYear * 12 + targetMonthNumber;
+
+  return [...months].sort((a, b) => {
+    const [aYear, aMonth] = a.split("-").map(Number);
+    const [bYear, bMonth] = b.split("-").map(Number);
+    const aDistance = Math.abs(aYear * 12 + aMonth - targetIndex);
+    const bDistance = Math.abs(bYear * 12 + bMonth - targetIndex);
+
+    return aDistance - bDistance || b.localeCompare(a);
+  })[0];
+}
+
 function getMedalByIndex(index: number) {
   if (index === 0) return "🥇";
   if (index === 1) return "🥈";
@@ -150,7 +168,7 @@ export default function MasterManager({
         const { data: trackingRows, error: trackingError } = isBdCategory
           ? await supabase
             .from("customer_tracking")
-            .select("bd_id, event_date, branch, in_hot_list, combo_voucher")
+            .select("bd_id, event_date, branch, in_hot_list, combo_voucher, offer_ads")
           : { data: [], error: null };
 
         if (recordsError) {
@@ -225,7 +243,7 @@ export default function MasterManager({
 
           filteredTrackingRows.forEach((r) => {
             if (!r.bd_id) return;
-            if (r.combo_voucher !== true) return;
+            if (r.combo_voucher !== true && r.offer_ads !== true) return;
 
             if (!trackingMap[r.bd_id]) {
               trackingMap[r.bd_id] = {
@@ -313,11 +331,13 @@ export default function MasterManager({
   }, [category, selectedMonth]);
 
   useEffect(() => {
-    if (category !== "bd_level") return;
-    if (selectedMonth !== ALL_TIME && monthOptions.includes(selectedMonth)) return;
+    if (category !== "bd" && category !== "bd_level") return;
+    if (category === "bd" && selectedMonth === ALL_TIME) return;
+    if (monthOptions.includes(selectedMonth)) return;
 
-    if (monthOptions.length > 0) {
-      setSelectedMonth(monthOptions[0]);
+    const fallbackMonth = getNearestMonth(monthOptions, selectedMonth);
+    if (fallbackMonth) {
+      setSelectedMonth(fallbackMonth);
     }
   }, [category, monthOptions, selectedMonth]);
 
@@ -400,11 +420,13 @@ export default function MasterManager({
     const handler = () => refresh();
 
     window.addEventListener("records-updated", handler);
+    window.addEventListener("customer-tracking-updated", handler);
 
     return () => {
       window.removeEventListener("records-updated", handler);
+      window.removeEventListener("customer-tracking-updated", handler);
     };
-  }, [selectedMonth]);
+  }, [category, selectedMonth]);
 
   function openCreate() {
     setEditing(null);

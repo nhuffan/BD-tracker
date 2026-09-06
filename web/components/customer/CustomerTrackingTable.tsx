@@ -89,6 +89,7 @@ export default function CustomerTrackingTable({
                 return;
             }
 
+            window.dispatchEvent(new Event("customer-tracking-updated"));
             setSelected({});
             setSelectionMode(false);
 
@@ -178,7 +179,7 @@ export default function CustomerTrackingTable({
                     </div>
 
                     <div className="w-full overflow-x-auto">
-                        <table className="w-full min-w-[1200px] table-fixed text-center text-sm">
+                        <table className="w-full min-w-[1340px] table-fixed text-center text-sm">
                             <thead className="sticky top-0 z-10 border-b bg-muted/90 shadow-sm backdrop-blur">
                                 <tr>
                                     <th className="w-[120px] p-2 pl-5 text-left">Date</th>
@@ -206,6 +207,7 @@ export default function CustomerTrackingTable({
 
                                     <th className="w-[120px] p-2">BD Name</th>
                                     <th className="w-[140px] p-2">Combo/Voucher</th>
+                                    <th className="w-[140px] p-2">Advertising</th>
                                     <th className="w-[140px] p-2">Note</th>
                                     <th className="w-[140px] p-2">Information</th>
 
@@ -270,6 +272,16 @@ export default function CustomerTrackingTable({
 
                                             <td className="p-2">
                                                 {r.combo_voucher ? (
+                                                    <span className="inline-flex items-center rounded-md bg-green-100 px-2 py-0.5 text-xs font-bold text-green-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+                                                        YES
+                                                    </span>
+                                                ) : (
+                                                    "—"
+                                                )}
+                                            </td>
+
+                                            <td className="p-2">
+                                                {r.offer_ads ? (
                                                     <span className="inline-flex items-center rounded-md bg-green-100 px-2 py-0.5 text-xs font-bold text-green-700 dark:bg-emerald-950/40 dark:text-emerald-300">
                                                         YES
                                                     </span>

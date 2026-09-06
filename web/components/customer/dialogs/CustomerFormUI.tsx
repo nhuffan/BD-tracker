@@ -1,7 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Check, Minus, TicketCheck } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { Check, Megaphone, Minus, TicketCheck } from "lucide-react";
 
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
@@ -63,30 +64,38 @@ export function CustomerFormField({
   );
 }
 
-export function VoucherPicker({
+function OfferFlagPicker({
   value,
   onChange,
+  ariaLabel,
+  yesDescription,
+  noDescription,
+  yesIcon: YesIcon,
 }: {
   value: boolean;
   onChange: (value: boolean) => void;
+  ariaLabel: string;
+  yesDescription: string;
+  noDescription: string;
+  yesIcon: LucideIcon;
 }) {
   const options = [
     {
       value: true,
       label: "Yes",
-      description: "Uses combo or voucher",
-      icon: TicketCheck,
+      description: yesDescription,
+      icon: YesIcon,
     },
     {
       value: false,
-      label: "None",
-      description: "No combo or voucher",
+      label: "No",
+      description: noDescription,
       icon: Minus,
     },
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Combo or voucher">
+    <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label={ariaLabel}>
       {options.map((option) => {
         const selected = value === option.value;
         const Icon = option.icon;
@@ -116,7 +125,7 @@ export function VoucherPicker({
               />
               <span>
                 <span className="block text-sm font-medium">{option.label}</span>
-                <span className="mt-0.5 block text-xs text-muted-foreground">
+                <span className="mt-0.5 block text-xs text-muted-foreground lg:whitespace-nowrap">
                   {option.description}
                 </span>
               </span>
@@ -135,5 +144,43 @@ export function VoucherPicker({
         );
       })}
     </div>
+  );
+}
+
+export function VoucherPicker({
+  value,
+  onChange,
+}: {
+  value: boolean;
+  onChange: (value: boolean) => void;
+}) {
+  return (
+    <OfferFlagPicker
+      value={value}
+      onChange={onChange}
+      ariaLabel="Combo or voucher"
+      yesDescription="Uses combo or voucher"
+      noDescription="No combo or voucher"
+      yesIcon={TicketCheck}
+    />
+  );
+}
+
+export function AdvertisingPicker({
+  value,
+  onChange,
+}: {
+  value: boolean;
+  onChange: (value: boolean) => void;
+}) {
+  return (
+    <OfferFlagPicker
+      value={value}
+      onChange={onChange}
+      ariaLabel="Advertising"
+      yesDescription="Includes advertising"
+      noDescription="No advertising"
+      yesIcon={Megaphone}
+    />
   );
 }

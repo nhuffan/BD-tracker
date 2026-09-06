@@ -229,7 +229,7 @@ export default function CreateQATicketDialog({
       }}
     >
       <DialogContent
-        className="max-h-[92dvh] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-w-4xl"
+        className="max-h-[92dvh] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-w-3xl"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <DialogHeader className="border-b bg-card px-5 py-4 pr-12 sm:px-6 sm:py-5">
@@ -248,7 +248,7 @@ export default function CreateQATicketDialog({
             description="Give the ticket a clear title, requester and priority."
           >
             <div className="space-y-4">
-              <QAFormField id="qa-title" label="Subject / title">
+              <QAFormField id="qa-title" label="Subject / Title">
                 <Input
                   id="qa-title"
                   value={title}

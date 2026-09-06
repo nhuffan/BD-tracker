@@ -8,6 +8,7 @@ export type TrackingRecordRow = {
   bd_id: string | null;
 
   combo_voucher: boolean | null;
+  offer_ads: boolean | null;
 
   note: string | null;
   info: string | null;
@@ -28,4 +29,5 @@ export type TrackingFilters = {
   customer_name?: string;
   bd_id?: string;
   combo_voucher?: "all" | "yes" | "none";
+  offer_ads?: "all" | "yes" | "none";
 };

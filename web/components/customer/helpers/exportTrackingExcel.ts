@@ -32,6 +32,7 @@ export function exportTrackingToExcel(
         : "",
     "BD Name": maps?.bd?.[r.bd_id ?? ""] ?? "",
     "Combo/Voucher": yesNo(r.combo_voucher),
+    Advertising: yesNo(r.offer_ads),
     Note: r.note ?? "",
     Info: r.info ?? "",
   }));

@@ -323,13 +323,13 @@ export default function InvoiceTable({
 
   if (rows.length === 0) {
     return (
-      <div className="rounded-lg border bg-card p-12 text-center text-card-foreground">
+      <div className="rounded-xl border bg-card p-12 text-center text-card-foreground">
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-lg bg-muted text-muted-foreground">
           <Receipt className="h-7 w-7" />
         </div>
         <div className="mt-4 text-base font-bold">Chưa tìm thấy hóa đơn nào</div>
         <div className="mt-1 text-sm text-muted-foreground">
-          Không có kết quả trùng khớp với bộ lọc tháng, trạng thái hoặc từ khóa tìm kiếm. Vui lòng thay đổi bộ lọc hoặc bấm &quot;+ Tạo mục mới&quot;.
+          Không có kết quả trùng khớp với bộ lọc tháng, trạng thái hoặc từ khóa tìm kiếm. Vui lòng thay đổi bộ lọc hoặc bấm &quot;Tạo hoá đơn&quot;.
         </div>
       </div>
     );

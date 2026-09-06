@@ -26,6 +26,7 @@ import { toast } from "sonner";
 import {
   CustomerFormField,
   CustomerFormSection,
+  AdvertisingPicker,
   VoucherPicker,
 } from "./CustomerFormUI";
 
@@ -61,6 +62,7 @@ export default function CreateTrackingDialog({
     in_hot_list: 0,
     bd_id: "",
     combo_voucher: false,
+    offer_ads: false,
     note: null as string | null,
     info: null as string | null,
   });
@@ -85,6 +87,7 @@ export default function CreateTrackingDialog({
         in_hot_list: form.in_hot_list,
         bd_id: form.bd_id,
         combo_voucher: form.combo_voucher,
+        offer_ads: form.offer_ads,
         note: form.note,
         info: form.info,
       });
@@ -94,6 +97,7 @@ export default function CreateTrackingDialog({
         return;
       }
 
+      window.dispatchEvent(new Event("customer-tracking-updated"));
       onOpenChange(false);
       onCreated();
 
@@ -104,6 +108,7 @@ export default function CreateTrackingDialog({
         in_hot_list: 0,
         bd_id: "",
         combo_voucher: false,
+        offer_ads: false,
         note: null,
         info: null,
       });
@@ -123,7 +128,7 @@ export default function CreateTrackingDialog({
         onOpenChange(nextOpen);
       }}
     >
-      <DialogContent className="max-h-[92dvh] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-w-3xl">
+      <DialogContent className="max-h-[92dvh] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-w-4xl">
         <DialogHeader className="border-b bg-card px-5 py-4 pr-12 sm:px-6 sm:py-5">
           <DialogTitle className="text-xl font-semibold tracking-tight">
             Create customer
@@ -226,16 +231,27 @@ export default function CreateTrackingDialog({
           <CustomerFormSection
             step={3}
             title="Offer"
-            description="Indicate whether this customer uses a combo or voucher."
+            description="Indicate whether this customer uses a combo, voucher or advertising."
           >
-            <CustomerFormField label="Combo/Voucher">
-              <VoucherPicker
-                value={form.combo_voucher}
-                onChange={(comboVoucher) =>
-                  setForm((f) => ({ ...f, combo_voucher: comboVoucher }))
-                }
-              />
-            </CustomerFormField>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <CustomerFormField label="Combo/Voucher">
+                <VoucherPicker
+                  value={form.combo_voucher}
+                  onChange={(comboVoucher) =>
+                    setForm((f) => ({ ...f, combo_voucher: comboVoucher }))
+                  }
+                />
+              </CustomerFormField>
+
+              <CustomerFormField label="Advertising">
+                <AdvertisingPicker
+                  value={form.offer_ads}
+                  onChange={(offerAds) =>
+                    setForm((f) => ({ ...f, offer_ads: offerAds }))
+                  }
+                />
+              </CustomerFormField>
+            </div>
           </CustomerFormSection>
 
           <CustomerFormSection

@@ -27,6 +27,7 @@ import { DatePickerDMY } from "@/components/ui/date-picker-dmy";
 import {
     CustomerFormField,
     CustomerFormSection,
+    AdvertisingPicker,
     VoucherPicker,
 } from "./CustomerFormUI";
 
@@ -64,6 +65,7 @@ export default function EditTrackingDialog({
         in_hot_list: 0,
         bd_id: "",
         combo_voucher: false,
+        offer_ads: false,
         note: null as string | null,
         info: null as string | null,
     });
@@ -82,6 +84,7 @@ export default function EditTrackingDialog({
             in_hot_list: record.in_hot_list ?? 0,
             bd_id: record.bd_id ?? "",
             combo_voucher: record.combo_voucher ?? false,
+            offer_ads: record.offer_ads ?? false,
             note: record.note ?? null,
             info: record.info ?? null,
         });
@@ -112,6 +115,7 @@ export default function EditTrackingDialog({
     const originalHotList = currentRecord.in_hot_list ?? 0;
     const originalBdId = currentRecord.bd_id ?? "";
     const originalComboVoucher = currentRecord.combo_voucher ?? false;
+    const originalOfferAds = currentRecord.offer_ads ?? false;
     const originalNote = (currentRecord.note ?? "").trim();
     const originalInfo = (currentRecord.info ?? "").trim();
     const originalEventDate = currentRecord.event_date ?? "";
@@ -125,6 +129,7 @@ export default function EditTrackingDialog({
         form.in_hot_list !== originalHotList ||
         form.bd_id !== originalBdId ||
         form.combo_voucher !== originalComboVoucher ||
+        form.offer_ads !== originalOfferAds ||
         normalizedNote !== originalNote ||
         normalizedInfo !== originalInfo;
 
@@ -146,6 +151,7 @@ export default function EditTrackingDialog({
                     in_hot_list: form.in_hot_list,
                     bd_id: form.bd_id,
                     combo_voucher: form.combo_voucher,
+                    offer_ads: form.offer_ads,
                     note: normalizedNote || null,
                     info: normalizedInfo || null,
                     updated_at: new Date().toISOString(),
@@ -157,6 +163,7 @@ export default function EditTrackingDialog({
                 return;
             }
 
+            window.dispatchEvent(new Event("customer-tracking-updated"));
             onOpenChange(false);
             await onSaved();
             toast.success("Record updated successfully.");
@@ -173,7 +180,7 @@ export default function EditTrackingDialog({
     return (
         <Dialog open={open} onOpenChange={handleDialogOpenChange}>
             <DialogContent
-                className="max-h-[92dvh] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-w-3xl"
+                className="max-h-[92dvh] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-w-5xl"
                 onOpenAutoFocus={(e) => e.preventDefault()}
             >
                 <DialogHeader className="border-b bg-card px-5 py-4 pr-12 sm:px-6 sm:py-5">
@@ -282,16 +289,27 @@ export default function EditTrackingDialog({
                     <CustomerFormSection
                         step={3}
                         title="Offer"
-                        description="Indicate whether this customer uses a combo or voucher."
+                        description="Indicate whether this customer uses a combo, voucher or advertising."
                     >
-                        <CustomerFormField label="Combo/Voucher">
-                            <VoucherPicker
-                                value={form.combo_voucher}
-                                onChange={(comboVoucher) =>
-                                    setForm((f) => ({ ...f, combo_voucher: comboVoucher }))
-                                }
-                            />
-                        </CustomerFormField>
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            <CustomerFormField label="Combo/Voucher">
+                                <VoucherPicker
+                                    value={form.combo_voucher}
+                                    onChange={(comboVoucher) =>
+                                        setForm((f) => ({ ...f, combo_voucher: comboVoucher }))
+                                    }
+                                />
+                            </CustomerFormField>
+
+                            <CustomerFormField label="Advertising">
+                                <AdvertisingPicker
+                                    value={form.offer_ads}
+                                    onChange={(offerAds) =>
+                                        setForm((f) => ({ ...f, offer_ads: offerAds }))
+                                    }
+                                />
+                            </CustomerFormField>
+                        </div>
                     </CustomerFormSection>
 
                     <CustomerFormSection

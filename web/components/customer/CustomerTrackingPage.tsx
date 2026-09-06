@@ -161,6 +161,14 @@ export default function CustomerTrackingPage({
           return false;
         }
 
+        if (filters.offer_ads === "yes" && r.offer_ads !== true) {
+          return false;
+        }
+
+        if (filters.offer_ads === "none" && r.offer_ads === true) {
+          return false;
+        }
+
         if (search) {
           const keyword = search.toLowerCase();
 
