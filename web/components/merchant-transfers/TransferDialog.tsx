@@ -109,7 +109,15 @@ function getMerchantLookupRows(rows: MerchantTransferRow[], query: string) {
   if (!keyword) return [];
 
   const latestByMerchantAccount = new Map<string, MerchantTransferRow>();
-  rows.forEach((item) => {
+  const newestTransfers = [...rows].sort((left, right) => {
+    const leftCreatedAt = Date.parse(left.created_at);
+    const rightCreatedAt = Date.parse(right.created_at);
+
+    if (Number.isNaN(leftCreatedAt) || Number.isNaN(rightCreatedAt)) return 0;
+    return rightCreatedAt - leftCreatedAt;
+  });
+
+  newestTransfers.forEach((item) => {
     const key = getTransferLookupKey(item);
     if (key.replace(/\|/g, "") && !latestByMerchantAccount.has(key)) {
       latestByMerchantAccount.set(key, item);
