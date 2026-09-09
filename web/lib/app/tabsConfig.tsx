@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import {
   BarChart3,
   ClipboardCheck,
+  FileCheck2,
   Landmark,
   Megaphone,
   MessageSquareText,
@@ -62,8 +63,16 @@ const MerchantTransfersPage = dynamic(() => import("@/components/merchant-transf
   loading: () => <TabLoading label="Merchant Transfers" />,
 });
 
+const ReconciliationPage = dynamic(() => import("@/components/reconciliation/ReconciliationPage"), {
+  loading: () => <TabLoading label="Reconciliation" />,
+});
+
 const HIDDEN_TAB_IDS = new Set(["ads-tracking", "approvals"]);
-const ACCOUNTANT_TAB_IDS = new Set(["merchant-invoices", "merchant-transfers"]);
+const ACCOUNTANT_TAB_IDS = new Set([
+  "merchant-invoices",
+  "merchant-transfers",
+  "reconciliation",
+]);
 
 const ALL_TABS_REGISTRY: TabItem[] = [
   {
@@ -123,6 +132,12 @@ const ALL_TABS_REGISTRY: TabItem[] = [
     render: ({ canManageFinanceTabs }) => (
       <MerchantTransfersPage isAdmin={canManageFinanceTabs} />
     ),
+  },
+  {
+    id: "reconciliation",
+    label: "Reconciliation",
+    icon: FileCheck2,
+    render: () => <ReconciliationPage />,
   },
 ];
 
