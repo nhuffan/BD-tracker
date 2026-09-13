@@ -2,16 +2,18 @@
 
 import { useRouter } from "next/navigation";
 import { ShieldX } from "lucide-react";
-import ThemeToggle from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
+import SettingsMenu from "@/components/SettingsMenu";
+import { useI18n } from "@/lib/i18n/I18nProvider";
 
 export default function AccountDisabledPage() {
   const router = useRouter();
+  const { t } = useI18n();
 
   return (
     <div className="relative flex min-h-screen items-center justify-center bg-muted/30 p-4">
       <div className="absolute right-4 top-4">
-        <ThemeToggle className="h-10 w-10" />
+        <SettingsMenu className="h-10 w-10" />
       </div>
 
       <div className="w-full max-w-md rounded-xl border bg-card p-5 text-card-foreground shadow-sm">
@@ -20,10 +22,9 @@ export default function AccountDisabledPage() {
         </div>
 
         <div className="space-y-2">
-          <h1 className="text-xl font-semibold">Account disabled</h1>
+          <h1 className="text-xl font-semibold">{t("Account disabled")}</h1>
           <p className="text-sm leading-6 text-muted-foreground">
-            This account no longer has access. The company is too terrible to
-            use Pink&apos;s website. If you really need a comeback, contact her.
+            {t("This account no longer has access. The company is too terrible to use Pink's website. If you really need a comeback, contact her.")}
           </p>
         </div>
 
@@ -32,7 +33,7 @@ export default function AccountDisabledPage() {
           variant="outline"
           onClick={() => router.replace("/login")}
         >
-          Back to login
+          {t("Back to login")}
         </Button>
       </div>
     </div>

@@ -5,10 +5,12 @@ import { supabase } from "@/lib/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
-import ThemeToggle from "@/components/ThemeToggle";
+import SettingsMenu from "@/components/SettingsMenu";
+import { useI18n } from "@/lib/i18n/I18nProvider";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { t } = useI18n();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -39,16 +41,16 @@ export default function LoginPage() {
       });
 
       if (error) {
-        setMsg("Invalid email or password.");
+        setMsg(t("Invalid email or password."));
         return;
       }
 
-      setMsg("Login successful. Redirecting...");
+      setMsg(t("Login successful. Redirecting..."));
       router.replace("/");
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : String(error);
-      setMsg(`Login exception: ${message}`);
+      setMsg(t("Login exception: {{message}}", { message }));
     } finally {
       setLoading(false);
     }
@@ -57,14 +59,14 @@ export default function LoginPage() {
   return (
     <div className="relative flex min-h-screen items-center justify-center bg-muted/30 p-4">
       <div className="absolute right-4 top-4">
-        <ThemeToggle className="h-10 w-10" />
+        <SettingsMenu className="h-10 w-10" />
       </div>
 
       <div className="w-full max-w-sm space-y-4 rounded-xl border bg-card p-4 text-card-foreground shadow-sm">
         <div className="space-y-1">
-          <h1 className="text-xl font-semibold">Login</h1>
+          <h1 className="text-xl font-semibold">{t("Login")}</h1>
           <p className="text-sm text-muted-foreground">
-            Sign in with your assigned account.
+            {t("Sign in with your assigned account.")}
           </p>
         </div>
 
@@ -76,7 +78,7 @@ export default function LoginPage() {
         />
 
         <Input
-          placeholder="Password"
+          placeholder={t("Password")}
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -89,7 +91,7 @@ export default function LoginPage() {
         />
 
         <Button className="w-full cursor-pointer" onClick={signIn} disabled={loading}>
-          {loading ? "Logging in..." : "Login"}
+          {loading ? t("Logging in...") : t("Login")}
         </Button>
 
         {msg && <p className="text-sm text-muted-foreground">{msg}</p>}

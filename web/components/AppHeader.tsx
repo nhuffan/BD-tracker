@@ -12,8 +12,9 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   LogOut,
 } from "lucide-react";
-import ThemeToggle from "@/components/ThemeToggle";
+import SettingsMenu from "@/components/SettingsMenu";
 import type { TabItem } from "@/lib/app/tabsConfig";
+import { useI18n } from "@/lib/i18n/I18nProvider";
 
 function getInitialsFromEmail(email?: string | null) {
   if (!email) return "??";
@@ -41,6 +42,7 @@ export default function AppHeader({
   tabs: TabItem[];
 }) {
   const initials = useMemo(() => getInitialsFromEmail(email), [email]);
+  const { t } = useI18n();
 
   const tabClass = `
     h-16 rounded-none border-0 border-b-2 border-transparent
@@ -86,7 +88,7 @@ export default function AppHeader({
                 return (
                   <TabsTrigger key={tab.id} value={tab.id} className={tabClass}>
                     <Icon className="mr-2 h-5 w-5" />
-                    {tab.label}
+                    {t(tab.label)}
                   </TabsTrigger>
                 );
               })}
@@ -95,6 +97,7 @@ export default function AppHeader({
         </div>
 
         <div className="flex justify-end gap-2 pl-4">
+          <SettingsMenu className="h-10 w-10" />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="rounded-full outline-none ring-offset-background transition focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
@@ -112,15 +115,13 @@ export default function AppHeader({
                 className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-3 transition-colors hover:bg-muted focus:bg-muted"
               >
                 <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
-                  {email ?? "No email"}
+                  {email ?? t("No email")}
                 </span>
 
                 <LogOut className="h-4 w-4 shrink-0 text-muted-foreground" />
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-
-          <ThemeToggle className="h-10 w-10" />
         </div>
       </div>
     </header>

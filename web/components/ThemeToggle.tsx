@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useI18n } from "@/lib/i18n/I18nProvider";
 
 type ThemeMode = "light" | "dark";
 
@@ -22,6 +23,7 @@ export default function ThemeToggle({
 }) {
   const [mounted, setMounted] = useState(false);
   const [theme, setTheme] = useState<ThemeMode>("light");
+  const { t } = useI18n();
 
   useEffect(() => {
     const frameId = window.requestAnimationFrame(() => {
@@ -46,8 +48,8 @@ export default function ThemeToggle({
       size="icon"
       className={`cursor-pointer ${className ?? ""}`}
       onClick={handleToggle}
-      aria-label={mounted && theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-      title={mounted && theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+      aria-label={t(mounted && theme === "dark" ? "Switch to light mode" : "Switch to dark mode")}
+      title={t(mounted && theme === "dark" ? "Switch to light mode" : "Switch to dark mode")}
     >
       {mounted && theme === "dark" ? (
         <Sun className="h-4 w-4" />

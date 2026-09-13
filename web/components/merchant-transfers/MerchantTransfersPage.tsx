@@ -145,15 +145,19 @@ export default function MerchantTransfersPage({ isAdmin }: { isAdmin: boolean })
     return [ALL, ...months];
   }, [rows]);
 
+  const monthRows = useMemo(
+    () =>
+      selectedMonth === ALL
+        ? rows
+        : rows.filter((row) => getMonthKey(row.transaction_date) === selectedMonth),
+    [rows, selectedMonth]
+  );
+
   const filteredRows = useMemo(() => {
     const keyword = search.trim().toLowerCase();
 
-    return [...rows]
+    return [...monthRows]
       .filter((row) => {
-        if (selectedMonth !== ALL && getMonthKey(row.transaction_date) !== selectedMonth) {
-          return false;
-        }
-
         if (statusFilter !== ALL && row.status !== statusFilter) {
           return false;
         }
@@ -174,18 +178,18 @@ export default function MerchantTransfersPage({ isAdmin }: { isAdmin: boolean })
         if (a.sequence_no !== b.sequence_no) return a.sequence_no - b.sequence_no;
         return a.created_at.localeCompare(b.created_at);
       });
-  }, [rows, search, selectedMonth, statusFilter]);
+  }, [monthRows, search, statusFilter]);
 
   const stats = useMemo(() => {
     const byStatus = {
-      not_transferred: rows.filter((row) => row.status === "not_transferred"),
-      ready: rows.filter((row) => row.status === "ready"),
-      transferred: rows.filter((row) => row.status === "transferred"),
+      not_transferred: monthRows.filter((row) => row.status === "not_transferred"),
+      ready: monthRows.filter((row) => row.status === "ready"),
+      transferred: monthRows.filter((row) => row.status === "transferred"),
     };
 
     return {
-      total: rows.length,
-      totalAmount: rows.reduce((sum, row) => sum + Number(row.amount || 0), 0),
+      total: monthRows.length,
+      totalAmount: monthRows.reduce((sum, row) => sum + Number(row.amount || 0), 0),
       notTransferredCount: byStatus.not_transferred.length,
       notTransferredAmount: byStatus.not_transferred.reduce(
         (sum, row) => sum + Number(row.amount || 0),
@@ -198,10 +202,10 @@ export default function MerchantTransfersPage({ isAdmin }: { isAdmin: boolean })
         (sum, row) => sum + Number(row.amount || 0),
         0
       ),
-      merchants: new Set(rows.map((row) => row.merchant.trim().toLowerCase()).filter(Boolean))
+      merchants: new Set(monthRows.map((row) => row.merchant.trim().toLowerCase()).filter(Boolean))
         .size,
     };
-  }, [rows]);
+  }, [monthRows]);
 
   function openCreate() {
     setEditingTransfer(null);
@@ -533,7 +537,7 @@ export default function MerchantTransfersPage({ isAdmin }: { isAdmin: boolean })
 
       <div className="flex items-center justify-between px-1 text-xs text-muted-foreground">
         <span>
-          Showing <strong className="text-primary">{filteredRows.length}</strong> / {rows.length}{" "}
+          Showing <strong className="text-primary">{filteredRows.length}</strong> / {monthRows.length}{" "}
           transactions
           {selectedMonth !== ALL && ` (${formatMonthLabel(selectedMonth)})`}
           {statusFilter !== ALL && ` • Status: ${TRANSFER_STATUS_LABEL[statusFilter]}`}

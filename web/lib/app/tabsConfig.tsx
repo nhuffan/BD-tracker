@@ -15,6 +15,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { UserRoleContextValue } from "@/lib/auth/userRoleContext";
+import { useI18n } from "@/lib/i18n/I18nProvider";
 
 export interface TabItem {
   id: string;
@@ -24,9 +25,10 @@ export interface TabItem {
 }
 
 function TabLoading({ label }: { label: string }) {
+  const { t } = useI18n();
   return (
     <div className="flex min-h-[320px] items-center justify-center text-sm font-medium text-muted-foreground">
-      Loading {label}...
+      {t("Loading {{label}}...", { label: t(label) })}
     </div>
   );
 }

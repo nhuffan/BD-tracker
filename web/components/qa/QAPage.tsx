@@ -22,6 +22,8 @@ import { useMasters } from "@/lib/features/masters/useMasters";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { deleteCloudinaryAssets } from "@/lib/integrations/cloudinary/delete-assets";
+import { useI18n } from "@/lib/i18n/I18nProvider";
+import type { Locale } from "@/lib/i18n/translations";
 
 type QAViewTab = "active" | "in_progress" | "done" | "archive";
 
@@ -91,9 +93,9 @@ function getInitials(name?: string) {
   return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
 }
 
-function formatExportDateTime(value?: string | null) {
+function formatExportDateTime(value: string | null | undefined, locale: Locale) {
   if (!value) return "—";
-  return new Date(value).toLocaleString("en-US", {
+  return new Date(value).toLocaleString(toBrowserLocale(locale), {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -102,23 +104,29 @@ function formatExportDateTime(value?: string | null) {
   });
 }
 
-function formatFooterTime(value?: string | null) {
+function formatFooterTime(value: string | null | undefined, locale: Locale) {
   if (!value) return "—";
 
   const d = new Date(value);
 
-  const date = d.toLocaleDateString("en-US", {
+  const date = d.toLocaleDateString(toBrowserLocale(locale), {
     month: "short",
     day: "numeric",
     year: "numeric",
   });
 
-  const time = d.toLocaleTimeString("en-US", {
+  const time = d.toLocaleTimeString(toBrowserLocale(locale), {
     hour: "2-digit",
     minute: "2-digit",
   });
 
   return `${date} | ${time}`;
+}
+
+function toBrowserLocale(locale: Locale) {
+  if (locale === "vi") return "vi-VN";
+  if (locale === "zh-CN") return "zh-CN";
+  return "en-US";
 }
 
 function upsertTicket(list: QATicket[], next: QATicket) {
@@ -137,6 +145,7 @@ export default function QAPage({
   isAdmin: boolean;
   currentUserId: string;
 }) {
+  const { locale, t } = useI18n();
   const [loading, setLoading] = useState(false);
   const [tickets, setTickets] = useState<QATicket[]>([]);
   const [search, setSearch] = useState("");
@@ -444,7 +453,8 @@ export default function QAPage({
           children: [
             new TextRun({
               text: `----- ${ticket.ticket_code} | ${formatExportDateTime(
-                ticket.created_at
+                ticket.created_at,
+                locale
               )} -----`,
               bold: true,
             }),
@@ -519,7 +529,7 @@ export default function QAPage({
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
         <div>
           <h1 className="text-[30px] font-extrabold tracking-tight text-foreground">
-            Ticket Dashboard <span className="text-foreground">({stats.active})</span>
+            {t("Ticket Dashboard")} <span className="text-foreground">({stats.active})</span>
           </h1>
         </div>
 
@@ -534,7 +544,7 @@ export default function QAPage({
               disabled={archivedTickets.length === 0}
             >
               <Download className="mr-1 h-4 w-4" />
-              Export
+              {t("Export")}
             </Button>
           )}
 
@@ -543,7 +553,7 @@ export default function QAPage({
             onClick={() => setCreateOpen(true)}
           >
             <Plus className="mr-1 h-4 w-4" />
-            Create
+            {t("Create")}
           </Button>
         </div>
       </div>
@@ -561,7 +571,7 @@ export default function QAPage({
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search ticket, priority, BD..."
+              placeholder={t("Search ticket, priority, BD...")}
               className="h-10 rounded-lg pl-9 shadow-none"
             />
           </div>
@@ -579,7 +589,7 @@ export default function QAPage({
                 : "text-muted-foreground hover:bg-muted"
                 }`}
             >
-              Active ({stats.active})
+              {t("Active")} ({stats.active})
             </button>
 
             <button
@@ -594,7 +604,7 @@ export default function QAPage({
                 : "text-muted-foreground hover:bg-muted"
                 }`}
             >
-              In Progress ({stats.inProgress})
+              {t("In Progress")} ({stats.inProgress})
             </button>
 
             <button
@@ -609,7 +619,7 @@ export default function QAPage({
                 : "text-muted-foreground hover:bg-muted"
                 }`}
             >
-              Done ({stats.done})
+              {t("Done")} ({stats.done})
             </button>
 
             <button
@@ -624,7 +634,7 @@ export default function QAPage({
                 : "text-muted-foreground hover:bg-muted"
                 }`}
             >
-              Archive ({stats.archive})
+              {t("Archive")} ({stats.archive})
             </button>
           </div>
 
@@ -639,7 +649,7 @@ export default function QAPage({
                 setSelected({});
               }}
             >
-              Cancel
+              {t("Cancel")}
             </Button>
           )}
 
@@ -649,13 +659,13 @@ export default function QAPage({
               className="rounded-lg cursor-pointer"
               onClick={openDeleteConfirm}
             >
-              {selectionMode ? `Delete (${selectedIds.length})` : "Delete"}
+              {selectionMode ? `${t("Delete")} (${selectedIds.length})` : t("Delete")}
             </Button>
           )}
         </div>
 
         {displayTickets.length === 0 && !(loading || bdLoading) ? (
-          <div className="p-5 text-sm text-muted-foreground">No tickets found</div>
+          <div className="p-5 text-sm text-muted-foreground">{t("No tickets found")}</div>
         ) : (
           <div className="grid min-h-[240px] grid-cols-1 gap-4 p-5 md:grid-cols-2 xl:grid-cols-3">
             {displayTickets.map((ticket) => {
@@ -710,7 +720,7 @@ export default function QAPage({
                           )}`}
                         >
                           <span className="mr-1 h-1.5 w-1.5 rounded-full bg-current opacity-70" />
-                          {ticket.priority}
+                          {t(ticket.priority.toUpperCase())}
                         </span>
 
                         {selectionMode && (
@@ -761,40 +771,40 @@ export default function QAPage({
                         <>
                           <Archive className="h-[10px] w-[10px] shrink-0 text-muted-foreground" />
                           <span className="uppercase tracking-[0.04em] leading-none">
-                            Archived:
+                            {t("Archived:")}
                           </span>
                           <span className="font-semibold text-foreground leading-none">
-                            {formatFooterTime(ticket.updated_at ?? ticket.archived_at)}
+                            {formatFooterTime(ticket.updated_at ?? ticket.archived_at, locale)}
                           </span>
                         </>
                       ) : ticket.is_done ? (
                         <>
                           <CheckCircle2 className="h-[10px] w-[10px] shrink-0 text-muted-foreground" />
                           <span className="uppercase tracking-[0.04em] leading-none">
-                            Done:
+                            {t("Done:")}
                           </span>
                           <span className="font-semibold text-foreground leading-none">
-                            {formatFooterTime(ticket.updated_at ?? ticket.done_at)}
+                            {formatFooterTime(ticket.updated_at ?? ticket.done_at, locale)}
                           </span>
                         </>
                       ) : ticket.is_in_progress ? (
                         <>
                           <CircleDashed className="h-[10px] w-[10px] shrink-0 text-muted-foreground" />
                           <span className="uppercase tracking-[0.04em] leading-none">
-                            Updated:
+                            {t("Updated:")}
                           </span>
                           <span className="font-semibold text-foreground leading-none">
-                            {formatFooterTime(ticket.updated_at ?? ticket.in_progress_at)}
+                            {formatFooterTime(ticket.updated_at ?? ticket.in_progress_at, locale)}
                           </span>
                         </>
                       ) : (
                         <>
                           <Clock3 className="h-[10px] w-[10px] shrink-0 text-muted-foreground" />
                           <span className="uppercase tracking-[0.04em] leading-none">
-                            Created:
+                            {t("Created:")}
                           </span>
                           <span className="font-semibold text-foreground leading-none">
-                            {formatFooterTime(ticket.created_at)}
+                            {formatFooterTime(ticket.created_at, locale)}
                           </span>
                         </>
                       )}

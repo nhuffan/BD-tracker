@@ -259,15 +259,19 @@ export default function MerchantInvoicesPage({
     return [ALL, ...months];
   }, [rows]);
 
+  const monthRows = useMemo(
+    () =>
+      selectedMonth === ALL
+        ? rows
+        : rows.filter((row) => getMonthKey(row.created_at) === selectedMonth),
+    [rows, selectedMonth]
+  );
+
   const filteredRows = useMemo(() => {
     const keyword = search.trim().toLowerCase();
 
-    return [...rows]
+    return [...monthRows]
       .filter((row) => {
-        if (selectedMonth !== ALL && getMonthKey(row.created_at) !== selectedMonth) {
-          return false;
-        }
-
         if (statusFilter !== ALL && row.status !== statusFilter) {
           return false;
         }
@@ -289,18 +293,18 @@ export default function MerchantInvoicesPage({
         if (a.sequence_no !== b.sequence_no) return a.sequence_no - b.sequence_no;
         return a.created_at.localeCompare(b.created_at);
       });
-  }, [rows, search, selectedMonth, statusFilter]);
+  }, [monthRows, search, statusFilter]);
 
   const stats = useMemo(() => {
     const byStatus = {
-      not_ready: rows.filter((row) => row.status === "not_ready"),
-      ready: rows.filter((row) => row.status === "ready"),
-      issued: rows.filter((row) => row.status === "issued"),
+      not_ready: monthRows.filter((row) => row.status === "not_ready"),
+      ready: monthRows.filter((row) => row.status === "ready"),
+      issued: monthRows.filter((row) => row.status === "issued"),
     };
 
     return {
-      total: rows.length,
-      totalAmount: rows.reduce((sum, row) => sum + Number(row.invoice_amount || 0), 0),
+      total: monthRows.length,
+      totalAmount: monthRows.reduce((sum, row) => sum + Number(row.invoice_amount || 0), 0),
       notReadyCount: byStatus.not_ready.length,
       notReadyAmount: byStatus.not_ready.reduce(
         (sum, row) => sum + Number(row.invoice_amount || 0),
@@ -317,7 +321,7 @@ export default function MerchantInvoicesPage({
         0
       ),
     };
-  }, [rows]);
+  }, [monthRows]);
 
   function openCreate() {
     setEditingInvoice(null);
@@ -816,7 +820,7 @@ export default function MerchantInvoicesPage({
       <div className="flex items-center justify-between px-1 text-xs text-muted-foreground">
         <span>
           Showing <strong className="text-primary">{filteredRows.length}</strong> /{" "}
-          {rows.length} invoices
+          {monthRows.length} invoices
           {selectedMonth !== ALL && ` (${formatMonthLabel(selectedMonth)})`}
           {statusFilter !== ALL &&
             ` • Status: ${

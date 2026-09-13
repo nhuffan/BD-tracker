@@ -173,17 +173,12 @@ export default function ReconciliationPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <FileCheck2 className="h-6 w-6 text-primary" />
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">Reconciliation</h1>
-          </div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Upload a reconciliation file, review the data, and export a Statement of Account using the MT LIFE template.
-          </p>
-        </div>
+    <div className="w-full space-y-4">
+      <div className="flex flex-col gap-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="flex items-center gap-2 text-[30px] font-extrabold tracking-tight text-foreground">
+          <FileCheck2 className="h-7 w-7 text-primary" />
+          Reconciliation Management
+        </h1>
 
         <div className="flex flex-wrap gap-2">
           {!data ? (
@@ -197,11 +192,10 @@ export default function ReconciliationPage() {
                 Client directory
               </Button>
               <Button
-                variant="outline"
                 className="cursor-pointer"
                 onClick={() => openClientDialog("create")}
               >
-                <Plus />
+                <Plus className="h-4 w-4" />
                 Add client
               </Button>
             </>
@@ -245,7 +239,7 @@ export default function ReconciliationPage() {
           onDragOver={(event) => event.preventDefault()}
           onDragLeave={() => setDragging(false)}
           onDrop={handleDrop}
-          className={`flex min-h-[360px] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed px-6 text-center transition-colors ${
+          className={`flex min-h-[300px] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed px-6 text-center transition-colors ${
             dragging
               ? "border-primary bg-primary/5"
               : "border-border bg-card hover:border-primary/60 hover:bg-muted/30"
@@ -342,11 +336,10 @@ export default function ReconciliationPage() {
                   Client directory
                 </Button>
                 <Button
-                  variant="outline"
                   className="shrink-0 cursor-pointer"
                   onClick={() => openClientDialog("create")}
                 >
-                  <Plus />
+                  <Plus className="h-4 w-4" />
                   Add client
                 </Button>
               </div>
@@ -400,7 +393,7 @@ export default function ReconciliationPage() {
               <table className="w-full min-w-[1000px] text-sm">
                 <thead className="bg-muted/60 text-left text-xs uppercase tracking-wide text-muted-foreground">
                   <tr>
-                    <th className="px-4 py-3 text-center">No.</th>
+                    <th className="px-4 py-3 text-left">No.</th>
                     <th className="px-4 py-3">Time</th>
                     <th className="px-4 py-3">Order ID</th>
                     <th className="px-4 py-3">Product ID</th>
@@ -413,7 +406,7 @@ export default function ReconciliationPage() {
                 <tbody>
                   {data.rows.map((row, index) => (
                     <tr key={`${row.orderId}-${row.productId}-${index}`} className="border-t">
-                      <td className="px-4 py-3 text-center text-muted-foreground">{index + 1}</td>
+                      <td className="px-4 py-3 text-left text-muted-foreground">{index + 1}</td>
                       <td className="whitespace-nowrap px-4 py-3">{row.reconciledAt}</td>
                       <td className="whitespace-nowrap px-4 py-3 font-medium">{row.orderId}</td>
                       <td className="whitespace-nowrap px-4 py-3">{row.productId}</td>
