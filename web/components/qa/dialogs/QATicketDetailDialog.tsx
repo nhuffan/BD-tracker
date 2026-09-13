@@ -571,7 +571,6 @@ export default function QATicketDetailDialog({
           toast.error("This ticket was updated by another user. Please reload and try again.");
           return;
         }
-        toast.success("Ticket updated successfully.");
       } else {
         const extra = additionalDescription.trim();
 

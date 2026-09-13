@@ -40,6 +40,7 @@ import type {
   MerchantInvoiceRow,
 } from "./utils/types";
 import MoneyText from "./MoneyText";
+import { useI18n } from "@/lib/i18n/I18nProvider";
 
 type LocalProofImage = MerchantInvoiceImage & {
   file?: File;
@@ -112,6 +113,7 @@ export default function InvoiceDialog({
   existingInvoices: MerchantInvoiceRow[];
   nextSequenceNo: number;
 }) {
+  const { t } = useI18n();
   const isEditMode = !!invoice;
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const merchantInputRef = useRef<HTMLInputElement | null>(null);
@@ -131,7 +133,10 @@ export default function InvoiceDialog({
   const [issuedLocked, setIssuedLocked] = useState(false);
   const [saving, setSaving] = useState(false);
   const [submitStage, setSubmitStage] = useState<"idle" | "uploading_images" | "saving_invoice">("idle");
-  const [autoFillNotice, setAutoFillNotice] = useState("");
+  const [autoFillNotice, setAutoFillNotice] = useState<{
+    merchant: string;
+    source: "merchant" | "tax_code";
+  } | null>(null);
   const [imageInputMode, setImageInputMode] = useState<"FILE" | "PASTE">("FILE");
   const [showMerchantSuggestions, setShowMerchantSuggestions] = useState(false);
   const [autoFilledLookup, setAutoFilledLookup] = useState<{
@@ -211,7 +216,7 @@ export default function InvoiceDialog({
       setNote(invoice.note ?? "");
       setProofImages(mapRemoteProofImages(invoice.proof_images));
       setIssuedLocked(invoice.status === "issued");
-      setAutoFillNotice("");
+      setAutoFillNotice(null);
       setImageInputMode("FILE");
       setShowMerchantSuggestions(false);
       setAutoFilledLookup(null);
@@ -232,7 +237,7 @@ export default function InvoiceDialog({
     setNote("");
     setProofImages([]);
     setIssuedLocked(false);
-    setAutoFillNotice("");
+    setAutoFillNotice(null);
     setImageInputMode("FILE");
     setShowMerchantSuggestions(false);
     setAutoFilledLookup(null);
@@ -261,7 +266,7 @@ export default function InvoiceDialog({
     setTaxCode(taxCodeValue);
     setInvoiceEmail("");
     setVatRate(10);
-    setAutoFillNotice("");
+    setAutoFillNotice(null);
     setAutoFilledLookup(null);
     setShowMerchantSuggestions(Boolean(merchantValue.trim()));
   }
@@ -317,7 +322,7 @@ export default function InvoiceDialog({
 
     const normalized = value.trim().toLowerCase();
     if (normalized.length < 6) {
-      setAutoFillNotice("");
+      setAutoFillNotice(null);
       setAutoFilledLookup(null);
       return;
     }
@@ -327,7 +332,7 @@ export default function InvoiceDialog({
     );
 
     if (!match) {
-      setAutoFillNotice("");
+      setAutoFillNotice(null);
       setAutoFilledLookup(null);
       return;
     }
@@ -341,7 +346,7 @@ export default function InvoiceDialog({
       merchant: match.merchant ?? "",
       taxCode: match.tax_code ?? "",
     });
-    setAutoFillNotice(`Invoice details were filled from the existing tax code (${match.merchant}).`);
+    setAutoFillNotice({ merchant: match.merchant, source: "tax_code" });
   }
 
   function applyMerchantLookup(row: MerchantInvoiceRow) {
@@ -358,7 +363,7 @@ export default function InvoiceDialog({
       merchant: row.merchant,
       taxCode: row.tax_code ?? "",
     });
-    setAutoFillNotice(`Invoice details were filled from ${row.merchant}.`);
+    setAutoFillNotice({ merchant: row.merchant, source: "merchant" });
   }
 
   const mergeProofImages = useCallback(async (fileList: FileList | File[]) => {
@@ -599,7 +604,7 @@ export default function InvoiceDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="flex max-h-[90vh] w-[72vw] max-w-none min-w-[920px] flex-col overflow-hidden rounded-xl border bg-background p-0 shadow-xl"
+        className="flex max-h-[90vh] w-[min(80vw,1180px)] max-w-[calc(100vw-2rem)] min-w-[min(1040px,calc(100vw-2rem))] flex-col overflow-hidden rounded-xl border bg-background p-0 shadow-xl"
         onOpenAutoFocus={(event) => event.preventDefault()}
       >
         <DialogHeader className="border-b px-6 py-4">
@@ -608,10 +613,10 @@ export default function InvoiceDialog({
             No. #{sequenceNo}
           </div>
           <DialogTitle className="text-2xl font-bold tracking-tight text-foreground">
-            {isEditMode ? "Update Invoice" : "Create Invoice"}
+            {t(isEditMode ? "Update Invoice" : "Create Invoice")}
           </DialogTitle>
           <DialogDescription className="sr-only">
-            {isEditMode ? "Update invoice details" : "Create a new invoice"}
+            {t(isEditMode ? "Update invoice details" : "Create a new invoice")}
           </DialogDescription>
         </DialogHeader>
 
@@ -619,14 +624,19 @@ export default function InvoiceDialog({
           {autoFillNotice && (
             <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/10 px-3 py-2 text-xs font-medium text-primary">
               <Sparkles className="h-4 w-4" />
-              {autoFillNotice}
+              {t(
+                autoFillNotice.source === "tax_code"
+                  ? "Invoice details were filled from the existing tax code ({{merchant}})."
+                  : "Invoice details were filled from {{merchant}}.",
+                { merchant: autoFillNotice.merchant }
+              )}
             </div>
           )}
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="relative">
               <label className={labelClass}>
-                Merchant (brand/store name){" "}
+                {t("Merchant (brand/store name)")}{" "}
                 <span className="text-destructive">*</span>
               </label>
               <Input
@@ -642,7 +652,7 @@ export default function InvoiceDialog({
                   }
                 }}
                 onBlur={() => window.setTimeout(() => setShowMerchantSuggestions(false), 120)}
-                placeholder="Example: Ha Spa, Tokyo Deli..."
+                placeholder={t("Example: Ha Spa, Tokyo Deli...")}
                 className={fieldClass}
               />
               {showMerchantSuggestions && merchantLookupRows.length > 0 && (
@@ -657,7 +667,7 @@ export default function InvoiceDialog({
                     >
                       <span className="font-semibold">{row.merchant}</span>
                       <span className="text-xs text-muted-foreground">
-                        {row.company_name} · Tax ID {row.tax_code}
+                        {row.company_name} · {t("Tax ID")} {row.tax_code}
                       </span>
                     </button>
                   ))}
@@ -667,13 +677,13 @@ export default function InvoiceDialog({
 
             <div>
               <label className={labelClass}>
-                Tax Code <span className="text-destructive">*</span>
+                {t("Tax Code")} <span className="text-destructive">*</span>
               </label>
               <Input
                 required
                 value={taxCode}
                 onChange={(event) => handleTaxCodeChange(event.target.value)}
-                placeholder="Enter tax code (e.g. 318954777)..."
+                placeholder={t("Enter tax code (e.g. 318954777)...")}
                 className={fieldClass}
               />
             </div>
@@ -682,7 +692,7 @@ export default function InvoiceDialog({
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
               <label className={labelClass}>
-                Invoice Company Name <span className="text-destructive">*</span>
+                {t("Invoice Company Name")} <span className="text-destructive">*</span>
               </label>
               <Input
                 required
@@ -694,11 +704,11 @@ export default function InvoiceDialog({
             </div>
 
             <div>
-              <label className={labelClass}>Invoice Address</label>
+              <label className={labelClass}>{t("Invoice Address")}</label>
               <Input
                 value={companyAddress}
                 onChange={(event) => setCompanyAddress(event.target.value)}
-                placeholder="Address shown on the invoice..."
+                placeholder={t("Address shown on the invoice...")}
                 className={fieldClass}
               />
             </div>
@@ -706,7 +716,7 @@ export default function InvoiceDialog({
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <label className={labelClass}>Email</label>
+              <label className={labelClass}>{t("Email")}</label>
               <Input
                 type="email"
                 value={invoiceEmail}
@@ -717,11 +727,11 @@ export default function InvoiceDialog({
             </div>
 
             <div>
-              <label className={labelClass}>Contract Number</label>
+              <label className={labelClass}>{t("Contract Number")}</label>
               <Input
                 value={contractNumber}
                 onChange={(event) => setContractNumber(event.target.value)}
-                placeholder="Example: NO.KADOB"
+                placeholder={t("Example: NO.KADOB")}
                 className={fieldClass}
               />
             </div>
@@ -730,7 +740,7 @@ export default function InvoiceDialog({
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
               <label className={labelClass}>
-                VAT Rate (%) <span className="text-destructive">*</span>
+                {t("VAT Rate (%)")} <span className="text-destructive">*</span>
               </label>
               <div className="flex h-11 items-center gap-2">
                 {[8, 10, 0].map((rate) => (
@@ -759,7 +769,7 @@ export default function InvoiceDialog({
 
             <div>
               <label className={labelClass}>
-                Invoice Amount (VAT Included){" "}
+                {t("Invoice Amount (VAT Included)")}{" "}
                 <span className="text-destructive">*</span>
               </label>
               <Input
@@ -777,7 +787,9 @@ export default function InvoiceDialog({
             <div className="space-y-1.5 rounded-xl border bg-muted/40 p-3 text-xs text-foreground">
               <div className="flex items-center justify-between gap-4">
                 <span>
-                  1. Amount before VAT (invoice amount / {100 + (vatRate || 0)}%):
+                  {t("1. Amount before VAT (invoice amount / {{rate}}%):", {
+                    rate: 100 + (vatRate || 0),
+                  })}
                 </span>
                 <MoneyText
                   amount={vatBreakdown.preVatAmount}
@@ -786,7 +798,7 @@ export default function InvoiceDialog({
                 />
               </div>
               <div className="flex items-center justify-between gap-4">
-                <span>2. VAT amount ({vatRate}%):</span>
+                <span>{t("2. VAT amount ({{rate}}%):", { rate: vatRate })}</span>
                 <MoneyText
                   amount={vatBreakdown.vatAmount}
                   className="font-mono text-xs font-bold"
@@ -794,7 +806,7 @@ export default function InvoiceDialog({
                 />
               </div>
               <div className="flex items-center justify-between gap-4 border-t pt-1.5 font-bold text-primary">
-                <span>3. Total invoice amount (VAT included):</span>
+                <span>{t("3. Total invoice amount (VAT included):")}</span>
                 <MoneyText
                   amount={numericInvoiceAmount}
                   className="font-mono text-sm font-extrabold"
@@ -805,11 +817,11 @@ export default function InvoiceDialog({
           )}
 
           <div>
-            <label className={labelClass}>Note</label>
+            <label className={labelClass}>{t("Note")}</label>
             <Textarea
               value={note}
               onChange={(event) => setNote(event.target.value)}
-              placeholder="Enter an invoice note..."
+              placeholder={t("Enter an invoice note...")}
               className="min-h-[82px] resize-none rounded-lg border-input bg-background px-3 py-2 text-sm shadow-none placeholder:font-medium placeholder:text-muted-foreground/65"
             />
           </div>
@@ -817,7 +829,7 @@ export default function InvoiceDialog({
           <div className="space-y-2 rounded-xl border bg-muted/30 p-4">
             <div className="flex items-center justify-between gap-3">
               <label className="flex items-center gap-1.5 text-xs font-bold text-foreground">
-                Invoice Status
+                {t("Invoice Status")}
               </label>
               <span
                 className={[
@@ -831,27 +843,29 @@ export default function InvoiceDialog({
               >
                 <span className="h-1.5 w-1.5 rounded-full bg-current" />
                 {currentStatus === "issued"
-                  ? "🔒 Issued"
+                  ? t("🔒 Issued")
                   : currentStatus === "ready"
-                    ? "Ready to issue"
-                    : "Not ready"}
+                    ? t("Ready to issue")
+                    : t("Not ready")}
               </span>
             </div>
 
             <div className="text-xs leading-relaxed text-muted-foreground">
               {currentStatus === "issued" ? (
                 <span className="font-medium text-emerald-700 dark:text-emerald-300">
-                  • This invoice is <strong>Issued</strong> and locked. It cannot return to Not ready or Ready to issue.
+                  • {t("This invoice is issued and locked. It cannot return to Not ready or Ready to issue.")}
                 </span>
               ) : missingFields.length === 0 ? (
                 <span className="font-medium text-amber-700 dark:text-amber-300">
-                  • When all details are complete (merchant, contract number, company, address, tax code, email, and amount), the invoice automatically moves to <strong>Ready to issue</strong>.
+                  • {t("When all details are complete (merchant, contract number, company, address, tax code, email, and amount), the invoice automatically moves to Ready to issue.")}
                 </span>
               ) : (
                 <div className="space-y-1 font-medium text-red-700 dark:text-red-300">
                   <p className="rounded-md border border-red-200 bg-red-50 px-2 py-1 text-xs font-semibold dark:border-red-900/70 dark:bg-red-950/40">
-                    📌 Missing fields:{" "}
-                    <span className="underline">{missingFields.join(", ")}</span>
+                    📌 {t("Missing fields:")}{" "}
+                    <span className="underline">
+                      {missingFields.map((field) => t(field)).join(", ")}
+                    </span>
                   </p>
                 </div>
               )}
@@ -865,7 +879,7 @@ export default function InvoiceDialog({
                   onChange={(event) => setIssuedLocked(event.target.checked)}
                   className="h-4 w-4 cursor-pointer"
                 />
-                Mark as Issued
+                {t("Mark as Issued")}
               </label>
             )}
           </div>
@@ -874,7 +888,7 @@ export default function InvoiceDialog({
             <div className="flex items-center justify-between gap-3">
               <label className="flex items-center gap-1.5 text-xs font-bold text-foreground">
                 <ImageIcon className="h-4 w-4 text-primary" />
-                Transaction Proof Images
+                {t("Transaction Proof Images")}
               </label>
               <div className="flex items-center gap-1 text-[11px]">
                 {[
@@ -892,7 +906,7 @@ export default function InvoiceDialog({
                         : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
                     ].join(" ")}
                   >
-                    {label}
+                    {t(label)}
                   </button>
                 ))}
               </div>
@@ -940,12 +954,12 @@ export default function InvoiceDialog({
                           </div>
                           {item.upload_status === "uploading" && (
                             <div className="mt-1 text-[11px] font-semibold text-primary">
-                              Uploading...
+                              {t("Uploading...")}
                             </div>
                           )}
                           {item.upload_status === "error" && (
                             <div className="mt-1 text-[11px] font-semibold text-destructive">
-                              Upload failed
+                              {t("Upload failed")}
                             </div>
                           )}
                         </div>
@@ -969,7 +983,7 @@ export default function InvoiceDialog({
                         disabled={saving}
                         className="flex h-[112px] cursor-pointer items-center justify-center rounded-lg border border-dashed bg-background text-sm font-semibold text-muted-foreground transition hover:border-primary/50 hover:bg-muted/40 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60"
                       >
-                        + Add images
+                        + {t("Add images")}
                       </button>
                     )}
                   </div>
@@ -984,13 +998,13 @@ export default function InvoiceDialog({
                         onClick={() => fileInputRef.current?.click()}
                         className="cursor-pointer font-bold text-primary hover:underline"
                       >
-                        Upload images
+                        {t("Upload images")}
                       </button>
-                      , drag and drop up to 2 images here, or press{" "}
+                      {t(", drag and drop up to 2 images here, or press")}{" "}
                       <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]">
                         Ctrl + V
                       </kbd>{" "}
-                      to paste
+                      {t("to paste")}
                     </div>
                     <Button
                       type="button"
@@ -1000,7 +1014,7 @@ export default function InvoiceDialog({
                       className="cursor-pointer"
                     >
                       <UploadCloud className="h-4 w-4" />
-                      Upload files
+                      {t("Upload files")}
                     </Button>
                   </div>
                 )}
@@ -1016,8 +1030,10 @@ export default function InvoiceDialog({
               <AttachmentLoadingIndicator
                 text={
                   submitStage === "uploading_images"
-                    ? `Uploading ${proofImages.filter((item) => item.file).length} images...`
-                    : "Saving invoice..."
+                    ? t("Uploading {{count}} images...", {
+                        count: proofImages.filter((item) => item.file).length,
+                      })
+                    : t("Saving invoice...")
                 }
               />
             )}
@@ -1028,11 +1044,11 @@ export default function InvoiceDialog({
             disabled={saving}
             className="cursor-pointer"
           >
-            Cancel
+            {t("Cancel")}
           </Button>
           <Button onClick={saveInvoice} disabled={!canSave} className="cursor-pointer">
             {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-            {isEditMode ? "Save Changes" : "Create Invoice"}
+            {t(isEditMode ? "Save Changes" : "Create Invoice")}
           </Button>
         </DialogFooter>
       </DialogContent>

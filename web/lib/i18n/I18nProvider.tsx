@@ -101,9 +101,11 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       });
     };
 
-    const applyTranslations = () => {
-      const root = document.body;
+    const applyTranslations = (root: Node) => {
       translateNode(root);
+      if (root.nodeType !== Node.ELEMENT_NODE && root.nodeType !== Node.DOCUMENT_FRAGMENT_NODE) {
+        return;
+      }
       const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
       let node = walker.nextNode();
       while (node) {
@@ -112,13 +114,42 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    const schedule = () => {
+    const pendingRoots = new Set<Node>();
+
+    const schedule = (roots: Node[]) => {
+      roots.forEach((root) => {
+        if (!root.isConnected) return;
+
+        for (const pendingRoot of pendingRoots) {
+          if (pendingRoot === root || pendingRoot.contains(root)) return;
+          if (root.contains(pendingRoot)) pendingRoots.delete(pendingRoot);
+        }
+        pendingRoots.add(root);
+      });
+
+      if (pendingRoots.size === 0) return;
       window.cancelAnimationFrame(frameId);
-      frameId = window.requestAnimationFrame(applyTranslations);
+      frameId = window.requestAnimationFrame(() => {
+        const rootsToTranslate = Array.from(pendingRoots);
+        pendingRoots.clear();
+        rootsToTranslate.forEach(applyTranslations);
+      });
     };
 
-    applyTranslations();
-    const observer = new MutationObserver(schedule);
+    applyTranslations(document.body);
+    const observer = new MutationObserver((mutations) => {
+      const roots: Node[] = [];
+
+      mutations.forEach((mutation) => {
+        if (mutation.type === "childList") {
+          roots.push(...mutation.addedNodes);
+          return;
+        }
+        roots.push(mutation.target);
+      });
+
+      schedule(roots);
+    });
     observer.observe(document.body, {
       childList: true,
       subtree: true,

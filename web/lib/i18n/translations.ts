@@ -165,6 +165,7 @@ export const VI_TRANSLATIONS: Record<string, string> = {
   "Date Created": "Ngày tạo",
   "Issue Description": "Mô tả vấn đề",
   "Response": "Phản hồi",
+  "Admin Response": "Phản hồi của admin",
   "Progress": "Tiến độ",
   "Update progress or archive the ticket when work is complete.": "Cập nhật tiến độ hoặc lưu trữ ticket khi công việc hoàn tất.",
   "Max. 10MB": "Tối đa 10MB",
@@ -202,6 +203,9 @@ export const VI_TRANSLATIONS: Record<string, string> = {
   "Update invoice details": "Cập nhật thông tin hóa đơn",
   "Create a new invoice": "Tạo hóa đơn mới",
   "Merchant (brand/store name)": "Merchant (tên thương hiệu/quán)",
+  "Tax ID": "Mã số thuế",
+  "Example: Ha Spa, Tokyo Deli...": "Ví dụ: Ha Spa, Tokyo Deli...",
+  "Example: NO.KADOB": "Ví dụ: NO.KADOB",
   "Tax Code": "Mã số thuế",
   "Invoice Company Name": "Tên đơn vị xuất hóa đơn",
   "Invoice Address": "Địa chỉ xuất hóa đơn",
@@ -209,10 +213,24 @@ export const VI_TRANSLATIONS: Record<string, string> = {
   "VAT Rate (%)": "Tỷ lệ VAT (%)",
   "Invoice Amount (VAT Included)": "Số tiền hóa đơn (đã gồm VAT)",
   "Invoice Status": "Trạng thái hóa đơn",
+  "1. Amount before VAT (invoice amount / {{rate}}%):": "1. Số tiền trước VAT (số tiền hóa đơn / {{rate}}%):",
+  "2. VAT amount ({{rate}}%):": "2. Tiền VAT ({{rate}}%):",
+  "3. Total invoice amount (VAT included):": "3. Tổng tiền hóa đơn (đã gồm VAT):",
+  "🔒 Issued": "🔒 Đã xuất",
+  "This invoice is issued and locked. It cannot return to Not ready or Ready to issue.": "Hóa đơn này đã được xuất và khóa. Không thể chuyển lại trạng thái Chưa sẵn sàng hoặc Chờ xuất.",
+  "When all details are complete (merchant, contract number, company, address, tax code, email, and amount), the invoice automatically moves to Ready to issue.": "Khi điền đủ thông tin (merchant, số hợp đồng, công ty, địa chỉ, mã số thuế, email và số tiền), hóa đơn sẽ tự động chuyển sang Chờ xuất.",
+  "Mark as Issued": "Đánh dấu đã xuất",
   "Transaction Proof Images": "Ảnh minh chứng giao dịch",
   "Upload files": "Tải tệp",
   "Add images": "Thêm ảnh",
   "Upload images": "Tải ảnh lên",
+  "Uploading...": "Đang tải lên...",
+  "Upload failed": "Tải lên thất bại",
+  ", drag and drop up to 2 images here, or press": ", kéo thả tối đa 2 ảnh vào đây hoặc nhấn",
+  "to paste": "để dán",
+  "Uploading {{count}} images...": "Đang tải lên {{count}} ảnh...",
+  "Invoice details were filled from the existing tax code ({{merchant}}).": "Thông tin hóa đơn đã được điền từ mã số thuế có sẵn ({{merchant}}).",
+  "Invoice details were filled from {{merchant}}.": "Thông tin hóa đơn đã được điền từ {{merchant}}.",
   "Save Changes": "Lưu thay đổi",
   "Transfer Management": "Quản lý chuyển khoản",
   "Not transferred": "Chưa chuyển khoản",
@@ -264,6 +282,8 @@ export const VI_TRANSLATIONS: Record<string, string> = {
   "Select the client whose details should appear in the exported SOA.": "Chọn client có thông tin sẽ hiển thị trong file SOA xuất ra.",
   "Select a client to export": "Chọn client để xuất",
   "Loading clients...": "Đang tải client...",
+  "Search clients...": "Tìm kiếm client...",
+  "No clients found.": "Không tìm thấy client.",
   "Data to be added to the SOA": "Dữ liệu sẽ điền vào SOA",
   "Time": "Thời gian",
   "Order ID": "Mã đơn",
@@ -319,12 +339,18 @@ export const VI_TRANSLATIONS: Record<string, string> = {
   "High": "Cao",
   "Medium": "Trung bình",
   "Low": "Thấp",
+  "Urgent": "Khẩn cấp",
   "No answer yet": "Chưa có phản hồi",
   "Type your response here...": "Nhập phản hồi tại đây...",
   "Provide a clear answer for the requester.": "Cung cấp câu trả lời rõ ràng cho người yêu cầu.",
   "Review the answer or add more details to this ticket.": "Kiểm tra câu trả lời hoặc bổ sung chi tiết cho ticket này.",
   "Ticket created successfully.": "Tạo ticket thành công.",
   "Ticket updated successfully.": "Cập nhật ticket thành công.",
+  "Failed to create ticket.": "Không thể tạo ticket.",
+  "Failed to update ticket.": "Không thể cập nhật ticket.",
+  "Failed to delete tickets.": "Không thể xóa ticket.",
+  "Delete failed.": "Xóa không thành công.",
+  "This ticket was updated by another user. Please reload and try again.": "Ticket này đã được người khác cập nhật. Vui lòng tải lại trang và thử lại.",
   "Grand total": "Tổng cộng",
   "No invoices found": "Không tìm thấy hóa đơn",
   "No invoices match the current filters.": "Không có hóa đơn phù hợp với bộ lọc hiện tại.",
@@ -343,6 +369,7 @@ export const VI_TRANSLATIONS: Record<string, string> = {
   "No clients yet. Click Add client to create the first profile.": "Chưa có client. Bấm Thêm client để tạo hồ sơ đầu tiên.",
   "Client added to the source.": "Đã thêm client vào danh bạ.",
   "Client updated.": "Đã cập nhật client.",
+  "Client removed from the source.": "Đã xóa client khỏi danh bạ.",
   "This client name already exists in the source.": "Tên client này đã tồn tại trong danh bạ.",
   "Enter the client name, address, and tax code.": "Nhập tên, địa chỉ và mã số thuế của client.",
   "Example: ABC Company": "Ví dụ: Công ty ABC",
@@ -377,6 +404,7 @@ export const VI_TRANSLATIONS: Record<string, string> = {
   "Failed to update record.": "Không thể cập nhật bản ghi.",
   "Failed to delete record.": "Không thể xóa bản ghi.",
   "Failed to create customer.": "Không thể tạo khách hàng.",
+  "Failed to delete records.": "Không thể xóa các bản ghi.",
   "Select combo/voucher": "Chọn combo/voucher",
   "Select advertising": "Chọn quảng cáo",
   "Uses combo or voucher": "Có sử dụng combo hoặc voucher",
@@ -394,6 +422,9 @@ export const VI_TRANSLATIONS: Record<string, string> = {
   "Could not update the invoice.": "Không thể cập nhật hóa đơn.",
   "Could not delete the invoice.": "Không thể xóa hóa đơn.",
   "Could not delete the invoice or its proof images.": "Không thể xóa hóa đơn hoặc ảnh minh chứng.",
+  "Could not save the invoice.": "Không thể lưu hóa đơn.",
+  "Could not change the invoice status.": "Không thể thay đổi trạng thái hóa đơn.",
+  "Could not import the CSV file.": "Không thể nhập file CSV.",
   "The CSV file is empty.": "File CSV trống.",
   "No valid header row was found in the CSV file.": "Không tìm thấy dòng tiêu đề hợp lệ trong file CSV.",
   "No valid invoice rows were found.": "Không tìm thấy dòng hóa đơn hợp lệ.",
@@ -406,7 +437,13 @@ export const VI_TRANSLATIONS: Record<string, string> = {
   "Could not create the transfer.": "Không thể tạo giao dịch chuyển khoản.",
   "Could not update the transfer.": "Không thể cập nhật giao dịch chuyển khoản.",
   "Could not delete the transaction.": "Không thể xóa giao dịch.",
+  "Could not change the status.": "Không thể thay đổi trạng thái.",
   "A completed transfer cannot be moved back to another status.": "Giao dịch đã hoàn tất không thể chuyển về trạng thái khác.",
+  "Ad record created successfully.": "Đã tạo bản ghi quảng cáo thành công.",
+  "Ad record deleted successfully.": "Đã xóa bản ghi quảng cáo thành công.",
+  "Failed to create ad record.": "Không thể tạo bản ghi quảng cáo.",
+  "Failed to delete ad record.": "Không thể xóa bản ghi quảng cáo.",
+  "Branch name is required for this customer.": "Khách hàng này bắt buộc phải có tên chi nhánh.",
   "Example: Pho Viet Nam, Lao Lu Guan...": "Ví dụ: Phở Việt Nam, Lao Lu Guan...",
   "Enter account number...": "Nhập số tài khoản...",
   "Enter bank name...": "Nhập tên ngân hàng...",
@@ -422,6 +459,24 @@ export const VI_TRANSLATIONS: Record<string, string> = {
   "Note (optional)": "Ghi chú (không bắt buộc)",
   "Add any notes for this ad record...": "Thêm ghi chú cho bản ghi quảng cáo...",
   "Pending Review": "Chờ duyệt",
+  "Request created successfully.": "Tạo yêu cầu thành công.",
+  "Request updated successfully.": "Cập nhật yêu cầu thành công.",
+  "Request deleted successfully.": "Xóa yêu cầu thành công.",
+  "Request approved successfully.": "Phê duyệt yêu cầu thành công.",
+  "Request rejected successfully.": "Từ chối yêu cầu thành công.",
+  "Failed to create request.": "Không thể tạo yêu cầu.",
+  "Failed to update request.": "Không thể cập nhật yêu cầu.",
+  "Failed to delete request.": "Không thể xóa yêu cầu.",
+  "Failed to delete request or attachments.": "Không thể xóa yêu cầu hoặc tệp đính kèm.",
+  "Failed to approve request.": "Không thể phê duyệt yêu cầu.",
+  "Failed to reject request.": "Không thể từ chối yêu cầu.",
+  "This request was updated by another admin. Please reload and try again.": "Yêu cầu này đã được admin khác cập nhật. Vui lòng tải lại trang và thử lại.",
+  "Please enter KPI Point Award.": "Vui lòng nhập điểm KPI được thưởng.",
+  "Please enter Bonus Amount.": "Vui lòng nhập số tiền thưởng.",
+  "KPI updated successfully.": "Cập nhật KPI thành công.",
+  "Failed to save KPI.": "Không thể lưu KPI.",
+  "Failed to update BD level.": "Không thể cập nhật cấp độ BD.",
+  "BD level was saved, but performance records failed to update.": "Đã lưu cấp độ BD nhưng không thể cập nhật các bản ghi hiệu suất.",
   "Recent History": "Lịch sử gần đây",
   "Create Approval Request": "Tạo yêu cầu phê duyệt",
   "Edit Approval Request": "Chỉnh sửa yêu cầu phê duyệt",
@@ -521,11 +576,18 @@ export function getLegacySourceText(text: string) {
   return text;
 }
 
-export function translateLegacyText(text: string, locale: Locale) {
+export function translateLegacyText(text: string, locale: Locale): string {
   if (locale === "en") return text;
   const dictionary = getTranslations(locale);
   const exact = dictionary[text];
   if (exact) return exact;
+
+  if (text.includes("\n")) {
+    return text
+      .split("\n")
+      .map((line) => translateLegacyText(line, locale))
+      .join("\n");
+  }
 
   if (locale === "zh-CN") return translateChinesePattern(text);
 
@@ -550,6 +612,15 @@ export function translateLegacyText(text: string, locale: Locale) {
     [/^Service fee \((.+)\)$/, (rate) => `Phí dịch vụ (${rate})`],
     [/^Before VAT \((.+)%\):$/, (rate) => `Trước VAT (${rate}%):`],
     [/^No\. #(\d+)$/, (number) => `STT #${number}`],
+    [/^(\d+) records deleted successfully\.$/, (count) => `Đã xóa thành công ${count} bản ghi.`],
+    [/^Successfully deleted (\d+) ticket\(s\)\.$/, (count) => `Đã xóa thành công ${count} ticket.`],
+    [/^Loaded (\d+) reconciliation transactions\.$/, (count) => `Đã tải ${count} giao dịch đối soát.`],
+    [/^Imported (\d+) invoices from the CSV file\.$/, (count) => `Đã nhập ${count} hóa đơn từ file CSV.`],
+    [/^You can upload up to (\d+) proof images\.$/, (count) => `Bạn có thể tải lên tối đa ${count} ảnh minh chứng.`],
+    [/^Added (\d+) proof images\.$/, (count) => `Đã thêm ${count} ảnh minh chứng.`],
+    [/^(.+) is still larger than 10 MB after compression\.$/, (name) => `${name} vẫn lớn hơn 10 MB sau khi nén.`],
+    [/^(.+) exceeds the 10MB limit\.$/, (name) => `${name} vượt quá giới hạn 10MB.`],
+    [/^Status changed to (.+)\.$/, (status) => `Đã chuyển trạng thái sang ${VI_TRANSLATIONS[status] ?? status}.`],
   ];
 
   for (const [pattern, format] of patterns) {
@@ -586,6 +657,15 @@ function translateChinesePattern(text: string) {
     [/^(.+)%\):$/, (rate) => `${rate}%）：`],
     [/^Missing fields: (.+)$/, (fields) => `缺少字段：${fields.split(", ").map((field) => ZH_TRANSLATIONS[field] ?? field).join("、")}`],
     [/^Copy amount for (.+)$/, (label) => `复制${ZH_TRANSLATIONS[label] ?? label}金额`],
+    [/^(\d+) records deleted successfully\.$/, (count) => `已成功删除 ${count} 条记录。`],
+    [/^Successfully deleted (\d+) ticket\(s\)\.$/, (count) => `已成功删除 ${count} 个工单。`],
+    [/^Loaded (\d+) reconciliation transactions\.$/, (count) => `已加载 ${count} 笔对账交易。`],
+    [/^Imported (\d+) invoices from the CSV file\.$/, (count) => `已从CSV文件导入 ${count} 张发票。`],
+    [/^You can upload up to (\d+) proof images\.$/, (count) => `最多可以上传 ${count} 张凭证图片。`],
+    [/^Added (\d+) proof images\.$/, (count) => `已添加 ${count} 张凭证图片。`],
+    [/^(.+) is still larger than 10 MB after compression\.$/, (name) => `${name} 压缩后仍大于10MB。`],
+    [/^(.+) exceeds the 10MB limit\.$/, (name) => `${name} 超过10MB限制。`],
+    [/^Status changed to (.+)\.$/, (status) => `状态已改为${ZH_TRANSLATIONS[status] ?? status}。`],
   ];
 
   for (const [pattern, format] of patterns) {

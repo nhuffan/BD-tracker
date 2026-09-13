@@ -108,7 +108,7 @@ function OfferFlagPicker({
             aria-checked={selected}
             onClick={() => onChange(option.value)}
             className={cn(
-              "relative cursor-pointer rounded-lg border px-3 py-3 text-left shadow-xs transition-all outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
+              "relative min-w-0 cursor-pointer rounded-lg border px-3 py-3 text-left shadow-xs transition-all outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
               selected
                 ? option.value
                   ? "border-emerald-600 bg-emerald-500/10 text-foreground ring-1 ring-emerald-500/10"
@@ -123,9 +123,9 @@ function OfferFlagPicker({
                   selected && option.value && "text-emerald-600 dark:text-emerald-400"
                 )}
               />
-              <span>
+              <span className="min-w-0">
                 <span className="block text-sm font-medium">{option.label}</span>
-                <span className="mt-0.5 block text-xs text-muted-foreground lg:whitespace-nowrap">
+                <span className="mt-0.5 block break-words text-xs leading-4 text-muted-foreground">
                   {option.description}
                 </span>
               </span>

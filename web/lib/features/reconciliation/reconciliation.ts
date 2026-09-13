@@ -264,6 +264,23 @@ function directChild(parent: Element, localName: string) {
   return Array.from(parent.children).find((child) => child.localName === localName) ?? null;
 }
 
+function setWorkbookFont(stylesDocument: XMLDocument, fontName: string) {
+  const fonts = directChild(stylesDocument.documentElement, "fonts");
+  if (!fonts) throw new Error("The template is missing its font definitions.");
+
+  Array.from(fonts.children)
+    .filter((child) => child.localName === "font")
+    .forEach((font) => {
+      let name = directChild(font, "name");
+      if (!name) {
+        name = createXmlElement(stylesDocument, "name");
+        font.insertBefore(name, font.firstChild);
+      }
+      name.setAttribute("val", fontName);
+      directChild(font, "scheme")?.remove();
+    });
+}
+
 function parseXml(xml: string) {
   const document = new DOMParser().parseFromString(xml, "application/xml");
   if (document.querySelector("parsererror")) throw new Error("The Excel template contains invalid XML.");
@@ -466,6 +483,51 @@ function createVndStyleFactory(stylesDocument: XMLDocument) {
   };
 }
 
+function createWrapTextStyleFactory(stylesDocument: XMLDocument) {
+  const cellXfs = directChild(stylesDocument.documentElement, "cellXfs");
+  if (!cellXfs) throw new Error("The template is missing cell formatting.");
+
+  const styleByBase = new Map<number, number>();
+  return (cell: Element) => {
+    const baseStyle = Number(cell.getAttribute("s") ?? 0);
+    let styleIndex = styleByBase.get(baseStyle);
+    if (styleIndex === undefined) {
+      const styles = Array.from(cellXfs.children).filter((child) => child.localName === "xf");
+      const base = styles[baseStyle] ?? styles[0];
+      if (!base) throw new Error("The template is missing the product cell style.");
+
+      const clone = base.cloneNode(true) as Element;
+      let alignment = directChild(clone, "alignment");
+      if (!alignment) {
+        alignment = createXmlElement(stylesDocument, "alignment");
+        clone.appendChild(alignment);
+      }
+      alignment.setAttribute("wrapText", "1");
+      alignment.setAttribute("vertical", "center");
+      clone.setAttribute("applyAlignment", "1");
+      cellXfs.appendChild(clone);
+      styleIndex = styles.length;
+      styleByBase.set(baseStyle, styleIndex);
+      cellXfs.setAttribute("count", String(styles.length + 1));
+    }
+    cell.setAttribute("s", String(styleIndex));
+  };
+}
+
+function setProductRowHeight(row: Element, productName: string) {
+  const lineCapacity = 13;
+  const lineCount = productName.split(/\r?\n/).reduce((total, line) => {
+    const displayUnits = Array.from(line).reduce(
+      (units, character) => units + (/[^\u0000-\u00ff]/.test(character) ? 2 : 1),
+      0
+    );
+    return total + Math.max(1, Math.ceil(displayUnits / lineCapacity));
+  }, 0);
+  const height = Math.min(120, Math.max(20, lineCount * 15 + 5));
+  row.setAttribute("ht", String(height));
+  row.setAttribute("customHeight", "1");
+}
+
 function matchCellFont(
   stylesDocument: XMLDocument,
   targetCell: Element,
@@ -569,7 +631,9 @@ export async function createStatementOfAccount(
   shiftTemplateRows(sheetDocument, extraRows);
   extendDataRows(sheetDocument, extraRows);
   updateDefinedRange(workbookDocument, totalRowNumber);
+  setWorkbookFont(stylesDocument, "Times New Roman");
   const applyVndStyle = createVndStyleFactory(stylesDocument);
+  const applyWrapTextStyle = createWrapTextStyleFactory(stylesDocument);
 
   // The template's original money columns are too narrow for values such as
   // "1,480,000 ₫", which Excel renders as ##########.
@@ -661,6 +725,8 @@ export async function createStatementOfAccount(
     setInlineString(sheetDocument, cells[2], source.orderId);
     setInlineString(sheetDocument, cells[3], source.productId);
     setInlineString(sheetDocument, cells[4], source.productName);
+    applyWrapTextStyle(cells[4]);
+    setProductRowHeight(rowElement, source.productName);
     setNumber(sheetDocument, cells[5], source.comboPrice);
     setNumber(sheetDocument, cells[6], source.serviceFee);
     setNumber(sheetDocument, cells[7], source.reconciliationAmount);

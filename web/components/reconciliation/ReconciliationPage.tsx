@@ -5,7 +5,9 @@ import {
   AlertCircle,
   BookUser,
   Building2,
+  Check,
   CheckCircle2,
+  ChevronsUpDown,
   Download,
   FileCheck2,
   Loader2,
@@ -16,12 +18,14 @@ import {
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import ClientSourceDialog from "@/components/reconciliation/ClientSourceDialog";
 import {
   listReconciliationClients,
@@ -62,6 +66,7 @@ export default function ReconciliationPage() {
   const [clients, setClients] = useState<ReconciliationClient[]>([]);
   const [clientsLoading, setClientsLoading] = useState(true);
   const [selectedClientId, setSelectedClientId] = useState("");
+  const [clientPickerOpen, setClientPickerOpen] = useState(false);
   const [clientSourceOpen, setClientSourceOpen] = useState(false);
   const [clientDialogMode, setClientDialogMode] = useState<"directory" | "create">("directory");
 
@@ -310,23 +315,67 @@ export default function ReconciliationPage() {
               </div>
 
               <div className="flex w-full flex-col gap-2 sm:flex-row lg:w-auto">
-                <Select value={selectedClientId} onValueChange={setSelectedClientId}>
-                  <SelectTrigger
-                    className="w-full cursor-pointer sm:min-w-[280px] lg:w-[320px]"
-                    disabled={clientsLoading || !clients.length}
+                <Popover open={clientPickerOpen} onOpenChange={setClientPickerOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={clientPickerOpen}
+                      className="w-full cursor-pointer justify-between font-normal sm:min-w-[280px] lg:w-[320px]"
+                      disabled={clientsLoading || !clients.length}
+                    >
+                      <span className="truncate">
+                        {selectedClient?.name ??
+                          (clientsLoading ? "Loading clients..." : "Select a client to export")}
+                      </span>
+                      <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    align="end"
+                    className="w-[var(--radix-popover-trigger-width)] p-0"
                   >
-                    <SelectValue
-                      placeholder={clientsLoading ? "Loading clients..." : "Select a client to export"}
-                    />
-                  </SelectTrigger>
-                  <SelectContent position="popper" align="end">
-                    {clients.map((client) => (
-                      <SelectItem key={client.id} value={client.id} className="cursor-pointer">
-                        {client.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                    <Command>
+                      <CommandInput placeholder="Search clients..." />
+                      <CommandList>
+                        <CommandEmpty>No clients found.</CommandEmpty>
+                        <CommandGroup>
+                          {clients.map((client) => (
+                            <CommandItem
+                              key={client.id}
+                              value={[
+                                client.id,
+                                client.name,
+                                client.taxCode,
+                                client.address,
+                                client.tel,
+                                client.email,
+                              ].join(" ")}
+                              onSelect={() => {
+                                setSelectedClientId(client.id);
+                                setClientPickerOpen(false);
+                              }}
+                              className="cursor-pointer"
+                            >
+                              <Check
+                                className={selectedClientId === client.id ? "opacity-100" : "opacity-0"}
+                              />
+                              <div className="min-w-0">
+                                <p className="truncate font-medium">{client.name}</p>
+                                {client.taxCode ? (
+                                  <p className="truncate text-xs text-muted-foreground">
+                                    {client.taxCode}
+                                  </p>
+                                ) : null}
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
                 <Button
                   variant="outline"
                   className="shrink-0 cursor-pointer"

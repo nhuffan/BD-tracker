@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/lib/i18n/I18nProvider";
 import type { QAPriority } from "../utils/types";
 
 export function QAFormSection({
@@ -78,13 +79,16 @@ const priorityStyles: Record<QAPriority, string> = {
 };
 
 export function QAPriorityOption({ priority }: { priority: QAPriority }) {
+  const { t } = useI18n();
+  const label = priority.charAt(0).toUpperCase() + priority.slice(1);
+
   return (
     <span className="inline-flex items-center gap-2">
       <span
         className={cn("size-2.5 shrink-0 rounded-full", priorityStyles[priority])}
         aria-hidden="true"
       />
-      <span>{priority.charAt(0).toUpperCase() + priority.slice(1)}</span>
+      <span>{t(label)}</span>
     </span>
   );
 }
