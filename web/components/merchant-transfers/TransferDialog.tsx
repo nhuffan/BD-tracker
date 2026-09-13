@@ -158,7 +158,7 @@ export default function TransferDialog({
   const [amount, setAmount] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
   const [accountHolder, setAccountHolder] = useState("");
-  const [bankName, setBankName] = useState("MB Bank");
+  const [bankName, setBankName] = useState("");
   const [customBankName, setCustomBankName] = useState("");
   const [branch, setBranch] = useState("");
   const [status, setStatus] = useState<MerchantTransferStatus>("not_transferred");
@@ -173,14 +173,21 @@ export default function TransferDialog({
 
   const numericAmount = parseMoneyInput(amount);
   const isLocked = transfer?.status === "transferred";
-  const finalBankName = bankName === "__other__" ? customBankName.trim() : bankName;
-  const canSave =
-    !saving &&
-    merchant.trim() &&
-    numericAmount > 0 &&
-    accountNumber.trim() &&
-    accountHolder.trim() &&
-    finalBankName;
+  const finalBankName = bankName === "__other__" ? customBankName.trim() : bankName.trim();
+  const hasChanges = !transfer || [
+    sequenceNo !== transfer.sequence_no,
+    merchant.trim() !== (transfer.merchant ?? "").trim(),
+    numericAmount !== Number(transfer.amount),
+    accountNumber.trim() !== (transfer.account_number ?? "").trim(),
+    accountHolder.trim() !== (transfer.account_holder ?? "").trim(),
+    finalBankName !== (transfer.bank_name ?? "").trim(),
+    branch.trim() !== (transfer.branch ?? "").trim(),
+    status !== transfer.status,
+    transactionDate !== toDateInputValue(transfer.transaction_date),
+  ].some(Boolean);
+  const canSave = Boolean(
+    !saving && merchant.trim() && numericAmount > 0 && hasChanges
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -191,8 +198,13 @@ export default function TransferDialog({
       setAmount(transfer.amount ? formatMoneyInput(transfer.amount) : "");
       setAccountNumber(transfer.account_number ?? "");
       setAccountHolder(transfer.account_holder ?? "");
-      setBankName(POPULAR_BANKS.includes(transfer.bank_name) ? transfer.bank_name : "__other__");
-      setCustomBankName(POPULAR_BANKS.includes(transfer.bank_name) ? "" : transfer.bank_name);
+      const savedBankName = transfer.bank_name?.trim() ?? "";
+      setBankName(
+        !savedBankName ? "" : POPULAR_BANKS.includes(savedBankName) ? savedBankName : "__other__"
+      );
+      setCustomBankName(
+        savedBankName && !POPULAR_BANKS.includes(savedBankName) ? savedBankName : ""
+      );
       setBranch(transfer.branch ?? "");
       setStatus(transfer.status);
       setTransactionDate(toDateInputValue(transfer.transaction_date));
@@ -207,7 +219,7 @@ export default function TransferDialog({
     setAmount("");
     setAccountNumber("");
     setAccountHolder("");
-    setBankName("MB Bank");
+    setBankName("");
     setCustomBankName("");
     setBranch("");
     setStatus("not_transferred");
@@ -270,7 +282,7 @@ export default function TransferDialog({
         amount: numericAmount,
         account_number: accountNumber.trim(),
         account_holder: accountHolder.trim().toUpperCase(),
-        bank_name: finalBankName || "Other",
+        bank_name: finalBankName,
         branch: branch.trim() || null,
         status,
         transaction_date: transactionDate,
@@ -395,7 +407,10 @@ export default function TransferDialog({
                       >
                         <span className="font-semibold">{row.merchant}</span>
                         <span className="text-xs text-muted-foreground">
-                          {row.account_number} · {row.bank_name}
+                          {[row.account_number, row.bank_name]
+                            .map((value) => value.trim())
+                            .filter(Boolean)
+                            .join(" · ")}
                         </span>
                       </button>
                     ))}
@@ -432,13 +447,12 @@ export default function TransferDialog({
           <TransferFormSection
             step={2}
             title="Recipient account"
-            description="Verify the bank details before saving."
+            description="Add recipient account details when available."
           >
             <div className="grid gap-4 md:grid-cols-2">
-              <TransferFormField id="transfer-account-number" label="Account number" required>
+              <TransferFormField id="transfer-account-number" label="Account number" optional>
                 <Input
                   id="transfer-account-number"
-                  required
                   value={accountNumber}
                   onChange={(event) => setAccountNumber(event.target.value)}
                   placeholder="Enter account number..."
@@ -446,10 +460,9 @@ export default function TransferDialog({
                 />
               </TransferFormField>
 
-              <TransferFormField id="transfer-account-holder" label="Account holder" required>
+              <TransferFormField id="transfer-account-holder" label="Account holder" optional>
                 <Input
                   id="transfer-account-holder"
-                  required
                   value={accountHolder}
                   onChange={(event) => setAccountHolder(event.target.value.toUpperCase())}
                   placeholder="NGUYEN VAN A..."
@@ -457,7 +470,7 @@ export default function TransferDialog({
                 />
               </TransferFormField>
 
-              <TransferFormField id="transfer-bank" label="Bank" required>
+              <TransferFormField id="transfer-bank" label="Bank" optional>
                 <div className="relative">
                   <select
                     id="transfer-bank"
@@ -465,6 +478,7 @@ export default function TransferDialog({
                     onChange={(event) => setBankName(event.target.value)}
                     className={selectClass}
                   >
+                    <option value="">No bank selected</option>
                     {POPULAR_BANKS.map((bank) => (
                       <option key={bank} value={bank}>
                         {bank}

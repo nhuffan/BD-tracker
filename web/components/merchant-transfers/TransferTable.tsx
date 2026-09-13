@@ -171,31 +171,35 @@ export default function TransferTable({
                   <TableCell className="p-3 text-sm">
                     <div className="flex items-center justify-between gap-2 group">
                       <ClampedText value={row.account_number} lines={1} />
-                      <Button
-                        type="button"
-                        size="icon-xs"
-                        variant="ghost"
-                        onClick={() => void copyText(row.account_number, `${row.id}-account`)}
-                        title="Copy account number"
-                        className="cursor-pointer opacity-60 group-hover:opacity-100"
-                      >
-                        {copiedId === `${row.id}-account` ? <Check /> : <Copy />}
-                      </Button>
+                      {row.account_number.trim() && (
+                        <Button
+                          type="button"
+                          size="icon-xs"
+                          variant="ghost"
+                          onClick={() => void copyText(row.account_number, `${row.id}-account`)}
+                          title="Copy account number"
+                          className="cursor-pointer opacity-60 group-hover:opacity-100"
+                        >
+                          {copiedId === `${row.id}-account` ? <Check /> : <Copy />}
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell className="p-3 text-sm font-semibold uppercase tracking-tight">
                     <div className="flex items-center justify-between gap-2 group">
                       <ClampedText value={row.account_holder} lines={2} />
-                      <Button
-                        type="button"
-                        size="icon-xs"
-                        variant="ghost"
-                        onClick={() => void copyText(row.account_holder, `${row.id}-holder`)}
-                        title="Copy account holder"
-                        className="cursor-pointer opacity-60 group-hover:opacity-100"
-                      >
-                        {copiedId === `${row.id}-holder` ? <Check /> : <Copy />}
-                      </Button>
+                      {row.account_holder.trim() && (
+                        <Button
+                          type="button"
+                          size="icon-xs"
+                          variant="ghost"
+                          onClick={() => void copyText(row.account_holder, `${row.id}-holder`)}
+                          title="Copy account holder"
+                          className="cursor-pointer opacity-60 group-hover:opacity-100"
+                        >
+                          {copiedId === `${row.id}-holder` ? <Check /> : <Copy />}
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell className="p-3 font-medium">

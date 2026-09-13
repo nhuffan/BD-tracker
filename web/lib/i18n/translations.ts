@@ -234,10 +234,15 @@ export const VI_TRANSLATIONS: Record<string, string> = {
   "Amount": "Số tiền",
   "Recipient account": "Tài khoản nhận tiền",
   "Verify the bank details before saving.": "Kiểm tra thông tin ngân hàng trước khi lưu.",
+  "Account holder, account number and branch can be left empty.":
+    "Tên chủ tài khoản, số tài khoản và chi nhánh ngân hàng có thể để trống.",
+  "Add recipient account details when available.":
+    "Thêm thông tin tài khoản nhận tiền nếu có.",
   "Account number": "Số tài khoản",
   "Account holder": "Chủ tài khoản",
   "Bank": "Ngân hàng",
   "Other bank...": "Ngân hàng khác...",
+  "No bank selected": "Không chọn ngân hàng",
   "Branch": "Chi nhánh",
   "Transfer status": "Trạng thái chuyển khoản",
   "Select the transaction date and current processing status.": "Chọn ngày giao dịch và trạng thái xử lý hiện tại.",
