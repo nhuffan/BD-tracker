@@ -111,9 +111,9 @@ export default function TransferTable({
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-lg bg-muted text-muted-foreground">
           <Landmark className="h-7 w-7" />
         </div>
-        <div className="mt-4 text-base font-bold">Chưa tìm thấy giao dịch nào</div>
+        <div className="mt-4 text-base font-bold">No transactions found</div>
         <div className="mt-1 text-sm text-muted-foreground">
-          Không có giao dịch nào phù hợp với bộ lọc hiện tại.
+          No transactions match the current filters.
         </div>
       </div>
     );
@@ -125,16 +125,16 @@ export default function TransferTable({
         <Table className="text-sm">
           <TableHeader className="bg-muted/50 [&_th]:border-r [&_th]:border-border/70 [&_th:last-child]:border-r-0">
             <TableRow>
-              <TableHead className="w-14 p-3 text-center font-semibold">STT</TableHead>
+              <TableHead className="w-14 p-3 text-center font-semibold">NO.</TableHead>
               <TableHead className="w-[190px] p-3 font-semibold">MERCHANT</TableHead>
-              <TableHead className="min-w-[150px] p-3 text-left font-semibold">SỐ TIỀN</TableHead>
-              <TableHead className="min-w-[150px] p-3 font-semibold">SỐ TÀI KHOẢN</TableHead>
-              <TableHead className="min-w-[200px] p-3 font-semibold">CHỦ TÀI KHOẢN</TableHead>
-              <TableHead className="min-w-[140px] p-3 font-semibold">NGÂN HÀNG</TableHead>
-              <TableHead className="min-w-[170px] p-3 font-semibold">CHI NHÁNH</TableHead>
-              <TableHead className="p-3 text-center font-semibold">TÌNH TRẠNG</TableHead>
-              <TableHead className="p-3 text-center font-semibold">NGÀY HOÀN THÀNH</TableHead>
-              {isAdmin && <TableHead className="w-28 p-3 text-center font-semibold">THAO TÁC</TableHead>}
+              <TableHead className="min-w-[150px] p-3 text-left font-semibold">AMOUNT</TableHead>
+              <TableHead className="min-w-[150px] p-3 font-semibold">ACCOUNT NUMBER</TableHead>
+              <TableHead className="min-w-[200px] p-3 font-semibold">ACCOUNT HOLDER</TableHead>
+              <TableHead className="min-w-[140px] p-3 font-semibold">BANK</TableHead>
+              <TableHead className="min-w-[170px] p-3 font-semibold">BRANCH</TableHead>
+              <TableHead className="p-3 text-center font-semibold">STATUS</TableHead>
+              <TableHead className="p-3 text-center font-semibold">COMPLETION DATE</TableHead>
+              {isAdmin && <TableHead className="w-28 p-3 text-center font-semibold">ACTIONS</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody className="[&_td]:border-r [&_td]:border-border/60 [&_td:last-child]:border-r-0">
@@ -161,7 +161,7 @@ export default function TransferTable({
                         size="icon-xs"
                         variant="ghost"
                         onClick={() => void copyText(String(row.amount), `${row.id}-amount`)}
-                        title="Sao chép số tiền"
+                        title="Copy amount"
                         className="cursor-pointer opacity-60 group-hover:opacity-100"
                       >
                         {copiedId === `${row.id}-amount` ? <Check /> : <Copy />}
@@ -176,7 +176,7 @@ export default function TransferTable({
                         size="icon-xs"
                         variant="ghost"
                         onClick={() => void copyText(row.account_number, `${row.id}-account`)}
-                        title="Sao chép số tài khoản"
+                        title="Copy account number"
                         className="cursor-pointer opacity-60 group-hover:opacity-100"
                       >
                         {copiedId === `${row.id}-account` ? <Check /> : <Copy />}
@@ -191,7 +191,7 @@ export default function TransferTable({
                         size="icon-xs"
                         variant="ghost"
                         onClick={() => void copyText(row.account_holder, `${row.id}-holder`)}
-                        title="Sao chép chủ tài khoản"
+                        title="Copy account holder"
                         className="cursor-pointer opacity-60 group-hover:opacity-100"
                       >
                         {copiedId === `${row.id}-holder` ? <Check /> : <Copy />}
@@ -209,7 +209,7 @@ export default function TransferTable({
                       <Badge
                         variant="outline"
                         className={`${statusClass(row.status)} gap-1.5 uppercase`}
-                        title="Đã chuyển khoản - trạng thái đã khóa"
+                        title="Transferred — status is locked"
                       >
                         <span className="h-1.5 w-1.5 rounded-full bg-current" />
                         {TRANSFER_STATUS_LABEL[row.status]}
@@ -239,7 +239,7 @@ export default function TransferTable({
                           size="icon-sm"
                           disabled={locked}
                           onClick={() => onEdit(row)}
-                          title={locked ? "Đã chuyển khoản - không thể chỉnh sửa" : "Chỉnh sửa"}
+                          title={locked ? "Transferred — editing is disabled" : "Edit"}
                           className="cursor-pointer"
                         >
                           <Pencil className="h-4 w-4 text-muted-foreground" />
@@ -249,7 +249,7 @@ export default function TransferTable({
                           variant="ghost"
                           size="icon-sm"
                           onClick={() => onDelete(row)}
-                          title="Xóa"
+                          title="Delete"
                           className="cursor-pointer"
                         >
                           <Trash2 className="h-4 w-4 text-muted-foreground" />
@@ -268,7 +268,7 @@ export default function TransferTable({
         <>
           <button
             type="button"
-            aria-label="Đóng menu trạng thái"
+            aria-label="Close status menu"
             className="fixed inset-0 z-[9998] cursor-default bg-transparent"
             onClick={() => setStatusMenu(null)}
           />
@@ -281,7 +281,7 @@ export default function TransferTable({
             className="fixed z-[9999] rounded-xl border bg-popover p-1.5 text-left text-popover-foreground shadow-2xl ring-1 ring-border"
           >
             <div className="border-b px-2 py-1 text-[10px] font-semibold text-muted-foreground">
-              Chuyển trạng thái
+              Change status
             </div>
             {(["not_transferred", "ready", "transferred"] as MerchantTransferStatus[]).map(
               (statusValue) => (

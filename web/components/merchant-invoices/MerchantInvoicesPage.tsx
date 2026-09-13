@@ -209,7 +209,7 @@ export default function MerchantInvoicesPage({
 
     if (error) {
       console.error("Failed to fetch merchant invoices:", error);
-      toast.error("Không thể tải danh sách hóa đơn.");
+      toast.error("Could not load invoices.");
       setRows([]);
       setLoading(false);
       return;
@@ -345,11 +345,11 @@ export default function MerchantInvoicesPage({
         .eq("id", row.id);
 
       if (error) {
-        toast.error(error.message || "Không thể chuyển trạng thái hóa đơn.");
+        toast.error(error.message || "Could not change the invoice status.");
         return;
       }
 
-      toast.success("Đã chuyển hóa đơn sang trạng thái Đã xuất!");
+      toast.success("Invoice marked as issued.");
       await refresh();
     } finally {
       setMutating(false);
@@ -369,16 +369,16 @@ export default function MerchantInvoicesPage({
         .eq("id", deleteTarget.id);
 
       if (error) {
-        toast.error(error.message || "Không thể xóa hóa đơn.");
+        toast.error(error.message || "Could not delete the invoice.");
         return;
       }
 
-      toast.success("Đã xóa hóa đơn khỏi danh sách!");
+      toast.success("Invoice deleted.");
       setDeleteTarget(null);
       await refresh();
     } catch (error) {
       console.error("Failed to delete invoice:", error);
-      toast.error("Không thể xóa hóa đơn hoặc ảnh minh chứng.");
+      toast.error("Could not delete the invoice or its proof images.");
     } finally {
       setMutating(false);
     }
@@ -386,17 +386,17 @@ export default function MerchantInvoicesPage({
 
   function exportExcel() {
     const headers = [
-      "STT",
+      "NO.",
       "Merchant",
-      "SỐ HỢP ĐỒNG",
-      "SỐ TIỀN HÓA ĐƠN",
-      "TỶ LỆ VAT",
-      "TÊM CÔNG TY",
-      "ĐỊA CHỈ CÔNG TY",
-      "MÃ SỐ THUẾ",
-      "EMAIL HOÁ ĐƠN",
-      "TRẠNG THÁI",
-      "NGÀY XUẤT",
+      "CONTRACT NUMBER",
+      "INVOICE AMOUNT",
+      "VAT RATE",
+      "COMPANY NAME",
+      "COMPANY ADDRESS",
+      "TAX CODE",
+      "INVOICE EMAIL",
+      "STATUS",
+      "ISSUE DATE",
       "NOTE",
     ];
 
@@ -468,8 +468,8 @@ export default function MerchantInvoicesPage({
     ];
 
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Quản Lý Xuất Hóa Đơn");
-    XLSX.writeFile(workbook, `Quản Lý Xuất Hóa Đơn_${getExportDateStamp()}.xlsx`);
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Invoice Management");
+    XLSX.writeFile(workbook, `Invoice_Management_${getExportDateStamp()}.xlsx`);
   }
 
   async function copyStatAmount(amount: number, key: string) {
@@ -485,7 +485,7 @@ export default function MerchantInvoicesPage({
     const csvRows = parseCsvRows(text);
 
     if (csvRows.length <= 1) {
-      toast.error("File CSV đang trống.");
+      toast.error("The CSV file is empty.");
       return;
     }
 
@@ -503,7 +503,7 @@ export default function MerchantInvoicesPage({
     });
 
     if (headerIndex < 0) {
-      toast.error("Không tìm thấy dòng header hợp lệ trong file CSV.");
+      toast.error("No valid header row was found in the CSV file.");
       return;
     }
 
@@ -572,25 +572,25 @@ export default function MerchantInvoicesPage({
     const validPayload = payload.filter((row) => row.merchant && row.tax_code);
 
     if (!validPayload.length) {
-      toast.error("Không tìm thấy dòng hóa đơn hợp lệ.");
+      toast.error("No valid invoice rows were found.");
       return;
     }
 
     const { error } = await supabase.from("merchant_invoices").insert(validPayload);
 
     if (error) {
-      toast.error(error.message || "Không thể nhập CSV.");
+      toast.error(error.message || "Could not import the CSV file.");
       return;
     }
 
-    toast.success(`Đã nhập thành công ${validPayload.length} hóa đơn từ file CSV!`);
+    toast.success(`Imported ${validPayload.length} invoices from the CSV file.`);
     await refresh();
   }
 
   const statCards = [
     {
       key: "not_ready" as StatusFilter,
-      label: "Hóa Đơn Chưa Xuất",
+      label: "Invoices Not Ready",
       count: stats.notReadyCount,
       amount: stats.notReadyAmount,
       icon: AlertCircle,
@@ -604,7 +604,7 @@ export default function MerchantInvoicesPage({
     },
     {
       key: "ready" as StatusFilter,
-      label: "Hóa Đơn Chờ Xuất",
+      label: "Invoices Ready to Issue",
       count: stats.readyCount,
       amount: stats.readyAmount,
       icon: Clock,
@@ -618,7 +618,7 @@ export default function MerchantInvoicesPage({
     },
     {
       key: "issued" as StatusFilter,
-      label: "Hóa Đơn Đã Xuất",
+      label: "Issued Invoices",
       count: stats.issuedCount,
       amount: stats.issuedAmount,
       icon: CheckCircle2,
@@ -632,7 +632,7 @@ export default function MerchantInvoicesPage({
     },
     {
       key: ALL as StatusFilter,
-      label: "Tổng Cộng Tất Cả",
+      label: "Grand Total",
       count: stats.total,
       amount: stats.totalAmount,
       icon: ReceiptText,
@@ -650,7 +650,7 @@ export default function MerchantInvoicesPage({
       <div className="py-2">
         <h1 className="flex items-center gap-2 text-[30px] font-extrabold tracking-tight text-foreground">
           <ReceiptText className="h-7 w-7 text-primary" />
-          Quản Lý Xuất Hóa Đơn
+          Invoice Management
         </h1>
       </div>
 
@@ -685,7 +685,7 @@ export default function MerchantInvoicesPage({
                   {card.label}
                 </div>
                 <Badge variant="outline" className={card.countClassName}>
-                  {card.count} mục
+                  {card.count} items
                 </Badge>
               </div>
               <div
@@ -704,8 +704,8 @@ export default function MerchantInvoicesPage({
                     event.stopPropagation();
                     void copyStatAmount(card.amount, card.key);
                   }}
-                  title="Sao chép số tiền"
-                  aria-label={`Sao chép số tiền ${card.label}`}
+                  title="Copy amount"
+                  aria-label={`Copy amount for ${card.label}`}
                   className="cursor-pointer opacity-60 hover:bg-foreground/10 hover:text-inherit group-hover:opacity-100 dark:hover:bg-foreground/15"
                 >
                   {copiedStatKey === card.key ? <Check /> : <Copy />}
@@ -728,8 +728,8 @@ export default function MerchantInvoicesPage({
               {monthOptions.map((month) => (
                 <option key={month} value={month}>
                   {month === ALL
-                    ? `Tất cả (${rows.length} HĐ)`
-                    : `${formatMonthLabel(month)} (${rows.filter((row) => getMonthKey(row.created_at) === month).length} HĐ)`}
+                    ? `All (${rows.length} invoices)`
+                    : `${formatMonthLabel(month)} (${rows.filter((row) => getMonthKey(row.created_at) === month).length} invoices)`}
                 </option>
               ))}
             </select>
@@ -737,10 +737,10 @@ export default function MerchantInvoicesPage({
 
           <div className="flex items-center gap-1 rounded-lg border bg-muted p-1 text-xs">
             {[
-              ["not_ready", "Chưa xuất"],
-              ["ready", "Chờ xuất"],
-              ["issued", "Đã xuất"],
-              [ALL, "Tất cả"],
+              ["not_ready", "Not ready"],
+              ["ready", "Ready to issue"],
+              ["issued", "Issued"],
+              [ALL, "All"],
             ].map(([value, label]) => (
               <button
                 key={value}
@@ -763,7 +763,7 @@ export default function MerchantInvoicesPage({
             <Input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Tìm theo Merchant, MST, Tên đơn vị..."
+              placeholder="Search merchant, tax code, company name..."
               className="pl-9"
             />
           </div>
@@ -773,7 +773,7 @@ export default function MerchantInvoicesPage({
           {isAdmin && (
             <Button onClick={openCreate} className="cursor-pointer">
               <Plus className="h-4 w-4" />
-              Tạo hoá đơn
+              Create invoice
             </Button>
           )}
 
@@ -784,7 +784,7 @@ export default function MerchantInvoicesPage({
             className="cursor-pointer"
           >
             <Download className="h-4 w-4" />
-            Xuất Excel
+            Export Excel
           </Button>
 
           {isAdmin && (
@@ -806,7 +806,7 @@ export default function MerchantInvoicesPage({
                 className="cursor-pointer"
               >
                 <Upload className="h-4 w-4" />
-                Nhập CSV
+                Import CSV
               </Button>
             </>
           )}
@@ -815,22 +815,22 @@ export default function MerchantInvoicesPage({
 
       <div className="flex items-center justify-between px-1 text-xs text-muted-foreground">
         <span>
-          Hiển thị <strong className="text-primary">{filteredRows.length}</strong> /{" "}
-          {rows.length} hóa đơn
+          Showing <strong className="text-primary">{filteredRows.length}</strong> /{" "}
+          {rows.length} invoices
           {selectedMonth !== ALL && ` (${formatMonthLabel(selectedMonth)})`}
           {statusFilter !== ALL &&
-            ` • Trạng thái: ${
+            ` • Status: ${
               statusFilter === "not_ready"
-                ? "Chưa xuất"
+                ? "Not ready"
                 : statusFilter === "ready"
-                  ? "Chờ xuất"
-                  : "Đã xuất"
+                  ? "Ready to issue"
+                  : "Issued"
             }`}
         </span>
         {loading && (
           <span className="flex items-center gap-1">
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            Đang tải
+            Loading
           </span>
         )}
       </div>
@@ -878,8 +878,8 @@ export default function MerchantInvoicesPage({
         onOpenChange={(open) => {
           if (!open) setDeleteTarget(null);
         }}
-        title="Xóa hóa đơn?"
-        description={`Thao tác này sẽ xóa vĩnh viễn hóa đơn #${deleteTarget?.contract_number ?? ""} của "${
+        title="Delete invoice?"
+        description={`This will permanently delete invoice #${deleteTarget?.contract_number ?? ""} for "${
           deleteTarget?.merchant ?? ""
         }"`}
         loading={mutating}

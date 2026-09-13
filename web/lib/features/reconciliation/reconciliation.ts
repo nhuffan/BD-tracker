@@ -1,5 +1,6 @@
 import JSZip from "jszip";
 import * as XLSX from "xlsx-js-style";
+import type { ReconciliationClient } from "@/lib/features/reconciliation/clients";
 
 export interface ReconciliationRow {
   reconciledAt: string;
@@ -41,6 +42,7 @@ const DATA_START_ROW = 13;
 const TEMPLATE_DATA_ROWS = 10;
 const TEMPLATE_TOTAL_ROW = 23;
 const TEMPLATE_LAST_ROW = 41;
+const TEMPLATE_LAST_COLUMN = "H";
 const XML_NAMESPACE = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
 const XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
@@ -91,7 +93,7 @@ function parseMoney(value: unknown) {
   const amount = digits ? Number(digits) : Number.NaN;
 
   if (!Number.isFinite(amount)) {
-    throw new Error(`Giá trị tiền không hợp lệ: ${raw}`);
+    throw new Error(`Invalid currency value: ${raw}`);
   }
 
   return negative ? -amount : amount;
@@ -178,7 +180,7 @@ export function parseReconciliationWorkbook(buffer: ArrayBuffer, fileName: strin
   });
   const sheetName = workbook.SheetNames[0];
 
-  if (!sheetName) throw new Error("File Excel không có sheet dữ liệu.");
+  if (!sheetName) throw new Error("The Excel file does not contain a data sheet.");
 
   const sheet = workbook.Sheets[sheetName];
   const matrix = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
@@ -197,7 +199,7 @@ export function parseReconciliationWorkbook(buffer: ArrayBuffer, fileName: strin
   });
 
   if (headerRowIndex < 0) {
-    throw new Error("Không tìm thấy hàng tiêu đề đối soát trong file.");
+    throw new Error("The reconciliation header row could not be found.");
   }
 
   const headers = matrix[headerRowIndex];
@@ -215,7 +217,7 @@ export function parseReconciliationWorkbook(buffer: ArrayBuffer, fileName: strin
     .filter(([, index]) => index < 0)
     .map(([key]) => key);
   if (missing.length) {
-    throw new Error(`File thiếu cột bắt buộc: ${missing.join(", ")}.`);
+    throw new Error(`The file is missing required columns: ${missing.join(", ")}.`);
   }
 
   const rows = matrix
@@ -236,7 +238,7 @@ export function parseReconciliationWorkbook(buffer: ArrayBuffer, fileName: strin
     }))
     .filter((row) => row.reconciledAt || row.orderId || row.productId || row.productName);
 
-  if (!rows.length) throw new Error("File không có giao dịch đối soát để xuất.");
+  if (!rows.length) throw new Error("The file has no reconciliation transactions to export.");
 
   const metadata = parseFileMetadata(fileName, rows);
   const totals = rows.reduce(
@@ -264,7 +266,7 @@ function directChild(parent: Element, localName: string) {
 
 function parseXml(xml: string) {
   const document = new DOMParser().parseFromString(xml, "application/xml");
-  if (document.querySelector("parsererror")) throw new Error("Template Excel có XML không hợp lệ.");
+  if (document.querySelector("parsererror")) throw new Error("The Excel template contains invalid XML.");
   return document;
 }
 
@@ -327,6 +329,29 @@ function getRow(sheetDocument: XMLDocument, rowNumber: number) {
   );
 }
 
+function removeTrailingTemplateColumn(sheetDocument: XMLDocument) {
+  Array.from(sheetDocument.getElementsByTagNameNS(XML_NAMESPACE, "row")).forEach((row) => {
+    Array.from(row.children)
+      .filter(
+        (child) =>
+          child.localName === "c" && cellColumn(child.getAttribute("r") ?? "") === "I"
+      )
+      .forEach((cell) => cell.remove());
+
+    if (row.getAttribute("spans") === "1:9") row.setAttribute("spans", "1:8");
+  });
+
+  Array.from(sheetDocument.getElementsByTagNameNS(XML_NAMESPACE, "mergeCell")).forEach(
+    (merge) => {
+      const reference = merge.getAttribute("ref");
+      if (reference) merge.setAttribute("ref", reference.replace(/I(\d+)/g, "H$1"));
+    }
+  );
+
+  const dimension = sheetDocument.getElementsByTagNameNS(XML_NAMESPACE, "dimension")[0];
+  if (dimension) dimension.setAttribute("ref", `A1:${TEMPLATE_LAST_COLUMN}${TEMPLATE_LAST_ROW}`);
+}
+
 function shiftTemplateRows(sheetDocument: XMLDocument, amount: number) {
   if (amount <= 0) return;
 
@@ -354,7 +379,9 @@ function shiftTemplateRows(sheetDocument: XMLDocument, amount: number) {
   });
 
   const dimension = sheetDocument.getElementsByTagNameNS(XML_NAMESPACE, "dimension")[0];
-  if (dimension) dimension.setAttribute("ref", `A1:I${TEMPLATE_LAST_ROW + amount}`);
+  if (dimension) {
+    dimension.setAttribute("ref", `A1:${TEMPLATE_LAST_COLUMN}${TEMPLATE_LAST_ROW + amount}`);
+  }
 }
 
 function extendDataRows(sheetDocument: XMLDocument, extraRows: number) {
@@ -363,7 +390,7 @@ function extendDataRows(sheetDocument: XMLDocument, extraRows: number) {
   const sheetData = sheetDocument.getElementsByTagNameNS(XML_NAMESPACE, "sheetData")[0];
   const templateRow = getRow(sheetDocument, DATA_START_ROW);
   const totalRow = getRow(sheetDocument, TEMPLATE_TOTAL_ROW + extraRows);
-  if (!sheetData || !templateRow || !totalRow) throw new Error("Template thiếu vùng dữ liệu chuẩn.");
+  if (!sheetData || !templateRow || !totalRow) throw new Error("The template is missing its required data region.");
 
   for (let index = 0; index < extraRows; index++) {
     const rowNumber = TEMPLATE_TOTAL_ROW + index;
@@ -417,7 +444,7 @@ function createVndStyleFactory(stylesDocument: XMLDocument) {
   numFmts.setAttribute("count", String(Array.from(numFmts.children).length));
 
   const cellXfs = directChild(root, "cellXfs");
-  if (!cellXfs) throw new Error("Template thiếu định dạng ô.");
+  if (!cellXfs) throw new Error("The template is missing cell formatting.");
 
   const styleByBase = new Map<number, number>();
   return (cell: Element) => {
@@ -426,7 +453,7 @@ function createVndStyleFactory(stylesDocument: XMLDocument) {
     if (styleIndex === undefined) {
       const styles = Array.from(cellXfs!.children).filter((child) => child.localName === "xf");
       const base = styles[baseStyle] ?? styles[0];
-      if (!base) throw new Error("Template thiếu cell style gốc.");
+      if (!base) throw new Error("The template is missing the base cell style.");
       const clone = base.cloneNode(true) as Element;
       clone.setAttribute("numFmtId", String(numFmtId));
       clone.setAttribute("applyNumberFormat", "1");
@@ -445,12 +472,12 @@ function matchCellFont(
   sourceCell: Element
 ) {
   const cellXfs = directChild(stylesDocument.documentElement, "cellXfs");
-  if (!cellXfs) throw new Error("Template thiếu định dạng ô.");
+  if (!cellXfs) throw new Error("The template is missing cell formatting.");
 
   const styles = Array.from(cellXfs.children).filter((child) => child.localName === "xf");
   const sourceStyle = styles[Number(sourceCell.getAttribute("s") ?? 0)];
   const targetStyle = styles[Number(targetCell.getAttribute("s") ?? 0)];
-  if (!sourceStyle || !targetStyle) throw new Error("Template thiếu style cho tên công ty.");
+  if (!sourceStyle || !targetStyle) throw new Error("The template is missing the company name style.");
 
   const clone = targetStyle.cloneNode(true) as Element;
   clone.setAttribute("fontId", sourceStyle.getAttribute("fontId") ?? "0");
@@ -466,11 +493,11 @@ function alignCell(
   horizontal: "left" | "center" | "right"
 ) {
   const cellXfs = directChild(stylesDocument.documentElement, "cellXfs");
-  if (!cellXfs) throw new Error("Template thiếu định dạng ô.");
+  if (!cellXfs) throw new Error("The template is missing cell formatting.");
 
   const styles = Array.from(cellXfs.children).filter((child) => child.localName === "xf");
   const currentStyle = styles[Number(cell.getAttribute("s") ?? 0)];
-  if (!currentStyle) throw new Error("Template thiếu style căn chỉnh.");
+  if (!currentStyle) throw new Error("The template is missing the alignment style.");
 
   const clone = currentStyle.cloneNode(true) as Element;
   let alignment = directChild(clone, "alignment");
@@ -492,7 +519,7 @@ function setColumnWidth(sheetDocument: XMLDocument, columnNumber: number, width:
     const max = Number(item.getAttribute("max"));
     return min <= columnNumber && columnNumber <= max;
   });
-  if (!column) throw new Error(`Template thiếu cấu hình cột ${columnNumber}.`);
+  if (!column) throw new Error(`The template is missing the configuration for column ${columnNumber}.`);
 
   column.setAttribute("width", String(width));
   column.setAttribute("customWidth", "1");
@@ -516,14 +543,15 @@ function sanitizeFilePart(value: string) {
 
 export async function createStatementOfAccount(
   templateBuffer: ArrayBuffer,
-  data: ReconciliationData
+  data: ReconciliationData,
+  client: ReconciliationClient
 ) {
   const zip = await JSZip.loadAsync(templateBuffer);
   const sheetFile = zip.file("xl/worksheets/sheet1.xml");
   const workbookFile = zip.file("xl/workbook.xml");
   const stylesFile = zip.file("xl/styles.xml");
   if (!sheetFile || !workbookFile || !stylesFile) {
-    throw new Error("Template SOA không đủ thành phần cần thiết.");
+    throw new Error("The SOA template is missing required elements.");
   }
 
   const [sheetXml, workbookXml, stylesXml] = await Promise.all([
@@ -537,6 +565,7 @@ export async function createStatementOfAccount(
   const extraRows = Math.max(0, data.rows.length - TEMPLATE_DATA_ROWS);
   const totalRowNumber = TEMPLATE_TOTAL_ROW + extraRows;
 
+  removeTrailingTemplateColumn(sheetDocument);
   shiftTemplateRows(sheetDocument, extraRows);
   extendDataRows(sheetDocument, extraRows);
   updateDefinedRange(workbookDocument, totalRowNumber);
@@ -582,15 +611,25 @@ export async function createStatementOfAccount(
   };
   ["F1", "G1", "F2", "G2"].forEach(alignLeftAt);
 
-  if (data.merchantName) {
-    setTextAt("E5", data.merchantName);
-    const companyRow = getRow(sheetDocument, 5);
-    if (companyRow) {
-      const fromCell = ensureCell(sheetDocument, companyRow, "B");
-      const toCell = ensureCell(sheetDocument, companyRow, "E");
-      matchCellFont(stylesDocument, toCell, fromCell);
-      alignCell(stylesDocument, toCell, "left");
-    }
+  const clientFields = [
+    [5, client.name],
+    [6, client.address],
+    [7, client.taxCode],
+    [8, client.tel],
+    [9, client.email],
+  ] as const;
+  clientFields.forEach(([rowNumber, value]) => {
+    setTextAt(`E${rowNumber}`, value);
+    const row = getRow(sheetDocument, rowNumber);
+    if (row) alignCell(stylesDocument, ensureCell(sheetDocument, row, "E"), "left");
+  });
+
+  const companyRow = getRow(sheetDocument, 5);
+  if (companyRow) {
+    const fromCell = ensureCell(sheetDocument, companyRow, "B");
+    const toCell = ensureCell(sheetDocument, companyRow, "E");
+    matchCellFont(stylesDocument, toCell, fromCell);
+    alignCell(stylesDocument, toCell, "left");
   }
   setTextAt("A10", `STATEMENT OF ACCOUNT FOR ${data.monthLabel} (DISBURSEMENT NOTE)`);
   setTextAt("A11", `${data.monthLabel} 月份对账单`);
@@ -605,7 +644,7 @@ export async function createStatementOfAccount(
   for (let index = 0; index < reservedRows; index++) {
     const rowNumber = DATA_START_ROW + index;
     const rowElement = getRow(sheetDocument, rowNumber);
-    if (!rowElement) throw new Error(`Template thiếu dòng dữ liệu ${rowNumber}.`);
+    if (!rowElement) throw new Error(`The template is missing data row ${rowNumber}.`);
 
     const cells = ["A", "B", "C", "D", "E", "F", "G", "H"].map((column) =>
       ensureCell(sheetDocument, rowElement, column)
@@ -629,7 +668,7 @@ export async function createStatementOfAccount(
   }
 
   const totalRow = getRow(sheetDocument, totalRowNumber);
-  if (!totalRow) throw new Error("Template thiếu dòng tổng cộng.");
+  if (!totalRow) throw new Error("The template is missing the total row.");
   const totalValues = [
     ["F", "comboPrice", data.totals.comboPrice],
     ["G", "serviceFee", data.totals.serviceFee],

@@ -19,9 +19,9 @@ export type MerchantTransferRow = {
 };
 
 export const TRANSFER_STATUS_LABEL: Record<MerchantTransferStatus, string> = {
-  not_transferred: "Chưa chuyển khoản",
-  ready: "Chờ chuyển khoản",
-  transferred: "Đã chuyển khoản",
+  not_transferred: "Not transferred",
+  ready: "Ready to transfer",
+  transferred: "Transferred",
 };
 
 export const POPULAR_BANKS = [
@@ -67,10 +67,10 @@ export function getMonthKey(value?: string | null) {
 }
 
 export function formatMonthLabel(monthKey: string) {
-  if (!monthKey || monthKey === "__all__") return "Tất cả";
+  if (!monthKey || monthKey === "__all__") return "All";
   const [year, month] = monthKey.split("-");
   if (!year || !month) return monthKey;
-  return `Tháng ${month}/${year}`;
+  return `Month ${month}/${year}`;
 }
 
 export function parseMoneyInput(value: string) {

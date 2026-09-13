@@ -225,7 +225,7 @@ export default function TransferDialog({
     setBankName(POPULAR_BANKS.includes(row.bank_name) ? row.bank_name : "__other__");
     setCustomBankName(POPULAR_BANKS.includes(row.bank_name) ? "" : row.bank_name);
     setBranch(row.branch ?? "");
-    setAutoFillNotice(`Đã tự động điền thông tin ngân hàng từ lần nhập trước của ${row.merchant}.`);
+    setAutoFillNotice(`Bank details were filled from the previous entry for ${row.merchant}.`);
     setShowMerchantSuggestions(false);
   }
 
@@ -270,7 +270,7 @@ export default function TransferDialog({
         amount: numericAmount,
         account_number: accountNumber.trim(),
         account_holder: accountHolder.trim().toUpperCase(),
-        bank_name: finalBankName || "Khác",
+        bank_name: finalBankName || "Other",
         branch: branch.trim() || null,
         status,
         transaction_date: transactionDate,
@@ -302,11 +302,11 @@ export default function TransferDialog({
           .eq("id", transfer.id);
 
         if (error) {
-          toast.error(error.message || "Không thể cập nhật giao dịch chuyển khoản.");
+          toast.error(error.message || "Could not update the transfer.");
           return;
         }
 
-        toast.success("Đã cập nhật giao dịch chuyển khoản!");
+        toast.success("Transfer updated.");
       } else {
         const { error } = await supabase.from("merchant_transfers").insert({
           sequence_no: payload.sequence_no,
@@ -323,11 +323,11 @@ export default function TransferDialog({
         });
 
         if (error) {
-          toast.error(error.message || "Không thể tạo mới giao dịch chuyển khoản.");
+          toast.error(error.message || "Could not create the transfer.");
           return;
         }
 
-        toast.success("Đã tạo giao dịch chuyển khoản!");
+        toast.success("Transfer created.");
       }
 
       onOpenChange(false);
@@ -347,25 +347,25 @@ export default function TransferDialog({
         <DialogHeader className="border-b bg-card px-5 py-4 pr-12 sm:px-6 sm:py-5">
           <div className="mb-2 flex w-fit items-center gap-2 rounded-md border bg-muted px-2 py-1 text-xs font-semibold text-muted-foreground">
             <ClipboardList className="h-3.5 w-3.5" />
-            STT #{sequenceNo}
+            No. #{sequenceNo}
           </div>
           <DialogTitle className="flex items-center gap-2 text-xl font-semibold tracking-tight">
-            {isEditMode ? "Chỉnh Sửa Giao Dịch Chuyển Khoản" : "Thêm Lượt Chuyển Khoản Mới"}
+            {isEditMode ? "Edit Transfer" : "Create Transfer"}
           </DialogTitle>
           <DialogDescription>
-            Tự động gợi ý và điền thông tin tài khoản nếu Merchant đã tồn tại.
+            Account details are suggested automatically when the merchant already exists.
           </DialogDescription>
         </DialogHeader>
 
         <div className="min-h-0 space-y-4 overflow-y-auto bg-muted/25 px-4 py-4 sm:px-6 sm:py-5">
           <TransferFormSection
             step={1}
-            title="Thông tin giao dịch"
-            description="Nhập Merchant và số tiền cần chuyển."
+            title="Transfer details"
+            description="Enter the merchant and transfer amount."
           >
             <div className="grid gap-4 md:grid-cols-2">
               <div className="relative min-w-0">
-                <TransferFormField id="transfer-merchant" label="Tên Merchant" required>
+                <TransferFormField id="transfer-merchant" label="Merchant name" required>
                   <Input
                     id="transfer-merchant"
                     required
@@ -379,7 +379,7 @@ export default function TransferDialog({
                         event.stopPropagation();
                       }
                     }}
-                    placeholder="Ví dụ: Phở Việt Nam, Lao Lu Guan..."
+                    placeholder="Example: Pho Viet Nam, Lao Lu Guan..."
                     className={fieldClass}
                   />
                 </TransferFormField>
@@ -403,7 +403,7 @@ export default function TransferDialog({
                 )}
               </div>
 
-              <TransferFormField id="transfer-amount" label="Số tiền" required>
+              <TransferFormField id="transfer-amount" label="Amount" required>
                 <div className="relative">
                   <Input
                     id="transfer-amount"
@@ -431,22 +431,22 @@ export default function TransferDialog({
 
           <TransferFormSection
             step={2}
-            title="Tài khoản nhận tiền"
-            description="Kiểm tra chính xác thông tin ngân hàng trước khi lưu."
+            title="Recipient account"
+            description="Verify the bank details before saving."
           >
             <div className="grid gap-4 md:grid-cols-2">
-              <TransferFormField id="transfer-account-number" label="Số tài khoản" required>
+              <TransferFormField id="transfer-account-number" label="Account number" required>
                 <Input
                   id="transfer-account-number"
                   required
                   value={accountNumber}
                   onChange={(event) => setAccountNumber(event.target.value)}
-                  placeholder="Nhập STK..."
+                  placeholder="Enter account number..."
                   className={fieldClass}
                 />
               </TransferFormField>
 
-              <TransferFormField id="transfer-account-holder" label="Chủ tài khoản" required>
+              <TransferFormField id="transfer-account-holder" label="Account holder" required>
                 <Input
                   id="transfer-account-holder"
                   required
@@ -457,7 +457,7 @@ export default function TransferDialog({
                 />
               </TransferFormField>
 
-              <TransferFormField id="transfer-bank" label="Ngân hàng" required>
+              <TransferFormField id="transfer-bank" label="Bank" required>
                 <div className="relative">
                   <select
                     id="transfer-bank"
@@ -470,7 +470,7 @@ export default function TransferDialog({
                         {bank}
                       </option>
                     ))}
-                    <option value="__other__">Ngân hàng khác...</option>
+                    <option value="__other__">Other bank...</option>
                   </select>
                   <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground opacity-70" />
                 </div>
@@ -478,18 +478,18 @@ export default function TransferDialog({
                   <Input
                     value={customBankName}
                     onChange={(event) => setCustomBankName(event.target.value)}
-                    placeholder="Nhập tên ngân hàng..."
+                    placeholder="Enter bank name..."
                     className={`${fieldClass} mt-2`}
                   />
                 )}
               </TransferFormField>
 
-              <TransferFormField id="transfer-branch" label="Chi nhánh" optional>
+              <TransferFormField id="transfer-branch" label="Branch" optional>
                 <Input
                   id="transfer-branch"
                   value={branch}
                   onChange={(event) => setBranch(event.target.value)}
-                  placeholder="Phú Nhuận, Hồ Chí Minh..."
+                  placeholder="Phu Nhuan, Ho Chi Minh City..."
                   className={fieldClass}
                 />
               </TransferFormField>
@@ -498,8 +498,8 @@ export default function TransferDialog({
 
           <TransferFormSection
             step={3}
-            title="Trạng thái chuyển khoản"
-            description="Chọn ngày giao dịch và tình trạng xử lý hiện tại."
+            title="Transfer status"
+            description="Select the transaction date and current processing status."
             trailing={
               <span
                 className={[
@@ -514,18 +514,18 @@ export default function TransferDialog({
             }
           >
             <div className="grid gap-4 md:grid-cols-2">
-              <TransferFormField id="transfer-date" label="Ngày giao dịch">
+              <TransferFormField id="transfer-date" label="Transaction date">
                 <DatePickerDMY
                   value={transactionDate}
                   onChange={(iso) =>
                     setTransactionDate(iso ?? transactionDate)
                   }
-                  placeholder="Chọn ngày giao dịch"
+                  placeholder="Select transaction date"
                   className="h-10"
                 />
               </TransferFormField>
 
-              <TransferFormField id="transfer-status" label="Tình trạng">
+              <TransferFormField id="transfer-status" label="Status">
                 <Select
                   value={status}
                   onValueChange={(value) =>
@@ -556,7 +556,7 @@ export default function TransferDialog({
                 {isLocked && (
                   <p className="flex items-center gap-1 text-xs font-medium text-amber-700 dark:text-amber-300">
                     <AlertCircle className="h-3 w-3 shrink-0" />
-                    Giao dịch đã ở trạng thái {TRANSFER_STATUS_LABEL.transferred} và không thể thay đổi.
+                    This transaction is {TRANSFER_STATUS_LABEL.transferred} and can no longer be changed.
                   </p>
                 )}
               </TransferFormField>
@@ -572,7 +572,7 @@ export default function TransferDialog({
             disabled={saving}
             className="cursor-pointer sm:min-w-24"
           >
-            Hủy
+            Cancel
           </Button>
           <Button
             onClick={saveTransfer}
@@ -580,7 +580,7 @@ export default function TransferDialog({
             className="cursor-pointer sm:min-w-32"
           >
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-            {isEditMode ? "Cập Nhật" : "Lưu Giao Dịch"}
+            {isEditMode ? "Update" : "Save Transfer"}
           </Button>
         </DialogFooter>
       </DialogContent>

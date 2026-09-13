@@ -341,7 +341,7 @@ export default function InvoiceDialog({
       merchant: match.merchant ?? "",
       taxCode: match.tax_code ?? "",
     });
-    setAutoFillNotice(`Đã tự động điền thông tin xuất hóa đơn từ MST đã có (${match.merchant}).`);
+    setAutoFillNotice(`Invoice details were filled from the existing tax code (${match.merchant}).`);
   }
 
   function applyMerchantLookup(row: MerchantInvoiceRow) {
@@ -358,7 +358,7 @@ export default function InvoiceDialog({
       merchant: row.merchant,
       taxCode: row.tax_code ?? "",
     });
-    setAutoFillNotice(`Đã tự động điền thông tin xuất hóa đơn từ ${row.merchant}.`);
+    setAutoFillNotice(`Invoice details were filled from ${row.merchant}.`);
   }
 
   const mergeProofImages = useCallback(async (fileList: FileList | File[]) => {
@@ -367,7 +367,7 @@ export default function InvoiceDialog({
 
     const remainingSlots = MAX_PROOF_IMAGES - proofImages.length;
     if (remainingSlots <= 0) {
-      toast.error(`Chỉ được tải tối đa ${MAX_PROOF_IMAGES} ảnh minh chứng.`);
+      toast.error(`You can upload up to ${MAX_PROOF_IMAGES} proof images.`);
       return;
     }
 
@@ -377,7 +377,7 @@ export default function InvoiceDialog({
     const oversizedFiles = getOversizedFiles(compressedFiles);
     if (oversizedFiles.length > 0) {
       toast.error(
-        oversizedFiles.map((file) => `${file.name} vẫn vượt quá 10MB sau khi nén.`).join("\n")
+        oversizedFiles.map((file) => `${file.name} is still larger than 10 MB after compression.`).join("\n")
       );
     }
 
@@ -394,7 +394,7 @@ export default function InvoiceDialog({
 
       return [...prev, ...next];
     });
-    toast.success(`Đã thêm ${validFiles.length} ảnh minh chứng.`);
+    toast.success(`Added ${validFiles.length} proof images.`);
   }, [proofImages.length]);
 
   useEffect(() => {
@@ -545,11 +545,11 @@ export default function InvoiceDialog({
           .eq("id", invoice.id);
 
         if (error) {
-          toast.error(error.message || "Không thể cập nhật thông tin hóa đơn.");
+          toast.error(error.message || "Could not update the invoice.");
           return;
         }
 
-        toast.success("Đã cập nhật thông tin hóa đơn!");
+        toast.success("Invoice updated.");
       } else {
         const { error } = await supabase.from("merchant_invoices").insert({
           sequence_no: payload.sequence_no,
@@ -569,18 +569,18 @@ export default function InvoiceDialog({
         });
 
         if (error) {
-          toast.error(error.message || "Không thể tạo mới hóa đơn.");
+          toast.error(error.message || "Could not create the invoice.");
           return;
         }
 
-        toast.success("Đã tạo mới hóa đơn thành công!");
+        toast.success("Invoice created.");
       }
 
       onOpenChange(false);
       await onSaved();
     } catch (error) {
       console.error("save invoice failed:", error);
-      toast.error("Không thể lưu hóa đơn.");
+      toast.error("Could not save the invoice.");
     } finally {
       setSaving(false);
       setSubmitStage("idle");
@@ -605,13 +605,13 @@ export default function InvoiceDialog({
         <DialogHeader className="border-b px-6 py-4">
           <div className="mb-2 flex w-fit items-center gap-2 rounded-md border bg-muted px-2 py-1 text-xs font-semibold text-muted-foreground">
             <ClipboardList className="h-3.5 w-3.5" />
-            STT #{sequenceNo}
+            No. #{sequenceNo}
           </div>
           <DialogTitle className="text-2xl font-bold tracking-tight text-foreground">
-            {isEditMode ? "Cập Nhật Thông Tin Hóa Đơn" : "Tạo Hóa Đơn Mới"}
+            {isEditMode ? "Update Invoice" : "Create Invoice"}
           </DialogTitle>
           <DialogDescription className="sr-only">
-            {isEditMode ? "Cập nhật hóa đơn xuất" : "Tạo hóa đơn mới"}
+            {isEditMode ? "Update invoice details" : "Create a new invoice"}
           </DialogDescription>
         </DialogHeader>
 
@@ -626,7 +626,7 @@ export default function InvoiceDialog({
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="relative">
               <label className={labelClass}>
-                Merchant (Tên thương hiệu/quán){" "}
+                Merchant (brand/store name){" "}
                 <span className="text-destructive">*</span>
               </label>
               <Input
@@ -642,7 +642,7 @@ export default function InvoiceDialog({
                   }
                 }}
                 onBlur={() => window.setTimeout(() => setShowMerchantSuggestions(false), 120)}
-                placeholder="Ví dụ: Hạ Spa, Tokyo Deli..."
+                placeholder="Example: Ha Spa, Tokyo Deli..."
                 className={fieldClass}
               />
               {showMerchantSuggestions && merchantLookupRows.length > 0 && (
@@ -657,7 +657,7 @@ export default function InvoiceDialog({
                     >
                       <span className="font-semibold">{row.merchant}</span>
                       <span className="text-xs text-muted-foreground">
-                        {row.company_name} · MST {row.tax_code}
+                        {row.company_name} · Tax ID {row.tax_code}
                       </span>
                     </button>
                   ))}
@@ -667,13 +667,13 @@ export default function InvoiceDialog({
 
             <div>
               <label className={labelClass}>
-                Mã Số Thuế (MST) <span className="text-destructive">*</span>
+                Tax Code <span className="text-destructive">*</span>
               </label>
               <Input
                 required
                 value={taxCode}
                 onChange={(event) => handleTaxCodeChange(event.target.value)}
-                placeholder="Nhập Mã Số Thuế (ví dụ: 318954777)..."
+                placeholder="Enter tax code (e.g. 318954777)..."
                 className={fieldClass}
               />
             </div>
@@ -682,23 +682,23 @@ export default function InvoiceDialog({
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
               <label className={labelClass}>
-                Tên Đơn Vị Xuất Hóa Đơn <span className="text-destructive">*</span>
+                Invoice Company Name <span className="text-destructive">*</span>
               </label>
               <Input
                 required
                 value={companyName}
                 onChange={(event) => setCompanyName(event.target.value)}
-                placeholder="CÔNG TY TNHH..."
+                placeholder="COMPANY LTD..."
                 className={fieldClass}
               />
             </div>
 
             <div>
-              <label className={labelClass}>Địa Chỉ Xuất Hóa Đơn</label>
+              <label className={labelClass}>Invoice Address</label>
               <Input
                 value={companyAddress}
                 onChange={(event) => setCompanyAddress(event.target.value)}
-                placeholder="Địa chỉ ghi trên hóa đơn..."
+                placeholder="Address shown on the invoice..."
                 className={fieldClass}
               />
             </div>
@@ -717,11 +717,11 @@ export default function InvoiceDialog({
             </div>
 
             <div>
-              <label className={labelClass}>Số Hợp Đồng</label>
+              <label className={labelClass}>Contract Number</label>
               <Input
                 value={contractNumber}
                 onChange={(event) => setContractNumber(event.target.value)}
-                placeholder="Ví dụ: NO.KADOB"
+                placeholder="Example: NO.KADOB"
                 className={fieldClass}
               />
             </div>
@@ -730,7 +730,7 @@ export default function InvoiceDialog({
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
               <label className={labelClass}>
-                Tỷ Lệ Thuế VAT (%) <span className="text-destructive">*</span>
+                VAT Rate (%) <span className="text-destructive">*</span>
               </label>
               <div className="flex h-11 items-center gap-2">
                 {[8, 10, 0].map((rate) => (
@@ -759,7 +759,7 @@ export default function InvoiceDialog({
 
             <div>
               <label className={labelClass}>
-                Số Tiền Xuất Hóa Đơn (Đã Bao Gồm VAT){" "}
+                Invoice Amount (VAT Included){" "}
                 <span className="text-destructive">*</span>
               </label>
               <Input
@@ -777,7 +777,7 @@ export default function InvoiceDialog({
             <div className="space-y-1.5 rounded-xl border bg-muted/40 p-3 text-xs text-foreground">
               <div className="flex items-center justify-between gap-4">
                 <span>
-                  1. Số tiền trước VAT (Số tiền xuất / {100 + (vatRate || 0)}%):
+                  1. Amount before VAT (invoice amount / {100 + (vatRate || 0)}%):
                 </span>
                 <MoneyText
                   amount={vatBreakdown.preVatAmount}
@@ -786,7 +786,7 @@ export default function InvoiceDialog({
                 />
               </div>
               <div className="flex items-center justify-between gap-4">
-                <span>2. Tiền thuế VAT ({vatRate}%):</span>
+                <span>2. VAT amount ({vatRate}%):</span>
                 <MoneyText
                   amount={vatBreakdown.vatAmount}
                   className="font-mono text-xs font-bold"
@@ -794,7 +794,7 @@ export default function InvoiceDialog({
                 />
               </div>
               <div className="flex items-center justify-between gap-4 border-t pt-1.5 font-bold text-primary">
-                <span>3. Tổng tiền xuất hóa đơn (Đã VAT):</span>
+                <span>3. Total invoice amount (VAT included):</span>
                 <MoneyText
                   amount={numericInvoiceAmount}
                   className="font-mono text-sm font-extrabold"
@@ -809,7 +809,7 @@ export default function InvoiceDialog({
             <Textarea
               value={note}
               onChange={(event) => setNote(event.target.value)}
-              placeholder="Nhập ghi chú cho hóa đơn..."
+              placeholder="Enter an invoice note..."
               className="min-h-[82px] resize-none rounded-lg border-input bg-background px-3 py-2 text-sm shadow-none placeholder:font-medium placeholder:text-muted-foreground/65"
             />
           </div>
@@ -817,7 +817,7 @@ export default function InvoiceDialog({
           <div className="space-y-2 rounded-xl border bg-muted/30 p-4">
             <div className="flex items-center justify-between gap-3">
               <label className="flex items-center gap-1.5 text-xs font-bold text-foreground">
-                Trạng Thái Hóa Đơn
+                Invoice Status
               </label>
               <span
                 className={[
@@ -831,26 +831,26 @@ export default function InvoiceDialog({
               >
                 <span className="h-1.5 w-1.5 rounded-full bg-current" />
                 {currentStatus === "issued"
-                  ? "🔒 Đã xuất"
+                  ? "🔒 Issued"
                   : currentStatus === "ready"
-                    ? "Chờ xuất"
-                    : "Chưa xuất"}
+                    ? "Ready to issue"
+                    : "Not ready"}
               </span>
             </div>
 
             <div className="text-xs leading-relaxed text-muted-foreground">
               {currentStatus === "issued" ? (
                 <span className="font-medium text-emerald-700 dark:text-emerald-300">
-                  • Hóa đơn đã ở trạng thái <strong>Đã xuất</strong> và được cố định, không thể chuyển lại thành Chưa xuất / Chờ xuất.
+                  • This invoice is <strong>Issued</strong> and locked. It cannot return to Not ready or Ready to issue.
                 </span>
               ) : missingFields.length === 0 ? (
                 <span className="font-medium text-amber-700 dark:text-amber-300">
-                  • Tất cả thông tin đã đầy đủ (Merchant, Số hợp đồng, Tên đơn vị, Địa chỉ, Mã số thuế, Email, Số tiền) ➔ Tự động chuyển <strong>Chờ xuất</strong>.
+                  • When all details are complete (merchant, contract number, company, address, tax code, email, and amount), the invoice automatically moves to <strong>Ready to issue</strong>.
                 </span>
               ) : (
                 <div className="space-y-1 font-medium text-red-700 dark:text-red-300">
                   <p className="rounded-md border border-red-200 bg-red-50 px-2 py-1 text-xs font-semibold dark:border-red-900/70 dark:bg-red-950/40">
-                    📌 Cần bổ sung các trường:{" "}
+                    📌 Missing fields:{" "}
                     <span className="underline">{missingFields.join(", ")}</span>
                   </p>
                 </div>
@@ -865,7 +865,7 @@ export default function InvoiceDialog({
                   onChange={(event) => setIssuedLocked(event.target.checked)}
                   className="h-4 w-4 cursor-pointer"
                 />
-                Chuyển trạng thái Đã xuất
+                Mark as Issued
               </label>
             )}
           </div>
@@ -874,12 +874,12 @@ export default function InvoiceDialog({
             <div className="flex items-center justify-between gap-3">
               <label className="flex items-center gap-1.5 text-xs font-bold text-foreground">
                 <ImageIcon className="h-4 w-4 text-primary" />
-                Hình Ảnh Minh Chứng Giao Dịch
+                Transaction Proof Images
               </label>
               <div className="flex items-center gap-1 text-[11px]">
                 {[
-                  ["FILE", "Tải tệp"],
-                  ["PASTE", "Dán ảnh (Ctrl+V)"],
+                  ["FILE", "Upload files"],
+                  ["PASTE", "Paste image (Ctrl+V)"],
                 ].map(([mode, label]) => (
                   <button
                     key={mode}
@@ -940,12 +940,12 @@ export default function InvoiceDialog({
                           </div>
                           {item.upload_status === "uploading" && (
                             <div className="mt-1 text-[11px] font-semibold text-primary">
-                              Đang tải...
+                              Uploading...
                             </div>
                           )}
                           {item.upload_status === "error" && (
                             <div className="mt-1 text-[11px] font-semibold text-destructive">
-                              Upload lỗi
+                              Upload failed
                             </div>
                           )}
                         </div>
@@ -969,7 +969,7 @@ export default function InvoiceDialog({
                         disabled={saving}
                         className="flex h-[112px] cursor-pointer items-center justify-center rounded-lg border border-dashed bg-background text-sm font-semibold text-muted-foreground transition hover:border-primary/50 hover:bg-muted/40 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60"
                       >
-                        + Thêm ảnh
+                        + Add images
                       </button>
                     )}
                   </div>
@@ -984,13 +984,13 @@ export default function InvoiceDialog({
                         onClick={() => fileInputRef.current?.click()}
                         className="cursor-pointer font-bold text-primary hover:underline"
                       >
-                        Tải ảnh lên
+                        Upload images
                       </button>
-                      , kéo thả tối đa 2 ảnh vào đây, hoặc nhấn{" "}
+                      , drag and drop up to 2 images here, or press{" "}
                       <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]">
                         Ctrl + V
                       </kbd>{" "}
-                      để dán
+                      to paste
                     </div>
                     <Button
                       type="button"
@@ -1000,7 +1000,7 @@ export default function InvoiceDialog({
                       className="cursor-pointer"
                     >
                       <UploadCloud className="h-4 w-4" />
-                      Tải tệp
+                      Upload files
                     </Button>
                   </div>
                 )}
@@ -1016,8 +1016,8 @@ export default function InvoiceDialog({
               <AttachmentLoadingIndicator
                 text={
                   submitStage === "uploading_images"
-                    ? `Đang tải ${proofImages.filter((item) => item.file).length} ảnh...`
-                    : "Đang lưu hóa đơn..."
+                    ? `Uploading ${proofImages.filter((item) => item.file).length} images...`
+                    : "Saving invoice..."
                 }
               />
             )}
@@ -1028,11 +1028,11 @@ export default function InvoiceDialog({
             disabled={saving}
             className="cursor-pointer"
           >
-            Hủy bỏ
+            Cancel
           </Button>
           <Button onClick={saveInvoice} disabled={!canSave} className="cursor-pointer">
             {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-            {isEditMode ? "Lưu Cập Nhật" : "Tạo Mới Hóa Đơn"}
+            {isEditMode ? "Save Changes" : "Create Invoice"}
           </Button>
         </DialogFooter>
       </DialogContent>

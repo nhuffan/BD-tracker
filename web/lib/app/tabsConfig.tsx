@@ -26,7 +26,7 @@ export interface TabItem {
 function TabLoading({ label }: { label: string }) {
   return (
     <div className="flex min-h-[320px] items-center justify-center text-sm font-medium text-muted-foreground">
-      Đang tải {label}...
+      Loading {label}...
     </div>
   );
 }
@@ -56,7 +56,7 @@ const ApprovalsPage = dynamic(() => import("@/components/approvals/ApprovalsPage
 });
 
 const MerchantInvoicesPage = dynamic(() => import("@/components/merchant-invoices/MerchantInvoicesPage"), {
-  loading: () => <TabLoading label="Hóa Đơn Merchant" />,
+  loading: () => <TabLoading label="Merchant Invoices" />,
 });
 
 const MerchantTransfersPage = dynamic(() => import("@/components/merchant-transfers/MerchantTransfersPage"), {

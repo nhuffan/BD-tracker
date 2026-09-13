@@ -97,7 +97,7 @@ export default function MerchantTransfersPage({ isAdmin }: { isAdmin: boolean })
 
     if (error) {
       console.error("Failed to fetch merchant transfers:", error);
-      toast.error("Không thể tải danh sách chuyển khoản.");
+      toast.error("Could not load transfers.");
       setRows([]);
       setLoading(false);
       return;
@@ -218,7 +218,7 @@ export default function MerchantTransfersPage({ isAdmin }: { isAdmin: boolean })
     if (!isAdmin || mutating) return;
 
     if (row.status === "transferred" && status !== "transferred") {
-      toast.warning("Giao dịch đã chuyển khoản không thể đổi lại trạng thái khác.");
+      toast.warning("A completed transfer cannot be moved back to another status.");
       return;
     }
 
@@ -237,11 +237,11 @@ export default function MerchantTransfersPage({ isAdmin }: { isAdmin: boolean })
         .eq("id", row.id);
 
       if (error) {
-        toast.error(error.message || "Không thể chuyển trạng thái.");
+        toast.error(error.message || "Could not change the status.");
         return;
       }
 
-      toast.success(`Đã chuyển sang ${TRANSFER_STATUS_LABEL[status]}.`);
+      toast.success(`Status changed to ${TRANSFER_STATUS_LABEL[status]}.`);
       await refresh();
     } finally {
       setMutating(false);
@@ -259,11 +259,11 @@ export default function MerchantTransfersPage({ isAdmin }: { isAdmin: boolean })
         .eq("id", deleteTarget.id);
 
       if (error) {
-        toast.error(error.message || "Không thể xóa giao dịch.");
+        toast.error(error.message || "Could not delete the transaction.");
         return;
       }
 
-      toast.success("Đã xóa giao dịch chuyển khoản!");
+      toast.success("Transfer deleted.");
       setDeleteTarget(null);
       await refresh();
     } finally {
@@ -273,15 +273,15 @@ export default function MerchantTransfersPage({ isAdmin }: { isAdmin: boolean })
 
   function exportExcel() {
     const headers = [
-      "STT",
+      "NO.",
       "MERCHANT",
-      "SỐ TIỀN",
-      "SỐ TÀI KHOẢN",
-      "CHỦ TÀI KHOẢN",
-      "NGÂN HÀNG",
-      "CHI NHÁNH",
-      "TÌNH TRẠNG",
-      "NGÀY HOÀN THÀNH",
+      "AMOUNT",
+      "ACCOUNT NUMBER",
+      "ACCOUNT HOLDER",
+      "BANK",
+      "BRANCH",
+      "STATUS",
+      "COMPLETION DATE",
     ];
 
     const data = filteredRows.map((row) => [
@@ -343,8 +343,8 @@ export default function MerchantTransfersPage({ isAdmin }: { isAdmin: boolean })
     ];
 
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Quản Lý Giao Dịch");
-    XLSX.writeFile(workbook, `Quản Lý Giao Dịch_${getExportDateStamp()}.xlsx`);
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Transfer Management");
+    XLSX.writeFile(workbook, `Transfer_Management_${getExportDateStamp()}.xlsx`);
   }
 
   async function copyStatAmount(amount: number, key: string) {
@@ -356,7 +356,7 @@ export default function MerchantTransfersPage({ isAdmin }: { isAdmin: boolean })
   const statCards = [
     {
       key: "not_transferred",
-      label: "Chưa chuyển khoản",
+      label: "Not transferred",
       icon: AlertCircle,
       amount: stats.notTransferredAmount,
       count: stats.notTransferredCount,
@@ -365,7 +365,7 @@ export default function MerchantTransfersPage({ isAdmin }: { isAdmin: boolean })
     },
     {
       key: "ready",
-      label: "Chờ chuyển khoản",
+      label: "Ready to transfer",
       icon: Clock,
       amount: stats.readyAmount,
       count: stats.readyCount,
@@ -374,7 +374,7 @@ export default function MerchantTransfersPage({ isAdmin }: { isAdmin: boolean })
     },
     {
       key: "transferred",
-      label: "Đã chuyển khoản",
+      label: "Transferred",
       icon: CheckCircle2,
       amount: stats.transferredAmount,
       count: stats.transferredCount,
@@ -383,7 +383,7 @@ export default function MerchantTransfersPage({ isAdmin }: { isAdmin: boolean })
     },
     {
       key: "total",
-      label: "Tổng cộng tất cả",
+      label: "Grand total",
       icon: Wallet,
       amount: stats.totalAmount,
       count: stats.total,
@@ -397,7 +397,7 @@ export default function MerchantTransfersPage({ isAdmin }: { isAdmin: boolean })
       <div className="py-2">
         <h1 className="flex items-center gap-2 text-[30px] font-extrabold tracking-tight text-foreground">
           <Landmark className="h-7 w-7 text-primary" />
-          Quản Lý Giao Dịch
+          Transfer Management
         </h1>
       </div>
 
@@ -430,7 +430,7 @@ export default function MerchantTransfersPage({ isAdmin }: { isAdmin: boolean })
                   {card.label}
                 </div>
                 <Badge variant="outline" className={card.countClassName}>
-                  {card.count} mục
+                  {card.count} items
                 </Badge>
               </div>
               <div className="group mt-3 flex items-center gap-2 font-mono font-extrabold">
@@ -447,8 +447,8 @@ export default function MerchantTransfersPage({ isAdmin }: { isAdmin: boolean })
                     event.stopPropagation();
                     void copyStatAmount(card.amount, card.key);
                   }}
-                  title="Sao chép số tiền"
-                  aria-label={`Sao chép số tiền ${card.label}`}
+                  title="Copy amount"
+                  aria-label={`Copy amount for ${card.label}`}
                   className="cursor-pointer opacity-60 hover:bg-foreground/10 hover:text-inherit group-hover:opacity-100 dark:hover:bg-foreground/15"
                 >
                   {copiedStatKey === card.key ? <Check /> : <Copy />}
@@ -471,8 +471,8 @@ export default function MerchantTransfersPage({ isAdmin }: { isAdmin: boolean })
               {monthOptions.map((month) => (
                 <option key={month} value={month}>
                   {month === ALL
-                    ? `Tất cả (${rows.length} GD)`
-                    : `${formatMonthLabel(month)} (${rows.filter((row) => getMonthKey(row.transaction_date) === month).length} GD)`}
+                    ? `All (${rows.length} transactions)`
+                    : `${formatMonthLabel(month)} (${rows.filter((row) => getMonthKey(row.transaction_date) === month).length} transactions)`}
                 </option>
               ))}
             </select>
@@ -480,10 +480,10 @@ export default function MerchantTransfersPage({ isAdmin }: { isAdmin: boolean })
 
           <div className="flex items-center gap-1 rounded-lg border bg-muted p-1 text-xs">
             {[
-              ["not_transferred", "Chưa chuyển"],
-              ["ready", "Chờ chuyển"],
-              ["transferred", "Đã chuyển"],
-              [ALL, "Tất cả"],
+              ["not_transferred", "Not transferred"],
+              ["ready", "Ready"],
+              ["transferred", "Transferred"],
+              [ALL, "All"],
             ].map(([value, label]) => (
               <button
                 key={value}
@@ -506,7 +506,7 @@ export default function MerchantTransfersPage({ isAdmin }: { isAdmin: boolean })
             <Input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Tìm theo Merchant, STK, chủ TK, ngân hàng..."
+              placeholder="Search merchant, account number, holder, bank..."
               className="pl-9"
             />
           </div>
@@ -516,7 +516,7 @@ export default function MerchantTransfersPage({ isAdmin }: { isAdmin: boolean })
           {isAdmin && (
             <Button onClick={openCreate} className="cursor-pointer">
               <Plus className="h-4 w-4" />
-              Tạo giao dịch
+              Create transfer
             </Button>
           )}
           <Button
@@ -526,23 +526,23 @@ export default function MerchantTransfersPage({ isAdmin }: { isAdmin: boolean })
             className="cursor-pointer"
           >
             <Download className="h-4 w-4" />
-            Xuất Excel
+            Export Excel
           </Button>
         </div>
       </div>
 
       <div className="flex items-center justify-between px-1 text-xs text-muted-foreground">
         <span>
-          Hiển thị <strong className="text-primary">{filteredRows.length}</strong> / {rows.length}{" "}
-          giao dịch
+          Showing <strong className="text-primary">{filteredRows.length}</strong> / {rows.length}{" "}
+          transactions
           {selectedMonth !== ALL && ` (${formatMonthLabel(selectedMonth)})`}
-          {statusFilter !== ALL && ` • Trạng thái: ${TRANSFER_STATUS_LABEL[statusFilter]}`}
+          {statusFilter !== ALL && ` • Status: ${TRANSFER_STATUS_LABEL[statusFilter]}`}
           {` • ${stats.merchants} merchant`}
         </span>
         {loading && (
           <span className="flex items-center gap-1">
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            Đang tải
+            Loading
           </span>
         )}
       </div>
@@ -582,8 +582,8 @@ export default function MerchantTransfersPage({ isAdmin }: { isAdmin: boolean })
         onOpenChange={(open) => {
           if (!open) setDeleteTarget(null);
         }}
-        title="Xóa giao dịch chuyển khoản?"
-        description={`Thao tác này sẽ xóa vĩnh viễn giao dịch #${deleteTarget?.sequence_no ?? ""} của "${
+        title="Delete transfer?"
+        description={`This will permanently delete transaction #${deleteTarget?.sequence_no ?? ""} for "${
           deleteTarget?.merchant ?? ""
         }"`}
         loading={mutating}

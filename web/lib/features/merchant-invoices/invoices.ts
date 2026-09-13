@@ -36,9 +36,9 @@ export type MerchantInvoiceRow = {
 };
 
 export const INVOICE_STATUS_LABEL: Record<MerchantInvoiceStatus, string> = {
-  not_ready: "Chưa xuất",
-  ready: "Chờ xuất",
-  issued: "Đã xuất",
+  not_ready: "Not ready",
+  ready: "Ready to issue",
+  issued: "Issued",
 };
 
 export function formatVnd(amount?: number | null) {
@@ -92,9 +92,9 @@ export function getMonthKey(value?: string | null) {
 }
 
 export function formatMonthLabel(monthKey: string) {
-  if (!monthKey || monthKey === "__all__") return "Tất cả các tháng";
+  if (!monthKey || monthKey === "__all__") return "All months";
   const [year, month] = monthKey.split("-");
-  return `Tháng ${month}/${year}`;
+  return `Month ${month}/${year}`;
 }
 
 export function formatDateTime(value?: string | null) {
@@ -143,12 +143,12 @@ export function getMissingInvoiceFields(item: {
       : Number(String(item.invoice_amount ?? "").replace(/[^\d.]/g, ""));
 
   if (!item.merchant?.trim()) missing.push("Merchant");
-  if (!item.contract_number?.trim()) missing.push("Số hợp đồng");
-  if (!item.company_name?.trim()) missing.push("Tên đơn vị");
-  if (!item.company_address?.trim()) missing.push("Địa chỉ");
-  if (!item.tax_code?.trim()) missing.push("Mã số thuế");
+  if (!item.contract_number?.trim()) missing.push("Contract number");
+  if (!item.company_name?.trim()) missing.push("Company name");
+  if (!item.company_address?.trim()) missing.push("Address");
+  if (!item.tax_code?.trim()) missing.push("Tax code");
   if (!item.invoice_email?.trim()) missing.push("Email");
-  if (!amount || amount <= 0) missing.push("Số tiền");
+  if (!amount || amount <= 0) missing.push("Amount");
 
   return missing;
 }

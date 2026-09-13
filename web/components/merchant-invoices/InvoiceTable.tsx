@@ -158,7 +158,7 @@ function ClampedText({
             className="mt-2 inline-flex cursor-pointer items-center gap-1 rounded-md border bg-background px-2 py-1 text-[11px] font-semibold text-muted-foreground transition hover:bg-accent hover:text-accent-foreground"
           >
             {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-            {copied ? "Đã copy" : "Copy"}
+            {copied ? "Copied" : "Copy"}
           </button>
         </div>
       )}
@@ -256,10 +256,10 @@ function ProofImagePreview({
           <div className="flex items-center justify-between rounded-t-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground">
             <span className="flex items-center gap-1.5">
               <Eye className="h-3.5 w-3.5" />
-              Xem phóng to minh chứng
+              Enlarge proof image
             </span>
             <span className="rounded bg-primary-foreground/15 px-1.5 py-0.5 text-[10px]">
-              Nhấp để xem full
+              Click to view full size
             </span>
           </div>
           <div className="mt-1 flex flex-1 items-center justify-center overflow-hidden rounded-b-lg bg-muted p-1">
@@ -327,9 +327,9 @@ export default function InvoiceTable({
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-lg bg-muted text-muted-foreground">
           <Receipt className="h-7 w-7" />
         </div>
-        <div className="mt-4 text-base font-bold">Chưa tìm thấy hóa đơn nào</div>
+        <div className="mt-4 text-base font-bold">No invoices found</div>
         <div className="mt-1 text-sm text-muted-foreground">
-          Không có kết quả trùng khớp với bộ lọc tháng, trạng thái hoặc từ khóa tìm kiếm. Vui lòng thay đổi bộ lọc hoặc bấm &quot;Tạo hoá đơn&quot;.
+          No results match the selected month, status, or search term. Change the filters or click &quot;Create invoice&quot;.
         </div>
       </div>
     );
@@ -341,21 +341,21 @@ export default function InvoiceTable({
         <Table className="text-sm">
         <TableHeader className="bg-muted/50 [&_th]:border-r [&_th]:border-border/70 [&_th:last-child]:border-r-0">
           <TableRow>
-            <TableHead className="w-14 p-3 text-center font-semibold">STT</TableHead>
+            <TableHead className="w-14 p-3 text-center font-semibold">NO.</TableHead>
             <TableHead className="p-3 font-semibold">MERCHANT</TableHead>
-            <TableHead className="p-3 font-semibold">SỐ HỢP ĐỒNG</TableHead>
+            <TableHead className="p-3 font-semibold">CONTRACT NUMBER</TableHead>
             <TableHead className="min-w-[250px] p-3 text-right font-semibold">
-              SỐ TIỀN (TRƯỚC & SAU VAT)
+              AMOUNT (BEFORE & AFTER VAT)
             </TableHead>
-            <TableHead className="min-w-[220px] p-3 font-semibold">TÊN ĐƠN VỊ</TableHead>
-            <TableHead className="min-w-[200px] p-3 font-semibold">ĐỊA CHỈ</TableHead>
-            <TableHead className="p-3 font-semibold">MÃ SỐ THUẾ</TableHead>
+            <TableHead className="min-w-[220px] p-3 font-semibold">COMPANY NAME</TableHead>
+            <TableHead className="min-w-[200px] p-3 font-semibold">ADDRESS</TableHead>
+            <TableHead className="p-3 font-semibold">TAX CODE</TableHead>
             <TableHead className="p-3 font-semibold">EMAIL</TableHead>
-            <TableHead className="p-3 text-center font-semibold">MINH CHỨNG</TableHead>
-            <TableHead className="p-3 text-center font-semibold">TRẠNG THÁI</TableHead>
-            <TableHead className="p-3 text-center font-semibold">NGÀY XUẤT</TableHead>
+            <TableHead className="p-3 text-center font-semibold">PROOF</TableHead>
+            <TableHead className="p-3 text-center font-semibold">STATUS</TableHead>
+            <TableHead className="p-3 text-center font-semibold">ISSUE DATE</TableHead>
             <TableHead className="p-3 text-center font-semibold">NOTE</TableHead>
-            {isAdmin && <TableHead className="w-28 p-3 text-center font-semibold">THAO TÁC</TableHead>}
+            {isAdmin && <TableHead className="w-28 p-3 text-center font-semibold">ACTIONS</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody className="[&_td]:border-r [&_td]:border-border/60 [&_td:last-child]:border-r-0">
@@ -385,7 +385,7 @@ export default function InvoiceTable({
                   <div className="flex flex-col items-end gap-1">
                     <div className="flex items-center justify-end gap-2">
                       <span className="text-sm font-semibold text-muted-foreground">
-                        Trước VAT ({row.vat_rate}%):
+                        Before VAT ({row.vat_rate}%):
                       </span>
                       <MoneyText
                         amount={preVatAmount}
@@ -396,14 +396,14 @@ export default function InvoiceTable({
                         size="icon-xs"
                         variant="outline"
                         onClick={() => void copyPreVat(row)}
-                        title="Sao chép số tiền thuần trước VAT (VD: 56584727) để dán vào Excel/Chat"
+                        title="Copy the net amount before VAT (e.g. 56584727) for Excel or chat"
                         className="cursor-pointer"
                       >
                         {copiedId === row.id ? <Check /> : <Copy />}
                       </Button>
                     </div>
                     <span className="text-xs font-medium text-muted-foreground">
-                      Tổng xuất (Đã VAT):{" "}
+                      Total issued (VAT included):{" "}
                       <MoneyText
                         amount={row.invoice_amount}
                         className="text-sm font-semibold text-foreground"
@@ -433,7 +433,7 @@ export default function InvoiceTable({
                         <ProofImagePreview
                           key={`${row.id}-${index}-${imageUrl}`}
                           src={imageUrl}
-                          alt={`Minh chứng ${row.merchant} ${index + 1}`}
+                          alt={`Proof for ${row.merchant} ${index + 1}`}
                           onOpen={onOpenImage}
                         />
                       ))}
@@ -447,7 +447,7 @@ export default function InvoiceTable({
                     <Badge
                       variant="outline"
                       className={`${statusClass(row.status)} gap-1.5 uppercase`}
-                      title="Trạng thái Đã xuất đã cố định, không thể thay đổi"
+                      title="Issued status is locked and cannot be changed"
                     >
                       <span className="h-1.5 w-1.5 rounded-full bg-current" />
                       {INVOICE_STATUS_LABEL[row.status]}
@@ -489,7 +489,7 @@ export default function InvoiceTable({
                         variant="ghost"
                         size="icon-sm"
                         onClick={() => onEdit(row)}
-                        title="Chỉnh sửa"
+                        title="Edit"
                         className="cursor-pointer"
                       >
                         <Pencil className="h-4 w-4 text-muted-foreground" />
@@ -499,7 +499,7 @@ export default function InvoiceTable({
                         variant="ghost"
                         size="icon-sm"
                         onClick={() => onDelete(row)}
-                        title="Xóa"
+                        title="Delete"
                         className="cursor-pointer"
                       >
                         <Trash2 className="h-4 w-4 text-muted-foreground" />
@@ -518,7 +518,7 @@ export default function InvoiceTable({
         <>
           <button
             type="button"
-            aria-label="Đóng menu trạng thái"
+            aria-label="Close status menu"
             className="fixed inset-0 z-[9998] cursor-default bg-transparent"
             onClick={() => setStatusMenu(null)}
           />
@@ -531,7 +531,7 @@ export default function InvoiceTable({
             className="fixed z-[9999] rounded-xl border bg-popover p-1.5 text-left text-popover-foreground shadow-2xl ring-1 ring-border"
           >
             <div className="border-b px-2 py-1 text-[10px] font-semibold text-muted-foreground">
-              Chuyển trạng thái
+              Change status
             </div>
             <button
               type="button"
@@ -542,7 +542,7 @@ export default function InvoiceTable({
               className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-bold text-emerald-700 transition hover:bg-emerald-50 dark:text-emerald-300 dark:hover:bg-emerald-950/35"
             >
               <Check className="h-3.5 w-3.5" />
-              Đánh dấu Đã xuất
+              Mark as issued
             </button>
           </div>
         </>

@@ -1,18 +1,32 @@
 "use client";
 
-import { DragEvent, useRef, useState } from "react";
+import { DragEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertCircle,
+  BookUser,
+  Building2,
   CheckCircle2,
   Download,
   FileCheck2,
-  FileSpreadsheet,
   Loader2,
+  Plus,
   RotateCcw,
   UploadCloud,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import ClientSourceDialog from "@/components/reconciliation/ClientSourceDialog";
+import {
+  listReconciliationClients,
+  type ReconciliationClient,
+} from "@/lib/features/reconciliation/clients";
 import {
   createStatementOfAccount,
   parseReconciliationWorkbook,
@@ -45,11 +59,49 @@ export default function ReconciliationPage() {
   const [dragging, setDragging] = useState(false);
   const [reading, setReading] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [clients, setClients] = useState<ReconciliationClient[]>([]);
+  const [clientsLoading, setClientsLoading] = useState(true);
+  const [selectedClientId, setSelectedClientId] = useState("");
+  const [clientSourceOpen, setClientSourceOpen] = useState(false);
+  const [clientDialogMode, setClientDialogMode] = useState<"directory" | "create">("directory");
+
+  const selectedClient = useMemo(
+    () => clients.find((client) => client.id === selectedClientId) ?? null,
+    [clients, selectedClientId]
+  );
+
+  const refreshClients = useCallback(async (preferredClient?: ReconciliationClient) => {
+    setClientsLoading(true);
+    try {
+      const nextClients = await listReconciliationClients();
+      setClients(nextClients);
+      setSelectedClientId((current) => {
+        if (preferredClient && nextClients.some((client) => client.id === preferredClient.id)) {
+          return preferredClient.id;
+        }
+        return nextClients.some((client) => client.id === current) ? current : "";
+      });
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : "Could not load the client source.";
+      toast.error(message);
+    } finally {
+      setClientsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshClients();
+  }, [refreshClients]);
+
+  function openClientDialog(mode: "directory" | "create") {
+    setClientDialogMode(mode);
+    setClientSourceOpen(true);
+  }
 
   async function readFile(file: File) {
     if (!/\.xlsx?$/i.test(file.name)) {
       setData(null);
-      setError("Vui lòng chọn file Excel .xlsx hoặc .xls.");
+      setError("Please select an .xlsx or .xls Excel file.");
       return;
     }
 
@@ -58,9 +110,13 @@ export default function ReconciliationPage() {
     try {
       const parsed = parseReconciliationWorkbook(await file.arrayBuffer(), file.name);
       setData(parsed);
-      toast.success(`Đã đọc ${parsed.rows.length} giao dịch đối soát.`);
+      const matchingClient = clients.find(
+        (client) => client.name.trim().toLowerCase() === parsed.merchantName.trim().toLowerCase()
+      );
+      setSelectedClientId(matchingClient?.id ?? "");
+      toast.success(`Loaded ${parsed.rows.length} reconciliation transactions.`);
     } catch (caught) {
-      const message = caught instanceof Error ? caught.message : "Không thể đọc file đối soát.";
+      const message = caught instanceof Error ? caught.message : "Could not read the reconciliation file.";
       setData(null);
       setError(message);
       toast.error(message);
@@ -79,12 +135,20 @@ export default function ReconciliationPage() {
 
   async function exportSoa() {
     if (!data || exporting) return;
+    if (!selectedClient) {
+      toast.error("Please select a client before exporting the SOA.");
+      return;
+    }
 
     setExporting(true);
     try {
       const response = await fetch(TEMPLATE_URL);
-      if (!response.ok) throw new Error("Không tải được template SOA MT LIFE.");
-      const output = await createStatementOfAccount(await response.arrayBuffer(), data);
+      if (!response.ok) throw new Error("Could not load the MT LIFE SOA template.");
+      const output = await createStatementOfAccount(
+        await response.arrayBuffer(),
+        data,
+        selectedClient
+      );
       const url = URL.createObjectURL(output.blob);
       const link = document.createElement("a");
       link.href = url;
@@ -93,9 +157,9 @@ export default function ReconciliationPage() {
       link.click();
       link.remove();
       URL.revokeObjectURL(url);
-      toast.success("Đã xuất file SOA theo template MT LIFE.");
+      toast.success("SOA exported using the MT LIFE template.");
     } catch (caught) {
-      const message = caught instanceof Error ? caught.message : "Không thể xuất file SOA.";
+      const message = caught instanceof Error ? caught.message : "Could not export the SOA file.";
       toast.error(message);
     } finally {
       setExporting(false);
@@ -105,6 +169,7 @@ export default function ReconciliationPage() {
   function reset() {
     setData(null);
     setError("");
+    setSelectedClientId("");
   }
 
   return (
@@ -113,25 +178,56 @@ export default function ReconciliationPage() {
         <div>
           <div className="flex items-center gap-2">
             <FileCheck2 className="h-6 w-6 text-primary" />
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">Đối soát</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">Reconciliation</h1>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            Tải file đối soát lên, kiểm tra dữ liệu và xuất Statement of Account theo mẫu MT LIFE.
+            Upload a reconciliation file, review the data, and export a Statement of Account using the MT LIFE template.
           </p>
         </div>
 
-        {data ? (
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={reset} disabled={exporting}>
-              <RotateCcw />
-              Chọn file khác
-            </Button>
-            <Button onClick={() => void exportSoa()} disabled={exporting}>
-              {exporting ? <Loader2 className="animate-spin" /> : <Download />}
-              {exporting ? "Đang xuất..." : "Xuất SOA"}
-            </Button>
-          </div>
-        ) : null}
+        <div className="flex flex-wrap gap-2">
+          {!data ? (
+            <>
+              <Button
+                variant="outline"
+                className="cursor-pointer"
+                onClick={() => openClientDialog("directory")}
+              >
+                <BookUser />
+                Client directory
+              </Button>
+              <Button
+                variant="outline"
+                className="cursor-pointer"
+                onClick={() => openClientDialog("create")}
+              >
+                <Plus />
+                Add client
+              </Button>
+            </>
+          ) : null}
+          {data ? (
+            <>
+              <Button
+                variant="outline"
+                className="cursor-pointer"
+                onClick={reset}
+                disabled={exporting}
+              >
+                <RotateCcw />
+                Choose another file
+              </Button>
+              <Button
+                className="cursor-pointer"
+                onClick={() => void exportSoa()}
+                disabled={exporting || !selectedClient}
+              >
+                {exporting ? <Loader2 className="animate-spin" /> : <Download />}
+                {exporting ? "Exporting..." : "Export SOA"}
+              </Button>
+            </>
+          ) : null}
+        </div>
       </div>
 
       {!data ? (
@@ -168,7 +264,7 @@ export default function ReconciliationPage() {
           {reading ? (
             <>
               <Loader2 className="h-12 w-12 animate-spin text-primary" />
-              <p className="mt-4 font-semibold">Đang đọc file đối soát...</p>
+              <p className="mt-4 font-semibold">Reading reconciliation file...</p>
             </>
           ) : (
             <>
@@ -176,11 +272,11 @@ export default function ReconciliationPage() {
                 <UploadCloud className="h-10 w-10" />
               </div>
               <p className="mt-5 text-lg font-semibold text-foreground">
-                Kéo thả file đối soát vào đây
+                Drag and drop the reconciliation file here
               </p>
-              <p className="mt-1 text-sm text-muted-foreground">hoặc bấm để chọn file Excel</p>
+              <p className="mt-1 text-sm text-muted-foreground">or click to select an Excel file</p>
               <span className="mt-4 rounded-full border bg-background px-3 py-1 text-xs font-medium text-muted-foreground">
-                Hỗ trợ .xlsx và .xls
+                Supports .xlsx and .xls
               </span>
             </>
           )}
@@ -191,35 +287,112 @@ export default function ReconciliationPage() {
             <div className="flex items-start gap-3">
               <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
               <div className="min-w-0">
-                <p className="font-semibold">Dữ liệu hợp lệ và sẵn sàng xuất</p>
+                <p className="font-semibold">Data is valid and ready to export</p>
                 <p className="mt-1 truncate text-sm opacity-90">{data.sourceFileName}</p>
               </div>
             </div>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <SummaryCard label="Giao dịch" value={data.rows.length.toLocaleString("vi-VN")} />
-            <SummaryCard label="Tổng giá combo" value={formatVnd(data.totals.comboPrice)} />
+            <SummaryCard label="Transactions" value={data.rows.length.toLocaleString("en-US")} />
+            <SummaryCard label="Total combo price" value={formatVnd(data.totals.comboPrice)} />
             <SummaryCard
-              label={`Phí dịch vụ${data.serviceFeeRate === null ? "" : ` (${data.serviceFeeRate}%)`}`}
+              label={`Service fee${data.serviceFeeRate === null ? "" : ` (${data.serviceFeeRate}%)`}`}
               value={formatVnd(data.totals.serviceFee)}
             />
-            <SummaryCard label="Tiền đối soát" value={formatVnd(data.totals.reconciliationAmount)} />
+            <SummaryCard label="Reconciliation amount" value={formatVnd(data.totals.reconciliationAmount)} />
+          </div>
+
+          <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5 text-primary" />
+                  <h2 className="font-semibold text-foreground">SOA recipient</h2>
+                </div>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Select the client whose details should appear in the exported SOA.
+                </p>
+              </div>
+
+              <div className="flex w-full flex-col gap-2 sm:flex-row lg:w-auto">
+                <Select value={selectedClientId} onValueChange={setSelectedClientId}>
+                  <SelectTrigger
+                    className="w-full cursor-pointer sm:min-w-[280px] lg:w-[320px]"
+                    disabled={clientsLoading || !clients.length}
+                  >
+                    <SelectValue
+                      placeholder={clientsLoading ? "Loading clients..." : "Select a client to export"}
+                    />
+                  </SelectTrigger>
+                  <SelectContent position="popper" align="end">
+                    {clients.map((client) => (
+                      <SelectItem key={client.id} value={client.id} className="cursor-pointer">
+                        {client.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  variant="outline"
+                  className="shrink-0 cursor-pointer"
+                  onClick={() => openClientDialog("directory")}
+                >
+                  <BookUser />
+                  Client directory
+                </Button>
+                <Button
+                  variant="outline"
+                  className="shrink-0 cursor-pointer"
+                  onClick={() => openClientDialog("create")}
+                >
+                  <Plus />
+                  Add client
+                </Button>
+              </div>
+            </div>
+
+            {selectedClient ? (
+              <dl className="mt-4 grid gap-3 border-t pt-4 text-sm sm:grid-cols-2 lg:grid-cols-5">
+                <div>
+                  <dt className="text-xs font-medium text-muted-foreground">To</dt>
+                  <dd className="mt-1 font-medium text-foreground">{selectedClient.name}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-medium text-muted-foreground">Address</dt>
+                  <dd className="mt-1 text-foreground">{selectedClient.address}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-medium text-muted-foreground">Tax code</dt>
+                  <dd className="mt-1 text-foreground">{selectedClient.taxCode}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-medium text-muted-foreground">Tel</dt>
+                  <dd className="mt-1 text-foreground">{selectedClient.tel}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-medium text-muted-foreground">Email</dt>
+                  <dd className="mt-1 break-all text-foreground">{selectedClient.email}</dd>
+                </div>
+              </dl>
+            ) : (
+              <div className="mt-4 rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+                {clients.length
+                  ? "Select a client before exporting the SOA."
+                  : "No clients yet. Click Add client to create the first profile."}
+              </div>
+            )}
           </div>
 
           <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-            <div className="flex flex-col gap-2 border-b px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="border-b px-5 py-4">
               <div>
-                <h2 className="font-semibold text-foreground">Dữ liệu sẽ điền vào SOA</h2>
+                <h2 className="font-semibold text-foreground">Data to be added to the SOA</h2>
                 <p className="text-sm text-muted-foreground">
-                  Kỳ {data.monthLabel}
+                  Period {data.monthLabel}
                   {data.statementId ? ` · Bill ID ${data.statementId}` : ""}
                   {data.merchantName ? ` · ${data.merchantName}` : ""}
                 </p>
-              </div>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <FileSpreadsheet className="h-4 w-4" />
-                Sheet nguồn: {data.sheetName}
               </div>
             </div>
 
@@ -227,14 +400,14 @@ export default function ReconciliationPage() {
               <table className="w-full min-w-[1000px] text-sm">
                 <thead className="bg-muted/60 text-left text-xs uppercase tracking-wide text-muted-foreground">
                   <tr>
-                    <th className="px-4 py-3 text-center">STT</th>
-                    <th className="px-4 py-3">Thời gian</th>
-                    <th className="px-4 py-3">Mã đơn</th>
-                    <th className="px-4 py-3">Mã sản phẩm</th>
-                    <th className="px-4 py-3">Tên sản phẩm</th>
-                    <th className="px-4 py-3 text-right">Giá combo</th>
-                    <th className="px-4 py-3 text-right">Phí dịch vụ</th>
-                    <th className="px-4 py-3 text-right">Tiền đối soát</th>
+                    <th className="px-4 py-3 text-center">No.</th>
+                    <th className="px-4 py-3">Time</th>
+                    <th className="px-4 py-3">Order ID</th>
+                    <th className="px-4 py-3">Product ID</th>
+                    <th className="px-4 py-3">Product name</th>
+                    <th className="px-4 py-3 text-left">Combo price</th>
+                    <th className="px-4 py-3 text-left">Service fee</th>
+                    <th className="px-4 py-3 text-right">Reconciliation amount</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -245,10 +418,10 @@ export default function ReconciliationPage() {
                       <td className="whitespace-nowrap px-4 py-3 font-medium">{row.orderId}</td>
                       <td className="whitespace-nowrap px-4 py-3">{row.productId}</td>
                       <td className="max-w-[280px] px-4 py-3">{row.productName}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums">
+                      <td className="whitespace-nowrap px-4 py-3 text-left tabular-nums">
                         {formatVnd(row.comboPrice)}
                       </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums">
+                      <td className="whitespace-nowrap px-4 py-3 text-left tabular-nums">
                         {formatVnd(row.serviceFee)}
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-right font-semibold tabular-nums">
@@ -259,11 +432,11 @@ export default function ReconciliationPage() {
                 </tbody>
                 <tfoot className="border-t-2 bg-amber-50 font-semibold text-amber-950 dark:bg-amber-950/30 dark:text-amber-200">
                   <tr>
-                    <td colSpan={5} className="px-4 py-3 text-right">Tổng cộng</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums">
+                    <td colSpan={5} className="px-4 py-3 text-right">Total</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-left tabular-nums">
                       {formatVnd(data.totals.comboPrice)}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums">
+                    <td className="whitespace-nowrap px-4 py-3 text-left tabular-nums">
                       {formatVnd(data.totals.serviceFee)}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums">
@@ -281,11 +454,19 @@ export default function ReconciliationPage() {
         <div className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
           <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
           <div>
-            <p className="font-semibold">Không thể đọc file</p>
+            <p className="font-semibold">Could not read the file</p>
             <p className="mt-1">{error}</p>
           </div>
         </div>
       ) : null}
+
+      <ClientSourceDialog
+        open={clientSourceOpen}
+        onOpenChange={setClientSourceOpen}
+        clients={clients}
+        onChanged={refreshClients}
+        mode={clientDialogMode}
+      />
     </div>
   );
 }

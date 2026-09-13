@@ -16,7 +16,7 @@ type Props = {
   className?: string;
 };
 
-export function DatePickerDMY({ value, onChange, placeholder = "Chọn ngày", className }: Props) {
+export function DatePickerDMY({ value, onChange, placeholder = "Select a date", className }: Props) {
   const selected = value ? new Date(value + "T00:00:00") : undefined;
 
   return (
