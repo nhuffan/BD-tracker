@@ -49,18 +49,9 @@ export default function EditAdRecordDialog({
 }) {
     if (!record) return null;
 
-    const formKey = [
-        record.id,
-        open ? "open" : "closed",
-        record.start_date ?? "",
-        record.end_date ?? "",
-        record.branch_name ?? "",
-        record.note ?? "",
-    ].join(":");
-
     return (
         <EditAdRecordDialogBody
-            key={formKey}
+            key={record.id}
             open={open}
             onOpenChange={onOpenChange}
             record={record}

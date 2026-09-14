@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertCircle,
   CheckCircle2,
@@ -104,10 +104,7 @@ function getTransferLookupKey(row: MerchantTransferRow) {
   ].join("|");
 }
 
-function getMerchantLookupRows(rows: MerchantTransferRow[], query: string) {
-  const keyword = query.trim().toLowerCase();
-  if (!keyword) return [];
-
+function buildMerchantLookupRows(rows: MerchantTransferRow[]) {
   const latestByMerchantAccount = new Map<string, MerchantTransferRow>();
   const newestTransfers = [...rows].sort((left, right) => {
     const leftCreatedAt = Date.parse(left.created_at);
@@ -124,7 +121,14 @@ function getMerchantLookupRows(rows: MerchantTransferRow[], query: string) {
     }
   });
 
-  return Array.from(latestByMerchantAccount.values())
+  return Array.from(latestByMerchantAccount.values());
+}
+
+function filterMerchantLookupRows(rows: MerchantTransferRow[], query: string) {
+  const keyword = query.trim().toLowerCase();
+  if (!keyword) return [];
+
+  return rows
     .filter((row) =>
       [row.merchant, row.account_number, row.account_holder, row.bank_name, row.branch ?? ""].some(
         (value) => value.toLowerCase().includes(keyword)
@@ -167,9 +171,14 @@ export default function TransferDialog({
   const [showMerchantSuggestions, setShowMerchantSuggestions] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  const merchantLookupOptions = useMemo(
+    () => buildMerchantLookupRows(existingTransfers),
+    [existingTransfers]
+  );
+  const deferredMerchant = useDeferredValue(merchant);
   const merchantLookupRows = useMemo(() => {
-    return getMerchantLookupRows(existingTransfers, merchant);
-  }, [existingTransfers, merchant]);
+    return filterMerchantLookupRows(merchantLookupOptions, deferredMerchant);
+  }, [merchantLookupOptions, deferredMerchant]);
 
   const numericAmount = parseMoneyInput(amount);
   const isLocked = transfer?.status === "transferred";
@@ -250,7 +259,7 @@ export default function TransferDialog({
       return;
     }
 
-    const exactMatches = getMerchantLookupRows(existingTransfers, value).filter(
+    const exactMatches = filterMerchantLookupRows(merchantLookupOptions, value).filter(
       (row) => normalizeLookupValue(row.merchant) === normalizeLookupValue(value)
     );
 

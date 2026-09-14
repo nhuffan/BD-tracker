@@ -59,11 +59,34 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     const originalText = originalTextRef.current;
     const originalAttributes = originalAttributesRef.current;
     const translatedAttributes = ["placeholder", "title", "aria-label", "alt"];
+    const internalMutationCounts = new WeakMap<Node, number>();
+    const translationCache = new Map<string, string>();
     let frameId = 0;
+
+    const translateCached = (source: string, candidateLocale: Locale) => {
+      const key = `${candidateLocale}\u0000${source}`;
+      const cached = translationCache.get(key);
+      if (cached !== undefined) return cached;
+      const translated = translateLegacyText(source, candidateLocale);
+      translationCache.set(key, translated);
+      return translated;
+    };
+
+    const markInternalMutation = (node: Node) => {
+      internalMutationCounts.set(node, (internalMutationCounts.get(node) ?? 0) + 1);
+    };
+
+    const consumeInternalMutation = (node: Node) => {
+      const count = internalMutationCounts.get(node) ?? 0;
+      if (count === 0) return false;
+      if (count === 1) internalMutationCounts.delete(node);
+      else internalMutationCounts.set(node, count - 1);
+      return true;
+    };
 
     const isKnownRendering = (source: string, current: string) =>
       (["en", "vi", "zh-CN"] as const).some(
-        (candidateLocale) => translateLegacyText(source, candidateLocale) === current
+        (candidateLocale) => translateCached(source, candidateLocale) === current
       );
 
     const translateNode = (node: Node) => {
@@ -79,9 +102,12 @@ export function I18nProvider({ children }: { children: ReactNode }) {
           originalText.set(node, getLegacySourceText(visible));
         }
         const source = originalText.get(node) ?? visible;
-        const next = translateLegacyText(source, locale);
+        const next = translateCached(source, locale);
         const nextValue = `${leading}${next}${trailing}`;
-        if (current !== nextValue) node.nodeValue = nextValue;
+        if (current !== nextValue) {
+          markInternalMutation(node);
+          node.nodeValue = nextValue;
+        }
         return;
       }
 
@@ -96,8 +122,11 @@ export function I18nProvider({ children }: { children: ReactNode }) {
           sourceMap.set(attribute, getLegacySourceText(current));
         }
         const source = sourceMap.get(attribute) ?? current;
-        const next = translateLegacyText(source, locale);
-        if (current !== next) node.setAttribute(attribute, next);
+        const next = translateCached(source, locale);
+        if (current !== next) {
+          markInternalMutation(node);
+          node.setAttribute(attribute, next);
+        }
       });
     };
 
@@ -141,6 +170,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       const roots: Node[] = [];
 
       mutations.forEach((mutation) => {
+        if (consumeInternalMutation(mutation.target)) return;
         if (mutation.type === "childList") {
           roots.push(...mutation.addedNodes);
           return;

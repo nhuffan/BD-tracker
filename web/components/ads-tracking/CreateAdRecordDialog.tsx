@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -89,6 +89,7 @@ export default function CreateAdRecordDialog({
     const [saving, setSaving] = useState(false);
     const [loadingCustomers, setLoadingCustomers] = useState(false);
     const [customerOpen, setCustomerOpen] = useState(false);
+    const deferredCustomerQuery = useDeferredValue(customerQuery);
 
     const customerInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -230,13 +231,13 @@ export default function CreateAdRecordDialog({
     const isBranchNameRequired = isDuplicateCustomerPointType || hasMultipleBranches;
 
     const filteredRecords = useMemo(() => {
-        const q = customerQuery.trim().toLowerCase();
+        const q = deferredCustomerQuery.trim().toLowerCase();
         if (!q) return customerOptions;
 
         return customerOptions.filter((item) =>
             item.customer_name.toLowerCase().includes(q)
         );
-    }, [customerOptions, customerQuery]);
+    }, [customerOptions, deferredCustomerQuery]);
 
     const endDate = useMemo(() => {
         if (!startDate || !selectedPointType?.code) return "";

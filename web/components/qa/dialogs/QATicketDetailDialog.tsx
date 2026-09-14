@@ -16,7 +16,12 @@ import { supabase } from "@/lib/integrations/supabase/client";
 import { deleteCloudinaryAssets } from "@/lib/integrations/cloudinary/delete-assets";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -162,6 +167,12 @@ export default function QATicketDetailDialog({
   >([]);
   const [conflictMessage, setConflictMessage] = useState("");
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const latestTicketRef = useRef(ticket);
+  const latestBdMapRef = useRef(bdMap);
+  const onTicketChangedRef = useRef(onTicketChanged);
+  latestTicketRef.current = ticket;
+  latestBdMapRef.current = bdMap;
+  onTicketChangedRef.current = onTicketChanged;
   const currentAdminName = adminNameMap?.[currentUserId] ?? "Another admin";
   const requesterName = ticket ? bdMap[ticket.asked_by_bd_id] ?? "—" : "—";
   const [localAttachments, setLocalAttachments] = useState<LocalAttachment[]>([]);
@@ -272,14 +283,16 @@ export default function QATicketDetailDialog({
         },
         (payload) => {
           const next = payload.new as QATicketVM;
+          const currentTicket = latestTicketRef.current;
+          if (!currentTicket) return;
 
           const nextVm: QATicketVM = {
-            ...ticket,
+            ...currentTicket,
             ...next,
-            asked_by_name: bdMap[next.asked_by_bd_id] ?? "—",
+            asked_by_name: latestBdMapRef.current[next.asked_by_bd_id] ?? "—",
           };
 
-          onTicketChanged(nextVm);
+          onTicketChangedRef.current(nextVm);
 
           setConflictMessage("");
           applyTicketToForm(nextVm);
@@ -290,7 +303,7 @@ export default function QATicketDetailDialog({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [open, ticket, bdMap, onTicketChanged]);
+  }, [open, ticket?.id]);
 
   useEffect(() => {
     setConflictMessage("");
@@ -351,18 +364,21 @@ export default function QATicketDetailDialog({
     return additionalDescription.trim().length > 0 || hasAttachmentChanges;
   }, [additionalDescription, hasAttachmentChanges]);
 
+  const adminEditors = useMemo(() => {
+    return [...editingUsers]
+      .sort(
+        (left, right) =>
+          new Date(left.joinedAt).getTime() - new Date(right.joinedAt).getTime()
+      )
+      .filter((user) => user.role === "admin");
+  }, [editingUsers]);
+
   if (!ticket) return null;
 
   const isDisabledSave = isAdmin
     ? saving || !hasAdminChanges
     : saving || !hasNonAdminChanges;
 
-  const sortedEditors = [...editingUsers].sort(
-    (a, b) =>
-      new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime()
-  );
-
-  const adminEditors = sortedEditors.filter((user) => user.role === "admin");
   const activeAdminEditor = adminEditors[0] ?? null;
   const isCurrentUserActiveAdmin = activeAdminEditor?.userId === currentUserId;
 
@@ -686,6 +702,9 @@ export default function QATicketDetailDialog({
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <DialogTitle className="sr-only">{ticket.title}</DialogTitle>
+        <DialogDescription className="sr-only">
+          Review the answer or add more details to this ticket.
+        </DialogDescription>
 
         <div className="border-b bg-card px-5 py-4 pr-12 sm:px-6 sm:py-5">
           <div className="min-w-0">

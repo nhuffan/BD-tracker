@@ -168,6 +168,18 @@ export default function CreateApprovalRequestDialog({
     return bdOptions.find((item) => item.id === askedByBdId)?.label ?? "—";
   }, [askedByBdId, bdOptions]);
 
+  const attachmentChanged = useMemo(() => {
+    if (!isEditMode || !request) return false;
+
+    const currentAttachmentKeys = attachments.map(getAttachmentKey).sort();
+    const originalAttachmentKeys = (request.images ?? []).map(getAttachmentKey).sort();
+
+    return (
+      currentAttachmentKeys.length !== originalAttachmentKeys.length ||
+      currentAttachmentKeys.some((key, index) => key !== originalAttachmentKeys[index])
+    );
+  }, [attachments, isEditMode, request]);
+
   const hasChanges = useMemo(() => {
     if (!isEditMode || !request) {
       return !!askedByBdId && !!storeName.trim();
@@ -191,18 +203,6 @@ export default function CreateApprovalRequestDialog({
       normalizedCurrentKpi !== originalKpiAwarded ||
       normalizedCurrentBonus !== originalBonusAmount;
 
-    const currentAttachmentKeys = attachments
-      .map((item) => getAttachmentKey(item))
-      .sort();
-
-    const originalAttachmentKeys = (request.images ?? [])
-      .map((item) => getAttachmentKey(item))
-      .sort();
-
-    const attachmentChanged =
-      currentAttachmentKeys.length !== originalAttachmentKeys.length ||
-      currentAttachmentKeys.some((key, index) => key !== originalAttachmentKeys[index]);
-
     return infoChanged || attachmentChanged;
   }, [
     isEditMode,
@@ -213,7 +213,7 @@ export default function CreateApprovalRequestDialog({
     adminRemark,
     kpiAwarded,
     bonusAmount,
-    attachments,
+    attachmentChanged,
   ]);
 
   const isDisabled =
@@ -327,10 +327,11 @@ export default function CreateApprovalRequestDialog({
   useEffect(() => {
     if (open) return;
 
-    attachments.forEach((item) => {
-      if (item.local_preview_url) {
-        URL.revokeObjectURL(item.local_preview_url);
-      }
+    setAttachments((current) => {
+      current.forEach((item) => {
+        if (item.local_preview_url) URL.revokeObjectURL(item.local_preview_url);
+      });
+      return current.length === 0 ? current : [];
     });
 
     setAskedByBdId("");
@@ -339,7 +340,6 @@ export default function CreateApprovalRequestDialog({
     setAdminRemark("");
     setKpiAwarded("");
     setBonusAmount("");
-    setAttachments([]);
     setDragging(false);
     setSaving(false);
     setSubmitStage("idle");
@@ -381,10 +381,6 @@ export default function CreateApprovalRequestDialog({
     setSubmitStage("idle");
 
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
       const existingAttachments = attachments
         .filter((item) => !item.file)
         .map<ApprovalImage>((item) => ({

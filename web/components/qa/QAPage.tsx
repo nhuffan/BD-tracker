@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { Archive, CheckCircle2, CircleDashed, Clock3, Plus, Search, Paperclip, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -149,6 +149,7 @@ export default function QAPage({
   const [loading, setLoading] = useState(false);
   const [tickets, setTickets] = useState<QATicket[]>([]);
   const [search, setSearch] = useState("");
+  const deferredSearch = useDeferredValue(search);
   const [viewTab, setViewTab] = useState<QAViewTab>("active");
 
   const [createOpen, setCreateOpen] = useState(false);
@@ -182,7 +183,7 @@ export default function QAPage({
   }, [tickets]);
 
 
-  async function refresh() {
+  const refresh = useCallback(async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -199,7 +200,7 @@ export default function QAPage({
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
     const channel = supabase
@@ -261,8 +262,8 @@ export default function QAPage({
   }, [bdNameMap]);
 
   useEffect(() => {
-    refresh();
-  }, []);
+    void refresh();
+  }, [refresh]);
 
   useEffect(() => {
     async function loadAdmins() {
@@ -288,7 +289,7 @@ export default function QAPage({
   }, []);
 
   const filteredTickets = useMemo(() => {
-    const keyword = search.trim().toLowerCase();
+    const keyword = deferredSearch.trim().toLowerCase();
 
     const list: QATicketVM[] = tickets.map((t) => ({
       ...t,
@@ -315,34 +316,33 @@ export default function QAPage({
 
       return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
     });
-  }, [tickets, search, bdNameMap, ticketCodeMap]);
+  }, [tickets, deferredSearch, bdNameMap, ticketCodeMap]);
 
-  const activeTickets = filteredTickets.filter(
-    (t) => !t.is_in_progress && !t.is_done && !t.is_archived
-  );
-
-  const inProgressTickets = [...filteredTickets]
-    .filter((t) => t.is_in_progress && !t.is_done && !t.is_archived)
-    .sort(
-      (a, b) =>
-        new Date(b.in_progress_at ?? b.updated_at ?? b.created_at).getTime() -
-        new Date(a.in_progress_at ?? a.updated_at ?? a.created_at).getTime()
-    );
-
-  const doneTickets = [...filteredTickets]
-    .filter((t) => t.is_done && !t.is_archived)
-    .sort(
-      (a, b) =>
-        new Date(b.done_at ?? 0).getTime() - new Date(a.done_at ?? 0).getTime()
-    );
-
-  const archivedTickets = [...filteredTickets]
-    .filter((t) => t.is_archived)
-    .sort(
-      (a, b) =>
-        new Date(b.archived_at ?? b.updated_at ?? b.created_at).getTime() -
-        new Date(a.archived_at ?? a.updated_at ?? a.created_at).getTime()
-    );
+  const { activeTickets, inProgressTickets, doneTickets, archivedTickets } = useMemo(() => ({
+    activeTickets: filteredTickets.filter(
+      (ticket) => !ticket.is_in_progress && !ticket.is_done && !ticket.is_archived
+    ),
+    inProgressTickets: filteredTickets
+      .filter((ticket) => ticket.is_in_progress && !ticket.is_done && !ticket.is_archived)
+      .sort(
+        (left, right) =>
+          new Date(right.in_progress_at ?? right.updated_at ?? right.created_at).getTime() -
+          new Date(left.in_progress_at ?? left.updated_at ?? left.created_at).getTime()
+      ),
+    doneTickets: filteredTickets
+      .filter((ticket) => ticket.is_done && !ticket.is_archived)
+      .sort(
+        (left, right) =>
+          new Date(right.done_at ?? 0).getTime() - new Date(left.done_at ?? 0).getTime()
+      ),
+    archivedTickets: filteredTickets
+      .filter((ticket) => ticket.is_archived)
+      .sort(
+        (left, right) =>
+          new Date(right.archived_at ?? right.updated_at ?? right.created_at).getTime() -
+          new Date(left.archived_at ?? left.updated_at ?? left.created_at).getTime()
+      ),
+  }), [filteredTickets]);
 
   const displayTickets =
     viewTab === "active"
@@ -353,9 +353,10 @@ export default function QAPage({
           ? doneTickets
           : archivedTickets;
 
-  const selectedIds = displayTickets
-    .filter((ticket) => selected[ticket.id])
-    .map((ticket) => ticket.id);
+  const selectedIds = useMemo(
+    () => displayTickets.filter((ticket) => selected[ticket.id]).map((ticket) => ticket.id),
+    [displayTickets, selected]
+  );
 
   const stats = useMemo(() => {
     return {
@@ -367,20 +368,33 @@ export default function QAPage({
     };
   }, [tickets, activeTickets, inProgressTickets, doneTickets, archivedTickets]);
 
-  function openDetail(ticket: QATicketVM) {
+  const openDetail = useCallback((ticket: QATicketVM) => {
     if (selectionMode) return;
     setSelectedTicket(ticket);
     setDetailOpen(true);
-  }
+  }, [selectionMode]);
 
-  function toggleSelection(id: string) {
+  const toggleSelection = useCallback((id: string) => {
     if (!selectionMode) return;
 
     setSelected((prev) => ({
       ...prev,
       [id]: !prev[id],
     }));
-  }
+  }, [selectionMode]);
+
+  const handleTicketChanged = useCallback((next: QATicketVM) => {
+    setTickets((prev) => upsertTicket(prev, next));
+    setSelectedTicket((prev) => {
+      if (!prev || prev.id !== next.id) return prev;
+
+      return {
+        ...prev,
+        ...next,
+        asked_by_name: bdNameMap[next.asked_by_bd_id] ?? "—",
+      };
+    });
+  }, [bdNameMap]);
 
   function openDeleteConfirm() {
     if (!isAdmin) return;
@@ -832,18 +846,7 @@ export default function QAPage({
         adminNameMap={adminNameMap}
         currentUserId={currentUserId}
         onSaved={refresh}
-        onTicketChanged={(next) => {
-          setTickets((prev) => upsertTicket(prev, next));
-          setSelectedTicket((prev) => {
-            if (!prev || prev.id !== next.id) return prev;
-
-            return {
-              ...prev,
-              ...next,
-              asked_by_name: bdNameMap[next.asked_by_bd_id] ?? "—",
-            };
-          });
-        }}
+        onTicketChanged={handleTicketChanged}
       />
 
       <ConfirmDialog

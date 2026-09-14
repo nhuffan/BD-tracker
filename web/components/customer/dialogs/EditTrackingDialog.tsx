@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
     Dialog,
     DialogContent,
@@ -56,7 +56,10 @@ export default function EditTrackingDialog({
     onSaved: () => Promise<void> | void;
 }) {
     const { items: allBdList } = useMasters("bd");
-    const bdList = allBdList.filter((item) => item.is_active);
+    const bdList = useMemo(
+        () => allBdList.filter((item) => item.is_active),
+        [allBdList]
+    );
 
     const [form, setForm] = useState({
         event_date: "",

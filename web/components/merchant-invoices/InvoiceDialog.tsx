@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   ClipboardList,
   ImageIcon,
@@ -24,7 +31,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import AttachmentLoadingIndicator from "@/components/qa/utils/AttachmentLoadingIndicator";
 import {
-  compressImageFile,
+  compressImageFiles,
   formatFileSize,
   getOversizedFiles,
   truncateMiddleFileName,
@@ -157,7 +164,7 @@ export default function InvoiceDialog({
     return Array.from(byTaxCode.values());
   }, [existingInvoices]);
 
-  function getMerchantLookupRows(keywordValue: string) {
+  const getMerchantLookupRows = useCallback((keywordValue: string) => {
     const keyword = keywordValue.trim().toLowerCase();
     if (!keyword) return [];
 
@@ -174,9 +181,13 @@ export default function InvoiceDialog({
         return values.some((value) => value.toLowerCase().includes(keyword));
       })
       .slice(0, 5);
-  }
+  }, [knownTaxRows]);
 
-  const merchantLookupRows = getMerchantLookupRows(merchant);
+  const deferredMerchant = useDeferredValue(merchant);
+  const merchantLookupRows = useMemo(
+    () => getMerchantLookupRows(deferredMerchant),
+    [deferredMerchant, getMerchantLookupRows]
+  );
 
   const numericInvoiceAmount = Number(normalizeAmountInput(invoiceAmount)) || 0;
   const vatBreakdown = calculatePreVat(numericInvoiceAmount, vatRate);
@@ -376,8 +387,8 @@ export default function InvoiceDialog({
       return;
     }
 
-    const compressedFiles = await Promise.all(
-      rawFiles.slice(0, remainingSlots).map((file) => compressImageFile(file))
+    const compressedFiles = await compressImageFiles(
+      rawFiles.slice(0, remainingSlots)
     );
     const oversizedFiles = getOversizedFiles(compressedFiles);
     if (oversizedFiles.length > 0) {

@@ -1,6 +1,13 @@
 "use client";
 
-import { type FormEvent, type ReactNode, useEffect, useMemo, useState } from "react";
+import {
+  type FormEvent,
+  type ReactNode,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { Check, Loader2, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -78,16 +85,17 @@ export default function ClientSourceDialog({
   const [deleteTarget, setDeleteTarget] = useState<ReconciliationClient | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const deferredSearchQuery = useDeferredValue(searchQuery);
 
   const filteredClients = useMemo(() => {
-    const query = searchQuery.trim().toLocaleLowerCase("vi");
+    const query = deferredSearchQuery.trim().toLocaleLowerCase("vi");
     if (!query) return clients;
     return clients.filter((client) =>
       [client.name, client.address, client.taxCode, client.tel, client.email].some((value) =>
         value.toLocaleLowerCase("vi").includes(query)
       )
     );
-  }, [clients, searchQuery]);
+  }, [clients, deferredSearchQuery]);
 
   const hasEditChanges = useMemo(() => {
     if (!editingId) return false;

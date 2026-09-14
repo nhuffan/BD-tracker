@@ -8,6 +8,11 @@ export const MAX_ATTACHMENTS = 4;
 export const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 export const MAX_IMAGE_SIZE_BYTES = 512 * 1024;
 
+function yieldToBrowser() {
+  if (typeof window === "undefined") return Promise.resolve();
+  return new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+}
+
 export function formatFileSize(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -58,6 +63,7 @@ export async function compressImageFile(
   let outputBlob: Blob | null = null;
 
   while (quality >= 0.4) {
+    await yieldToBrowser();
     canvas.width = width;
     canvas.height = height;
 
@@ -92,18 +98,28 @@ export async function compressImageFile(
   });
 }
 
+export async function compressImageFiles(
+  files: File[],
+  maxBytes = MAX_IMAGE_SIZE_BYTES
+): Promise<File[]> {
+  const compressed: File[] = [];
+
+  for (const file of files) {
+    compressed.push(await compressImageFile(file, maxBytes));
+  }
+
+  return compressed;
+}
+
 export async function preprocessAttachmentFiles(
   files: File[],
   isImageFile: (type: string) => boolean
 ): Promise<File[]> {
-  const processedFiles = await Promise.all(
-    files.map(async (file) => {
-      if (isImageFile(file.type)) {
-        return compressImageFile(file);
-      }
-      return file;
-    })
-  );
+  const processedFiles: File[] = [];
+
+  for (const file of files) {
+    processedFiles.push(isImageFile(file.type) ? await compressImageFile(file) : file);
+  }
 
   return processedFiles.filter((file) => file.size <= MAX_FILE_SIZE_BYTES);
 }
